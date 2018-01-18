@@ -14,7 +14,7 @@ We need a structured admin hierarchy to easily known that [paris](https://www.op
 
 OSM administrative regions may not be mapped with the same precision all over the earth but the data is easy to update and the update will benefit the community.
 
-We do not forbid ourself however to use other data sources (with compliant license), but we don't want `cosmogony` to be too complex and we do not aim to recreate the great [WhosOnFirst](https://www.whosonfirst.org/) ([see below](#See also))
+We do not forbid ourself however to use other data sources (with compliant license), but we don't want `cosmogony` to be too complex and we do not aim to recreate the great [WhosOnFirst](https://www.whosonfirst.org/) ([see below](#See-also))
 
 ## Use cases
 
