@@ -5,16 +5,16 @@
 ##  Goals
 The goal of the project is to have easy to use, easy to update geographic regions.
 
-[OpenStreetMap](https://www.openstreetmap.org) seems the best datasource for this, but the OSM administrative regions (admins) have several drawbacks.
+[OpenStreetMap](https://www.openstreetmap.org) (OSM) seems the best datasource for this, but the OSM administrative regions (admins) have several drawbacks.
 
- * admin_level (:construction:)
+ * admin_level : The world is a complicated place, and each country has its own administrative division. OSM uses an `admin_level`tag, with values from 1 to ~10 to allow consistent rendering of the borders among countries. This is fine for making maps, but if you want a world list of cities or regions, you still need local and specific knowledge to find which admin_level to use in each country.
  * no hierarchy (:construction:)
 
 We need a structured admin hierarchy to easily known that [paris](https://www.openstreetmap.org/relation/7444) is `city` in the `state` [ile de france](https://www.openstreetmap.org/relation/8649) in the `country` [france](https://www.openstreetmap.org/relation/2202162).
 
 OSM administrative regions may not be mapped with the same precision all over the earth but the data is easy to update and the update will benefit the community.
 
-We do not forbid ourself however to use other data sources, but we don't want `cosmogony` to be too complex and we do not aim to recreate the great [WhosOnFirst](https://www.whosonfirst.org/) ([see below](#See also))
+We do not forbid ourself however to use other data sources (with compliant license), but we don't want `cosmogony` to be too complex and we do not aim to recreate the great [WhosOnFirst](https://www.whosonfirst.org/) ([see below](#See also))
 
 ## Use cases
 
@@ -55,9 +55,8 @@ The libpostal types seems nice (and made by brighter people than us):
 
 ## See also
 
-## Licences
-:construction:
-### Code
-:construction:
-### Data
-:construction:
+## Licenses
+All code in this repository is under the [Apache License 2.0](./LICENSE).
+
+This project uses OpenStreetMap data, licensed under the ODbL by the OpenStreetMap Foundation. * You need to visibly credit OpenStreetMap and its contributors if you use or distribute the data from cosmogony.
+Read more on [OpenStreetMap official website](https://www.openstreetmap.org/copyright).
