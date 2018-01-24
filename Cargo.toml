@@ -1,0 +1,17 @@
+[package]
+name = "cosmogony"
+version = "0.1.0"
+authors = ["Adrien Matissart <a.matissart@qwantresearch.com>"]
+
+[dependencies]
+log = "0.4"
+geo = "0.4.7"
+mimir = { git = "https://github.com/CanalTP/mimirsbrunn.git" }
+mimirsbrunn = { git = "https://github.com/CanalTP/mimirsbrunn.git" }
+structopt = "0.1"
+structopt-derive = "0.1"
+osmpbfreader = "*"
+serde = {version = "1", features = ["rc"]}
+serde_derive = "1"
+serde_json = "1"
+itertools = "*"
