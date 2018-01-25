@@ -9,6 +9,7 @@ extern crate osmpbfreader;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate failure;
 
 mod zone;
 mod admin_type;
@@ -20,6 +21,9 @@ use mimirsbrunn::osm_reader::OsmPbfReader;
 use itertools::Itertools;
 use mimirsbrunn::boundaries::{build_boundary, make_centroid};
 use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
+
+use failure::Error;
+use failure::ResultExt;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
@@ -35,9 +39,9 @@ pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
     }
 }
 
-pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> (Vec<zone::Zone>, CosmogonyStats) {
+pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
     info!("reading pbf...");
-    let objects = pbf.get_objs_and_deps(|o| is_admin(o)).unwrap();
+    let objects = pbf.get_objs_and_deps(|o| is_admin(o)).context("invalid osm file")?;
     info!("reading pbf done.");
 
     let mut zones = vec![];
@@ -108,16 +112,16 @@ pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> (Vec<zone::Zone>, Cosmogon
         }
     }
 
-    return (zones, stats);
+    return Ok((zones, stats));
 }
 
-pub fn build_cosmogony(pbf_path: String) -> Cosmogony {
+pub fn build_cosmogony(pbf_path: String) -> Result<Cosmogony, Error> {
     let path = Path::new(&pbf_path);
-    let file = File::open(&path).unwrap();
+    let file = File::open(&path).context("no pbf file")?;
 
     let mut parsed_pbf = osmpbfreader::OsmPbfReader::new(file);
 
-    let (zones, stats) = get_zones_and_stats(&mut parsed_pbf);
+    let (zones, stats) = get_zones_and_stats(&mut parsed_pbf)?;
     let cosmogony = Cosmogony {
         zones: zones,
         meta: CosmogonyMetadata {
@@ -125,5 +129,5 @@ pub fn build_cosmogony(pbf_path: String) -> Cosmogony {
             stats: stats,
         },
     };
-    cosmogony
+    Ok(cosmogony)
 }

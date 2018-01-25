@@ -4,12 +4,17 @@ extern crate serde_json;
 extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
+extern crate failure;
+#[macro_use]
+extern crate log;
 
 use std::fs::File;
 use std::io::prelude::*;
 use cosmogony::build_cosmogony;
 use cosmogony::cosmogony::Cosmogony;
 use structopt::StructOpt;
+
+use failure::Error;
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -21,17 +26,28 @@ struct Args {
     output: String,
 }
 
-fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) {
-    let json = serde_json::to_string(cosmogony).unwrap();
+fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), Error> {
+    let json = serde_json::to_string(cosmogony)?;
 
-    let mut file = File::create(output_file).unwrap();
-    file.write_all(json.as_bytes()).unwrap();
+    let mut file = File::create(output_file)?;
+    file.write_all(json.as_bytes())?;
+    Ok(())
 }
 
+fn cosmogny(args: Args) -> Result<(), Error> {
+    let cosmogony = build_cosmogony(args.input)?;
+
+    serialize_to_json(&cosmogony, args.output)?;
+    Ok(())
+}
 fn main() {
     mimir::logger_init();
     let args = Args::from_args();
-    let cosmogony = build_cosmogony(args.input);
-
-    serialize_to_json(&cosmogony, args.output);
+    match cosmogny(args) {
+        Err(e) => {
+            error!("error in cosmogony: {:?}", e);
+            std::process::exit(1);
+        }
+        _ => ()
+    }
 }
