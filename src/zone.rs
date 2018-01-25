@@ -20,7 +20,7 @@ pub struct Zone {
 }
 
 impl Zone {
-    fn is_admin(&self) -> bool {
+    pub fn is_admin(&self) -> bool {
         match self.admin_type {
             None => false,
             Some(AdminType::NonAdministrative) => false,

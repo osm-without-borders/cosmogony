@@ -12,14 +12,12 @@ mod zone;
 mod admin_type;
 mod cosmogony;
 
-use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
 use mimirsbrunn::osm_reader::OsmPbfReader;
 use itertools::Itertools;
 use mimirsbrunn::boundaries::{build_boundary, make_centroid};
 use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
-
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
@@ -41,9 +39,7 @@ pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> (Vec<zone::Zone>, Cosmogon
     info!("reading pbf done.");
 
     let mut zones = vec![];
-    let mut stats = CosmogonyStats {
-        level_counts: BTreeMap::new()
-    };
+    let mut stats = CosmogonyStats::default();
 
     for obj in objects.values() {
         if !is_admin(obj) {
