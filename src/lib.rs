@@ -1,16 +1,18 @@
 extern crate geo;
+extern crate geojson;
 extern crate itertools;
 #[macro_use]
 extern crate log;
 extern crate mimir;
 extern crate mimirsbrunn;
 extern crate osmpbfreader;
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
 mod zone;
 mod admin_type;
-mod cosmogony;
+pub mod cosmogony;
 
 use std::fs::File;
 use std::path::Path;
