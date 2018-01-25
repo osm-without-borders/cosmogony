@@ -125,7 +125,7 @@ pub fn build_cosmogony(pbf_path: String) -> Result<Cosmogony, Error> {
     let cosmogony = Cosmogony {
         zones: zones,
         meta: CosmogonyMetadata {
-            osm_filename: path.file_name().unwrap().to_str().unwrap().to_string(),
+            osm_filename: path.file_name().and_then(|f| f.to_str()).map(|f| f.to_string()).unwrap_or("invalid file name".into()),
             stats: stats,
         },
     };
