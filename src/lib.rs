@@ -7,51 +7,39 @@ extern crate mimirsbrunn;
 extern crate osmpbfreader;
 #[macro_use]
 extern crate serde_derive;
-extern crate structopt;
-#[macro_use]
-extern crate structopt_derive;
-
-use structopt::StructOpt;
-use mimirsbrunn::osm_reader::parse_osm_pbf;
-use mimirsbrunn::osm_reader::OsmPbfReader;
-use itertools::Itertools;
-use mimirsbrunn::boundaries::{build_boundary, make_centroid};
 
 mod zone;
 mod admin_type;
+mod cosmogony;
 
-#[derive(StructOpt, Debug)]
-struct Args {
-    /// OSM PBF file.
-    #[structopt(short = "i", long = "input")]
-    input: String,
-}
+use std::fs::File;
+use std::path::Path;
+use mimirsbrunn::osm_reader::OsmPbfReader;
+use itertools::Itertools;
+use mimirsbrunn::boundaries::{build_boundary, make_centroid};
+use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 
-fn main() {
-    mimir::logger_init();
-    let args = Args::from_args();
-
-    let mut parsed_pbf = parse_osm_pbf(&args.input);
-    let zones = get_zones(&mut parsed_pbf);
-}
-
+#[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
     match *obj {
         osmpbfreader::OsmObj::Relation(ref rel) => {
             rel.tags
                 .get("boundary")
                 .map_or(false, |v| v == "administrative")
-            && 
+            &&
             rel.tags.get("admin_level").is_some()
         }
         _ => false,
     }
 }
 
-pub fn get_zones(pbf: &mut OsmPbfReader) {
+pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> (Vec<zone::Zone>, CosmogonyStats) {
     info!("reading pbf...");
     let objects = pbf.get_objs_and_deps(|o| is_admin(o)).unwrap();
     info!("reading pbf done.");
+
+    let mut zones = vec![];
+    let mut stats = CosmogonyStats::default();
 
     for obj in objects.values() {
         if !is_admin(obj) {
@@ -105,7 +93,35 @@ pub fn get_zones(pbf: &mut OsmPbfReader) {
                 tags: vec![],
             };
 
-            println!("{:?}", zone);
+            // Ignore zone without boundary polygon
+            if zone.boundary.is_none() {
+                continue;
+            }
+
+            zone.admin_level.map(|level| {
+                let count = stats.level_counts.entry(level).or_insert(0);
+                *count += 1;
+            });
+            zones.push(zone);
         }
     }
+
+    return (zones, stats);
+}
+
+pub fn build_cosmogony(pbf_path: String) -> Cosmogony {
+    let path = Path::new(&pbf_path);
+    let file = File::open(&path).unwrap();
+
+    let mut parsed_pbf = osmpbfreader::OsmPbfReader::new(file);
+
+    let (zones, stats) = get_zones_and_stats(&mut parsed_pbf);
+    let cosmogony = Cosmogony {
+        zones: zones,
+        meta: CosmogonyMetadata {
+            osm_filename: path.file_name().unwrap().to_str().unwrap().to_string(),
+            stats: stats,
+        },
+    };
+    cosmogony
 }

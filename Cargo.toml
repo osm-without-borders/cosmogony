@@ -2,6 +2,7 @@
 name = "cosmogony"
 version = "0.1.0"
 authors = ["Adrien Matissart <a.matissart@qwantresearch.com>"]
+build = "build.rs"
 
 [dependencies]
 log = "0.4"
