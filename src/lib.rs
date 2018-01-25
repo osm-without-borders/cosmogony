@@ -41,7 +41,9 @@ pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> (Vec<zone::Zone>, Cosmogon
     info!("reading pbf done.");
 
     let mut zones = vec![];
-    let mut counts = BTreeMap::new();
+    let mut stats = CosmogonyStats {
+        level_counts: BTreeMap::new()
+    };
 
     for obj in objects.values() {
         if !is_admin(obj) {
@@ -101,16 +103,13 @@ pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> (Vec<zone::Zone>, Cosmogon
             }
 
             zone.admin_level.map(|level| {
-                let count = counts.entry(level).or_insert(0);
+                let count = stats.level_counts.entry(level).or_insert(0);
                 *count += 1;
             });
             zones.push(zone);
         }
     }
 
-    let stats = CosmogonyStats {
-        level_counts: counts,
-    };
     return (zones, stats);
 }
 

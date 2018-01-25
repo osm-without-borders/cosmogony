@@ -5,6 +5,10 @@ use std::collections::BTreeMap;
 #[test]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 fn read_lux_admin_levels() {
+    // Ensure that all well-defined (with closed boundaries)
+    // administrative zones are loaded from the sample .osm.pbf file,
+    // with correct counts per admin_level.
+
     let test_file = concat!(
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
