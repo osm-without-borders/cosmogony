@@ -30,8 +30,6 @@ pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
                 .map_or(false, |v| v == "administrative")
             &&
             rel.tags.get("admin_level").is_some()
-            // &&
-            // rel.tags.get("type").map_or(false, |v| v == "boundary")
         }
         _ => false,
     }
