@@ -15,7 +15,7 @@ pub struct Zone {
     pub zip_codes: Vec<String>,
     pub center: Coord,
     #[serde(serialize_with = "serialize_as_geojson", deserialize_with = "deserialize_as_geojson",
-            default)]
+            rename = "geometry", default)]
     pub boundary: Option<geo::MultiPolygon<f64>>,
     pub parent: Option<Rc<Zone>>,
     pub tags: Vec<Property>,
