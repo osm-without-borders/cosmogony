@@ -1,0 +1,14 @@
+language: rust
+cache: cargo
+
+before_script: 
+  - export PATH=$PATH:$HOME/.cargo/bin
+
+matrix:
+  include:
+    - rust: nightly
+      before_script: cargo install rustfmt-nightly --force
+      script: cargo fmt -- --write-mode diff
+    - rust: stable
+      script:
+        - cargo test
