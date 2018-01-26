@@ -1,12 +1,12 @@
 extern crate cosmogony;
+extern crate failure;
+#[macro_use]
+extern crate log;
 extern crate mimir;
 extern crate serde_json;
 extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
-extern crate failure;
-#[macro_use]
-extern crate log;
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -40,6 +40,7 @@ fn cosmogny(args: Args) -> Result<(), Error> {
     serialize_to_json(&cosmogony, args.output)?;
     Ok(())
 }
+
 fn main() {
     mimir::logger_init();
     let args = Args::from_args();
@@ -48,6 +49,6 @@ fn main() {
             error!("error in cosmogony: {:?}", e);
             std::process::exit(1);
         }
-        _ => ()
+        _ => (),
     }
 }

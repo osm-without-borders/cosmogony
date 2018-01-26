@@ -1,3 +1,4 @@
+extern crate failure;
 extern crate geo;
 extern crate geojson;
 extern crate itertools;
@@ -9,7 +10,6 @@ extern crate osmpbfreader;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate failure;
 
 mod zone;
 mod admin_type;
@@ -39,9 +39,12 @@ pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
     }
 }
 
-pub fn get_zones_and_stats(pbf: &mut OsmPbfReader) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
+pub fn get_zones_and_stats(
+    pbf: &mut OsmPbfReader,
+) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
     info!("reading pbf...");
-    let objects = pbf.get_objs_and_deps(|o| is_admin(o)).context("invalid osm file")?;
+    let objects = pbf.get_objs_and_deps(|o| is_admin(o))
+        .context("invalid osm file")?;
     info!("reading pbf done.");
 
     let mut zones = vec![];
@@ -125,7 +128,10 @@ pub fn build_cosmogony(pbf_path: String) -> Result<Cosmogony, Error> {
     let cosmogony = Cosmogony {
         zones: zones,
         meta: CosmogonyMetadata {
-            osm_filename: path.file_name().and_then(|f| f.to_str()).map(|f| f.to_string()).unwrap_or("invalid file name".into()),
+            osm_filename: path.file_name()
+                .and_then(|f| f.to_str())
+                .map(|f| f.to_string())
+                .unwrap_or("invalid file name".into()),
             stats: stats,
         },
     };
