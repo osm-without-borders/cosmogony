@@ -4,6 +4,10 @@ extern crate log;
 extern crate osmpbfreader;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_yaml;
+extern crate structopt;
+#[macro_use]
+extern crate structopt_derive;
 
 mod zone;
 mod admin_type;
@@ -13,6 +17,9 @@ use std::fs::File;
 use std::path::Path;
 use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use osmpbfreader::{OsmObj, OsmPbfReader};
+use std::collections::BTreeMap;
+use std::fs;
+use std::io::prelude::*;
 
 use failure::Error;
 use failure::ResultExt;
@@ -105,4 +112,111 @@ pub fn build_cosmogony(pbf_path: String, with_geom: bool) -> Result<Cosmogony, E
         },
     };
     Ok(cosmogony)
+}
+
+pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String, model::Country> {
+    let paths = fs::read_dir(yaml_files_folder).expect("The yaml directory doesn't exist.");
+    let mut countries: BTreeMap<String, model::Country> = BTreeMap::new();
+
+    for entry in paths {
+        let mut contents = String::new();
+        let a_path = entry.unwrap().path();
+
+        File::open(&a_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .expect("Something went wrong reading the file");
+
+        let deserialized_country = match read_libpostal_yaml(&contents) {
+            Ok(a) => a,
+            Err(_) => continue,
+        };
+
+        let reference = a_path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .get(0..2)
+            .unwrap();
+        info!("{:?}: {:?}", reference, deserialized_country);
+        if !deserialized_country.admin_level.contains_key("error") {
+            countries.insert(reference.into(), deserialized_country);
+        }
+    }
+    countries
+}
+
+pub fn read_libpostal_yaml(contents: &String) -> Result<model::Country, String> {
+    let mut map_error: BTreeMap<String, String> = BTreeMap::new();
+    map_error.insert("error".to_string(), "error".to_string());
+    let empty_country: model::Country = model::Country {
+        admin_level: map_error,
+    };
+
+    let deserialized_country: model::Country = match serde_yaml::from_str(&contents) {
+        Ok(country) => country,
+        Err(_) => empty_country,
+    };
+
+    Ok(deserialized_country)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_libpostal_yaml;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn test_read_libpostal_yaml() {
+        let yaml_ok_1 = r#"---
+        admin_level: 
+            "3": "country"
+            "7": "state"
+            "8": "city"
+
+        overrides:
+            contained_by:
+                relation:
+                     "5829526":
+                        admin_level:
+                            "10": "suburb""#.to_string();
+
+        let yaml_ok_2 = r#"---
+        admin_level: 
+            "3": "country"
+            "7": "state"
+            "8": "city""#.to_string();
+
+        let yaml_ko = r#"---
+        admin_level: 
+            "3": "country"
+            "7": "state"
+            "8": "city"
+
+            overrides:
+                contained_by:
+                    relation:
+                        "5829526":
+                            admin_level:
+                                "10": "suburb""#.to_string();
+
+        // Test for ok yaml
+        let deserialized_country = read_libpostal_yaml(&yaml_ok_1).unwrap();
+        assert_eq!(
+            deserialized_country.admin_level.get(&"3".to_string()),
+            Some(&"country".to_string())
+        );
+        let deserialized_country = read_libpostal_yaml(&yaml_ok_2).unwrap();
+        assert_eq!(
+            deserialized_country.admin_level.get(&"8".to_string()),
+            Some(&"city".to_string())
+        );
+
+        // Test for ko yaml
+        let deserialized_country = read_libpostal_yaml(&yaml_ko).unwrap();
+        let mut map: BTreeMap<String, String> = BTreeMap::new();
+        map.insert("error".to_string(), "error".to_string());
+        assert_eq!(deserialized_country.admin_level, map);
+    }
 }
