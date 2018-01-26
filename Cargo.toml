@@ -16,3 +16,5 @@ serde = {version = "1", features = ["rc"]}
 serde_derive = "1"
 serde_json = "1"
 itertools = "*"
+geojson = "0.8"
+failure = "0.1"
