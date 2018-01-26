@@ -6,4 +6,3 @@ use std::collections::{BTreeMap, HashMap};
 pub struct Country {
     pub admin_level: BTreeMap<String, String>,
 }
-

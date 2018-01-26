@@ -40,8 +40,8 @@ fn main() {
     let mut parsed_pbf = parse_osm_pbf(&args.input);
     let zones = get_zones(&mut parsed_pbf);
 
-    let countries: BTreeMap<String, model::Country> = read_libpostal_yaml_folder("/data/libpostal_osm_yaml/".to_string());
-    
+    let countries: BTreeMap<String, model::Country> =
+        read_libpostal_yaml_folder("/data/libpostal_osm_yaml/".to_string());
 }
 
 pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
@@ -50,8 +50,7 @@ pub fn is_admin(obj: &osmpbfreader::OsmObj) -> bool {
             rel.tags
                 .get("boundary")
                 .map_or(false, |v| v == "administrative")
-            && 
-            rel.tags.get("admin_level").is_some()
+                && rel.tags.get("admin_level").is_some()
         }
         _ => false,
     }
@@ -119,8 +118,8 @@ pub fn get_zones(pbf: &mut OsmPbfReader) {
     }
 }
 
-pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String, model::Country>{
-    let paths = fs::read_dir(yaml_files_folder).expect("The yaml directory doesn't exist.");      
+pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String, model::Country> {
+    let paths = fs::read_dir(yaml_files_folder).expect("The yaml directory doesn't exist.");
     let mut countries: BTreeMap<String, model::Country> = BTreeMap::new();
 
     for entry in paths {
@@ -137,27 +136,33 @@ pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String,
             Err(_) => continue,
         };
 
-        let reference = a_path.file_name().unwrap().to_str().unwrap().get(0..2).unwrap();
-        info!("{:?}: {:?}",reference, deserialized_country);
+        let reference = a_path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .get(0..2)
+            .unwrap();
+        info!("{:?}: {:?}", reference, deserialized_country);
         if !deserialized_country.admin_level.contains_key("error") {
             countries.insert(reference.into(), deserialized_country);
         }
-    } 
+    }
     countries
 }
 
-pub fn read_libpostal_yaml(contents: &String) -> Result<model::Country,String> {
+pub fn read_libpostal_yaml(contents: &String) -> Result<model::Country, String> {
     let mut map_error: BTreeMap<String, String> = BTreeMap::new();
     map_error.insert("error".to_string(), "error".to_string());
-    let empty_country: model::Country = model::Country {admin_level: map_error};
+    let empty_country: model::Country = model::Country {
+        admin_level: map_error,
+    };
 
     let deserialized_country: model::Country = match serde_yaml::from_str(&contents) {
         Ok(country) => country,
-        Err(_) => {
-            empty_country
-        },
-    };    
-    
+        Err(_) => empty_country,
+    };
+
     Ok(deserialized_country)
 }
 
@@ -202,15 +207,20 @@ mod tests {
 
         // Test for ok yaml
         let deserialized_country = read_libpostal_yaml(&yaml_ok_1).unwrap();
-        assert_eq!(deserialized_country.admin_level.get(&"3".to_string()), Some(&"country".to_string()));
+        assert_eq!(
+            deserialized_country.admin_level.get(&"3".to_string()),
+            Some(&"country".to_string())
+        );
         let deserialized_country = read_libpostal_yaml(&yaml_ok_2).unwrap();
-        assert_eq!(deserialized_country.admin_level.get(&"8".to_string()), Some(&"city".to_string()));
+        assert_eq!(
+            deserialized_country.admin_level.get(&"8".to_string()),
+            Some(&"city".to_string())
+        );
 
         // Test for ko yaml
         let deserialized_country = read_libpostal_yaml(&yaml_ko).unwrap();
         let mut map: BTreeMap<String, String> = BTreeMap::new();
         map.insert("error".to_string(), "error".to_string());
         assert_eq!(deserialized_country.admin_level, map);
-    }     
+    }
 }
-
