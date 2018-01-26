@@ -4,14 +4,11 @@ cache: cargo
 before_script: 
   - export PATH=$PATH:$HOME/.cargo/bin
 
-rust:
-  - stable
-
 matrix:
   include:
     - rust: nightly
       before_script: cargo install rustfmt-nightly --force
-      script: cargo fmt --all -- --write-mode diff
-
-script:
-  - cargo test
+      script: cargo fmt -- --write-mode diff
+    - rust: stable
+      script:
+        - cargo test
