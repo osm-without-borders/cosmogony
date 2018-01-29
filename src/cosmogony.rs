@@ -21,6 +21,19 @@ pub struct CosmogonyStats {
     pub wikidata_counts: BTreeMap<u32, u64>,
 }
 
+impl CosmogonyStats {
+    pub fn process(&mut self, zone: &Zone) {
+        zone.admin_level.map(|level| {
+            let count = self.level_counts.entry(level).or_insert(0);
+            *count += 1;
+            if zone.wikidata.is_some() {
+                let wd_count = self.wikidata_counts.entry(level).or_insert(0);
+                *wd_count += 1;
+            }
+        });
+    }
+}
+
 impl fmt::Display for CosmogonyStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (level, count) in &self.level_counts {
