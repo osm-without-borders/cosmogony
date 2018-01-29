@@ -22,8 +22,10 @@ struct Args {
     #[structopt(short = "i", long = "input")]
     input: String,
     /// output file name
-    #[structopt(short = "o", long = "output", default_value = "cosmogony.json")]
-    output: String,
+    #[structopt(short = "o", long = "output")]
+    output: Option<String>,
+    #[structopt(long = "print-stats", default_value = "true")]
+    print_stats: bool,
 }
 
 fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), Error> {
@@ -37,7 +39,17 @@ fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), E
 fn cosmogny(args: Args) -> Result<(), Error> {
     let cosmogony = build_cosmogony(args.input)?;
 
-    serialize_to_json(&cosmogony, args.output)?;
+    if let Some(output) = args.output {
+        serialize_to_json(&cosmogony, output)?;
+    }
+
+    if args.print_stats {
+        println!(
+            "Statistics for {}:\n{}",
+            cosmogony.meta.osm_filename, cosmogony.meta.stats
+        );
+    }
+
     Ok(())
 }
 
