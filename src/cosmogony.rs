@@ -45,3 +45,21 @@ impl fmt::Display for CosmogonyStats {
         Ok(())
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AdminRules {
+    pub admin_level: BTreeMap<String, String>,
+    #[serde(default)]
+    pub overrides: Option<Overrides>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Overrides {
+    #[serde(default)]
+    pub id: Option<Id>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Id {
+    pub relation: BTreeMap<String, String>,
+}

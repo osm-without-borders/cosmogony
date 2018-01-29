@@ -96,11 +96,15 @@ pub fn build_cosmogony(pbf_path: String, with_geom: bool) -> Result<Cosmogony, E
 
     let mut parsed_pbf = OsmPbfReader::new(file);
 
+<<<<<<< 719df56e23ad37020776700b02f97eefa5b89317
     let (zones, stats) = if with_geom {
         get_zones_and_stats(&mut parsed_pbf)?
     } else {
         get_zones_and_stats_without_geom(&mut parsed_pbf)?
     };
+=======
+    let (zones, stats) = get_zones_and_stats(&mut parsed_pbf)?;
+>>>>>>> Tests - read libpostal levels
     let cosmogony = Cosmogony {
         zones: zones,
         meta: CosmogonyMetadata {
@@ -133,12 +137,13 @@ pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String,
         };
 
         let reference = a_path
-            .file_stem().unwrap();
-            //.unwrap()
-            //.to_str()
-            //.unwrap()
-            //.get(0..2)
-            //.unwrap();
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .get(0..2)
+            .unwrap()
+        let path_filename = path.file_name().and_then(|f| f.to_str()).map(|f| f.to_string()).unwrap_or("invalid file name".into())
         info!("{:?}: {:?}", reference, deserialized_country);
         if !deserialized_country.admin_level.contains_key(&"0") {
             countries.insert(reference, deserialized_country);
@@ -147,83 +152,8 @@ pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String,
     countries
 }
 
-//pub fn read_libpostal_yaml_old(contents: &String) -> Result<model::AdminRules, String> {
-//    let mut map_error = BTreeMap::new();
-//    map_error.insert(0, "error".to_string());
-//    let empty_country: model::AdminRules = model::AdminRules {
-//        admin_level: map_error,
-//    };
-//
-//    let deserialized_country: model::AdminRules = match serde_yaml::from_str(&contents) {
-//        Ok(country) => country,
-//        Err(_) => empty_country,
-//    };
-//
-//    Ok(deserialized_country)
-//}
-
-fn read_libpostal_yaml(contents: &String) -> Result<model::AdminRules, Error> {
+pub fn read_libpostal_yaml(contents: &String) -> Result<AdminRules, Error> {
     Ok(serde_yaml::from_str(&contents)?)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::read_libpostal_yaml;
-    use std::collections::BTreeMap;
-
-    #[test]
-    fn test_read_libpostal_yaml_ok() {
-        let yaml_ok_1 = r#"---
-        admin_level: 
-            "3": "country"
-            "7": "state"
-            "8": "city"
-
-        overrides:
-            contained_by:
-                relation:
-                     "5829526":
-                        admin_level:
-                            "10": "suburb""#.to_string();
-
-        let yaml_ok_2 = r#"---
-        admin_level: 
-            "3": "country"
-            "7": "state"
-            "8": "city""#.to_string();
-
-        let deserialized_country = read_libpostal_yaml(&yaml_ok_1).unwrap();
-        assert_eq!(
-            deserialized_country.admin_level.get(&"3"),
-            Some(&"country".to_string())
-        );
-        let deserialized_country = read_libpostal_yaml(&yaml_ok_2).unwrap();
-        assert_eq!(
-            deserialized_country.admin_level.get(&"8"),
-            Some(&"city".to_string())
-        );        
-    }
-
-    #[test]
-    fn test_read_libpostal_yaml_ko() {
-        // a test where the yaml is not valid because of the wrong indentation
-        let yaml_ko = r#"---
-        admin_level: 
-            "3": "country"
-            "7": "state"
-            "8": "city"
-
-            overrides:
-                contained_by:
-                    relation:
-                        "5829526":
-                            admin_level:
-                                "10": "suburb""#.to_string();
-
-        // Test for ko yaml
-        let deserialized_country = read_libpostal_yaml(&yaml_ko).unwrap();
-        let mut map: BTreeMap<String, String> = BTreeMap::new();
-        map.insert(0, "error".to_string());
-        assert_eq!(deserialized_country.admin_level, map);
-    }
-}
+include_str!
