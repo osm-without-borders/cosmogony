@@ -17,4 +17,5 @@ pub struct CosmogonyMetadata {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct CosmogonyStats {
     pub level_counts: BTreeMap<u32, u64>,
+    pub wikidata_counts: BTreeMap<u32, u64>,
 }

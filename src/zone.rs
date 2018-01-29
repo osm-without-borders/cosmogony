@@ -19,6 +19,7 @@ pub struct Zone {
     pub boundary: Option<geo::MultiPolygon<f64>>,
     pub parent: Option<Rc<Zone>>,
     pub tags: Vec<Property>,
+    pub wikidata: Option<String>,
     // pub links: Vec<Rc<Zone>>
 }
 

@@ -89,6 +89,7 @@ pub fn get_zones_and_stats(
                 .filter(|s| !s.is_empty())
                 .map(|s| s.to_string())
                 .sorted();
+            let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
             let boundary = build_boundary(relation, &objects);
             let zone = zone::Zone {
                 id: relation.id.0.to_string(),
@@ -100,6 +101,7 @@ pub fn get_zones_and_stats(
                 boundary: boundary,
                 parent: None,
                 tags: vec![],
+                wikidata: wikidata,
             };
 
             // Ignore zone without boundary polygon
@@ -110,7 +112,12 @@ pub fn get_zones_and_stats(
             zone.admin_level.map(|level| {
                 let count = stats.level_counts.entry(level).or_insert(0);
                 *count += 1;
+                if zone.wikidata.is_some() {
+                    let wd_count = stats.wikidata_counts.entry(level).or_insert(0);
+                    *wd_count += 1;
+                }
             });
+
             zones.push(zone);
         }
     }
