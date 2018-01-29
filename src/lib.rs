@@ -118,42 +118,42 @@ pub fn build_cosmogony(pbf_path: String, with_geom: bool) -> Result<Cosmogony, E
     Ok(cosmogony)
 }
 
-pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String, model::AdminRules> {
-    let paths = fs::read_dir(yaml_files_folder).expect("The yaml directory doesn't exist.");
-    let mut countries: BTreeMap<String, model::AdminRules> = BTreeMap::new();
+pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String, AdminRules> {
+    let mut admin_levels: BTreeMap<String, AdminRules> = BTreeMap::new();
 
-    for entry in paths {
-        let mut contents = String::new();
-        let a_path = entry.unwrap().path();
+    if let Ok(paths) = fs::read_dir(yaml_files_folder) {
+        for entry in paths {
+            let mut contents = String::new();
 
-        File::open(&a_path)
-            .unwrap()
-            .read_to_string(&mut contents)
-            .expect("Something went wrong reading the file");
+            if let Ok(a_path) = entry {
+                if let Ok(mut f) = File::open(&a_path.path()) {
+                    f.read_to_string(&mut contents);
 
-        let deserialized_country = match read_libpostal_yaml(&contents) {
-            Ok(a) => a,
-            Err(_) => continue,
-        };
+                    let deserialized_level = match read_libpostal_yaml(&contents) {
+                        Ok(a) => a,
+                        Err(_) => continue,
+                    };
 
-        let reference = a_path
-            .file_stem()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .get(0..2)
-            .unwrap()
-        let path_filename = path.file_name().and_then(|f| f.to_str()).map(|f| f.to_string()).unwrap_or("invalid file name".into())
-        info!("{:?}: {:?}", reference, deserialized_country);
-        if !deserialized_country.admin_level.contains_key(&"0") {
-            countries.insert(reference, deserialized_country);
+                    let reference = a_path
+                        .path()
+                        .file_name()
+                        .and_then(|f| f.to_str())
+                        .map(|f| f.to_string())
+                        .unwrap_or("invalid file name".into());
+
+                    admin_levels.insert(reference, deserialized_level);
+                }
+            }
         }
     }
-    countries
+    admin_levels
 }
 
 pub fn read_libpostal_yaml(contents: &String) -> Result<AdminRules, Error> {
     Ok(serde_yaml::from_str(&contents)?)
 }
+<<<<<<< f9328700a9ec1b9f9a652696058e735771224377
 
 include_str!
+=======
+>>>>>>> Function read_libpostal_yaml_folder()

@@ -1,4 +1,3 @@
-
 extern crate cosmogony;
 
 use std::collections::BTreeMap;
@@ -12,11 +11,11 @@ fn test_read_libpostal_yaml_basic() {
         "8": "city""#.to_string();
 
     let deserialized_levels = cosmogony::read_libpostal_yaml(&yaml_basic).expect("invalid yaml");
-    
+
     assert_eq!(
         deserialized_levels.admin_level.get(&"3".to_string()),
         Some(&"country".to_string())
-    );            
+    );
 }
 
 #[test]
@@ -29,11 +28,16 @@ fn test_read_libpostal_yaml_overrides() {
     overrides:
         id:
             relation:
-                 "5829526": "city""#.to_string();    
-        
-    let deserialized_levels = cosmogony::read_libpostal_yaml(&yaml_overrides).expect("invalid yaml");
-    let id = deserialized_levels.overrides.expect("overrides problem").id.expect("id problem");
-    
+                 "5829526": "city""#.to_string();
+
+    let deserialized_levels =
+        cosmogony::read_libpostal_yaml(&yaml_overrides).expect("invalid yaml");
+    let id = deserialized_levels
+        .overrides
+        .expect("overrides problem")
+        .id
+        .expect("id problem");
+
     assert_eq!(
         id.relation.get(&"5829526".to_string()),
         Some(&"city".to_string())
@@ -56,6 +60,6 @@ fn test_read_libpostal_yaml_ko() {
                             "10": "suburb""#.to_string();
 
     let deserialized_levels = cosmogony::read_libpostal_yaml(&yaml_ko);
-    
+
     assert_eq!(deserialized_levels.is_err(), true);
 }
