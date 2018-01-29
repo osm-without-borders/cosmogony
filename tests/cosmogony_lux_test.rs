@@ -12,7 +12,7 @@ fn read_lux_admin_levels() {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(test_file.into()).expect("invalid cosmology");
+    let cosmogony = cosmogony::build_cosmogony(test_file.into()).expect("invalid cosmogony");
     assert_eq!(cosmogony.meta.osm_filename, "luxembourg_filtered.osm.pbf");
 
     let level_counts = cosmogony.meta.stats.level_counts;
@@ -38,4 +38,12 @@ fn read_lux_admin_levels() {
     assert_count(&level_counts, 10, 3); // 2 + 1 outside LU
 
     assert_eq!(cosmogony.zones.len(), 201);
+
+    assert!(
+        cosmogony
+            .zones
+            .iter()
+            .map(|zone| zone.name.to_owned())
+            .any(|name| name == format!("Esch-sur-Alzette"))
+    )
 }
