@@ -131,7 +131,13 @@ pub fn read_libpostal_yaml_folder(yaml_files_folder: String) -> BTreeMap<String,
 
                     let deserialized_level = match read_libpostal_yaml(&contents) {
                         Ok(a) => a,
-                        Err(_) => continue,
+                        Err(_) => {
+                            warn!(
+                                "Levels corresponding to file: {:?} have been skipped",
+                                &a_path.path()
+                            );
+                            continue;
+                        }
                     };
 
                     let reference = a_path
