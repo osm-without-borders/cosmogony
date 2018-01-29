@@ -36,7 +36,7 @@ fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), E
     Ok(())
 }
 
-fn cosmogny(args: Args) -> Result<(), Error> {
+fn cosmogony(args: Args) -> Result<(), Error> {
     let cosmogony = build_cosmogony(args.input)?;
 
     if let Some(output) = args.output {
@@ -56,7 +56,7 @@ fn cosmogny(args: Args) -> Result<(), Error> {
 fn main() {
     mimir::logger_init();
     let args = Args::from_args();
-    match cosmogny(args) {
+    match cosmogony(args) {
         Err(e) => {
             error!("error in cosmogony: {:?}", e);
             std::process::exit(1);
