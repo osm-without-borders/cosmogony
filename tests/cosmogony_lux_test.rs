@@ -39,10 +39,11 @@ fn read_lux_admin_levels() {
 
     assert_eq!(cosmogony.zones.len(), 201);
 
-    let admin_names = cosmogony
-        .zones
-        .iter()
-        .map(|zone| zone.name.to_owned())
-        .collect::<Vec<String>>();
-    assert!(admin_names.contains(&format!("Esch-sur-Alzette")));
+    assert!(
+        cosmogony
+            .zones
+            .iter()
+            .map(|zone| zone.name.to_owned())
+            .any(|name| name == format!("Esch-sur-Alzette"))
+    )
 }
