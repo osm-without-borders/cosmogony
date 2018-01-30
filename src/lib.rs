@@ -7,8 +7,6 @@ extern crate osmpbfreader;
 extern crate serde_derive;
 extern crate serde_yaml;
 extern crate structopt;
-#[macro_use]
-extern crate structopt_derive;
 
 mod zone;
 pub mod admin_type;
@@ -134,36 +132,36 @@ pub fn read_libpostal_yaml_folder(
 
             if let Ok(a_path) = entry {
                 if let Ok(mut f) = File::open(&a_path.path()) {
-                    f.read_to_string(&mut contents);
+                    if let Ok(_) = f.read_to_string(&mut contents) {
+                        let deserialized_level = match read_libpostal_yaml(&contents) {
+                            Ok(a) => a,
+                            Err(_) => {
+                                warn!(
+                                    "Levels corresponding to file: {:?} have been skipped",
+                                    &a_path.path()
+                                );
+                                continue;
+                            }
+                        };
 
-                    let deserialized_level = match read_libpostal_yaml(&contents) {
-                        Ok(a) => a,
-                        Err(_) => {
-                            warn!(
-                                "Levels corresponding to file: {:?} have been skipped",
-                                &a_path.path()
-                            );
-                            continue;
-                        }
+                        let country_code = match a_path
+                            .path()
+                            .file_name()
+                            .and_then(|f| f.to_str())
+                            .map(|f| f.to_string())
+                        {
+                            Some(name) => name.into(),
+                            None => {
+                                warn!(
+                                    "Levels corresponding to file: {:?} have been skipped",
+                                    &a_path.path()
+                                );
+                                continue;
+                            }
+                        };
+
+                        admin_levels.insert(country_code, deserialized_level);
                     };
-
-                    let country_code = match a_path
-                        .path()
-                        .file_name()
-                        .and_then(|f| f.to_str())
-                        .map(|f| f.to_string())
-                    {
-                        Some(name) => name.into(),
-                        None => {
-                            warn!(
-                                "Levels corresponding to file: {:?} have been skipped",
-                                &a_path.path()
-                            );
-                            continue;
-                        }
-                    };
-
-                    admin_levels.insert(country_code, deserialized_level);
                 }
             }
         },

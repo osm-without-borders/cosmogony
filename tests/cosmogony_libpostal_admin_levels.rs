@@ -1,6 +1,5 @@
 extern crate cosmogony;
 
-use std::collections::BTreeMap;
 use cosmogony::admin_type::AdminType;
 
 #[test]
