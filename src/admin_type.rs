@@ -1,6 +1,12 @@
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum AdminType {
-    NonAdministrative,
-    City,
+    State,
+    StateDistrict,
     Country,
+    CountryRegion,
+    City,
+    CityDistrict,
+    Suburb,
+    NonAdministrative,
 }
