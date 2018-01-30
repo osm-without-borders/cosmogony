@@ -26,6 +26,9 @@ struct Args {
     output: Option<String>,
     #[structopt(long = "print-stats", default_value = "true")]
     print_stats: bool,
+    #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom",
+                default_value = "false")]
+    disable_geom: bool,
 }
 
 fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), Error> {
@@ -37,7 +40,7 @@ fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), E
 }
 
 fn cosmogony(args: Args) -> Result<(), Error> {
-    let cosmogony = build_cosmogony(args.input)?;
+    let cosmogony = build_cosmogony(args.input, !args.disable_geom)?;
 
     if let Some(output) = args.output {
         serialize_to_json(&cosmogony, output)?;

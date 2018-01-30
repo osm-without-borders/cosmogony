@@ -12,7 +12,7 @@ fn read_lux_admin_levels() {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(test_file.into()).expect("invalid cosmogony");
+    let cosmogony = cosmogony::build_cosmogony(test_file.into(), true).expect("invalid cosmogony");
     assert_eq!(cosmogony.meta.osm_filename, "luxembourg_filtered.osm.pbf");
 
     let level_counts = cosmogony.meta.stats.level_counts;
