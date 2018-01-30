@@ -18,7 +18,7 @@ fn test_read_libpostal_yaml_basic() {
             .admin_level
             .get(&"3".to_string())
             .unwrap(),
-        &AdminType::Country
+        &AdminType::country
     );
 }
 
