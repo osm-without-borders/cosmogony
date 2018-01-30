@@ -1,7 +1,7 @@
 extern crate cosmogony;
 
 use std::collections::BTreeMap;
-use admin_type::AdminType;  // problem: cannot refer to admin_type
+use admin_type::AdminType; // problem: cannot refer to admin_type
 
 #[test]
 fn test_read_libpostal_yaml_basic() {
@@ -23,7 +23,7 @@ fn test_read_libpostal_yaml_basic() {
 //#[test]
 //fn test_read_libpostal_yaml_overrides() {
 //    let yaml_overrides = r#"---
-//    admin_level: 
+//    admin_level:
 //        "3": "country"
 //        "7": "state"
 //        "8": "city"

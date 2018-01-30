@@ -1,6 +1,7 @@
 extern crate failure;
 #[macro_use]
 extern crate log;
+extern crate mimirsbrunn;
 extern crate osmpbfreader;
 #[macro_use]
 extern crate serde_derive;
@@ -15,11 +16,12 @@ pub mod cosmogony;
 
 use std::fs::File;
 use std::path::Path;
-use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
+use cosmogony::{AdminRules, Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::prelude::*;
+use std::io;
 
 use failure::Error;
 use failure::ResultExt;
@@ -96,15 +98,11 @@ pub fn build_cosmogony(pbf_path: String, with_geom: bool) -> Result<Cosmogony, E
 
     let mut parsed_pbf = OsmPbfReader::new(file);
 
-<<<<<<< 719df56e23ad37020776700b02f97eefa5b89317
     let (zones, stats) = if with_geom {
         get_zones_and_stats(&mut parsed_pbf)?
     } else {
         get_zones_and_stats_without_geom(&mut parsed_pbf)?
     };
-=======
-    let (zones, stats) = get_zones_and_stats(&mut parsed_pbf)?;
->>>>>>> Tests - read libpostal levels
     let cosmogony = Cosmogony {
         zones: zones,
         meta: CosmogonyMetadata {
@@ -118,7 +116,9 @@ pub fn build_cosmogony(pbf_path: String, with_geom: bool) -> Result<Cosmogony, E
     Ok(cosmogony)
 }
 
-pub fn read_libpostal_yaml_folder(yaml_files_folder: &String) -> io::Result<BTreeMap<String, AdminRules>> {
+pub fn read_libpostal_yaml_folder(
+    yaml_files_folder: &String,
+) -> io::Result<BTreeMap<String, AdminRules>> {
     let mut admin_levels: BTreeMap<String, AdminRules> = BTreeMap::new();
 
     match fs::read_dir(&yaml_files_folder) {
@@ -128,39 +128,42 @@ pub fn read_libpostal_yaml_folder(yaml_files_folder: &String) -> io::Result<BTre
                 &yaml_files_folder
             );
             return Err(e);
-        },
-        Ok(paths) => {
-            for entry in paths {
-                let mut contents = String::new();
+        }
+        Ok(paths) => for entry in paths {
+            let mut contents = String::new();
 
-                if let Ok(a_path) = entry {
-                    if let Ok(mut f) = File::open(&a_path.path()) {
-                        f.read_to_string(&mut contents);
+            if let Ok(a_path) = entry {
+                if let Ok(mut f) = File::open(&a_path.path()) {
+                    f.read_to_string(&mut contents);
 
-                        let deserialized_level = match read_libpostal_yaml(&contents) {
-                            Ok(a) => a,
-                            Err(_) => {
-                                warn!(
-                                    "Levels corresponding to file: {:?} have been skipped",
-                                    &a_path.path()
-                                );
-                                continue;
-                            }
-                        };
+                    let deserialized_level = match read_libpostal_yaml(&contents) {
+                        Ok(a) => a,
+                        Err(_) => {
+                            warn!(
+                                "Levels corresponding to file: {:?} have been skipped",
+                                &a_path.path()
+                            );
+                            continue;
+                        }
+                    };
 
-                        let country_code = match a_path.path().file_name().and_then(|f| f.to_str()).map(|f| f.to_string()) {
-                            Some(name) => name.into(),
-                            None => {
-                                warn!(
-                                    "Levels corresponding to file: {:?} have been skipped",
-                                    &a_path.path()
-                                );
-                                continue;
-                            }
-                        };
+                    let country_code = match a_path
+                        .path()
+                        .file_name()
+                        .and_then(|f| f.to_str())
+                        .map(|f| f.to_string())
+                    {
+                        Some(name) => name.into(),
+                        None => {
+                            warn!(
+                                "Levels corresponding to file: {:?} have been skipped",
+                                &a_path.path()
+                            );
+                            continue;
+                        }
+                    };
 
-                        admin_levels.insert(country_code, deserialized_level);
-                    }
+                    admin_levels.insert(country_code, deserialized_level);
                 }
             }
         },
@@ -171,8 +174,3 @@ pub fn read_libpostal_yaml_folder(yaml_files_folder: &String) -> io::Result<BTre
 pub fn read_libpostal_yaml(contents: &String) -> Result<AdminRules, Error> {
     Ok(serde_yaml::from_str(&contents)?)
 }
-<<<<<<< f9328700a9ec1b9f9a652696058e735771224377
-
-include_str!
-=======
->>>>>>> Function read_libpostal_yaml_folder()
