@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum AdminType {
