@@ -11,7 +11,7 @@ extern crate structopt;
 extern crate structopt_derive;
 
 mod zone;
-mod admin_type;
+pub mod admin_type;
 pub mod cosmogony;
 
 use std::fs::File;

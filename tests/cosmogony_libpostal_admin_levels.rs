@@ -1,7 +1,7 @@
 extern crate cosmogony;
 
 use std::collections::BTreeMap;
-use admin_type::AdminType; // problem: cannot refer to admin_type
+use cosmogony::admin_type::AdminType; // problem: cannot refer to admin_type
 
 #[test]
 fn test_read_libpostal_yaml_basic() {
@@ -14,8 +14,11 @@ fn test_read_libpostal_yaml_basic() {
     let deserialized_levels = cosmogony::read_libpostal_yaml(&yaml_basic).expect("invalid yaml");
 
     assert_eq!(
-        deserialized_levels.admin_level.get(&"3".to_string()),
-        Some(AdminType::Country)
+        deserialized_levels
+            .admin_level
+            .get(&"3".to_string())
+            .unwrap(),
+        &AdminType::Country
     );
 }
 
