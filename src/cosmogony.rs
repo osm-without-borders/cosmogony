@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use zone::Zone;
+use admin_type::AdminType;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Cosmogony {
@@ -48,19 +49,21 @@ impl fmt::Display for CosmogonyStats {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AdminRules {
-    pub admin_level: BTreeMap<String, String>,
-    #[serde(default)]
-    pub overrides: Option<Overrides>,
+    pub admin_level: BTreeMap<String, AdminType>,
+    // WIP
+    //#[serde(default)]
+    //pub overrides: Option<Overrides>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Overrides {
-    #[serde(default)]
-    pub id: Option<Id>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Id {
-    #[serde(default)]
-    pub relation: BTreeMap<String, String>,
-}
+// WIP
+//#[derive(Serialize, Deserialize, Debug)]
+//pub struct Overrides {
+//    #[serde(default)]
+//    pub id: Option<Id>,
+//}
+//
+//#[derive(Serialize, Deserialize, Debug)]
+//pub struct Id {
+//    #[serde(default)]
+//    pub relation: BTreeMap<String, String>,
+//}
