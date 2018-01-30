@@ -22,8 +22,13 @@ struct Args {
     #[structopt(short = "i", long = "input")]
     input: String,
     /// output file name
-    #[structopt(short = "o", long = "output", default_value = "cosmogony.json")]
-    output: String,
+    #[structopt(short = "o", long = "output")]
+    output: Option<String>,
+    #[structopt(long = "print-stats", default_value = "true")]
+    print_stats: bool,
+    #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom",
+                default_value = "false")]
+    disable_geom: bool,
 }
 
 fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), Error> {
@@ -34,17 +39,27 @@ fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), E
     Ok(())
 }
 
-fn cosmogny(args: Args) -> Result<(), Error> {
-    let cosmogony = build_cosmogony(args.input)?;
+fn cosmogony(args: Args) -> Result<(), Error> {
+    let cosmogony = build_cosmogony(args.input, !args.disable_geom)?;
 
-    serialize_to_json(&cosmogony, args.output)?;
+    if let Some(output) = args.output {
+        serialize_to_json(&cosmogony, output)?;
+    }
+
+    if args.print_stats {
+        println!(
+            "Statistics for {}:\n{}",
+            cosmogony.meta.osm_filename, cosmogony.meta.stats
+        );
+    }
+
     Ok(())
 }
 
 fn main() {
     mimir::logger_init();
     let args = Args::from_args();
-    match cosmogny(args) {
+    match cosmogony(args) {
         Err(e) => {
             error!("error in cosmogony: {:?}", e);
             std::process::exit(1);
