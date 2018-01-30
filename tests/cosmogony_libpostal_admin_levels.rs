@@ -9,6 +9,7 @@ fn test_read_libpostal_yaml_basic() {
     admin_level: 
         "3": "country"
         "7": "state"
+        "5": "city_district"
         "8": "city""#.to_string();
 
     let deserialized_levels = cosmogony::read_libpostal_yaml(&yaml_basic).expect("invalid yaml");
@@ -19,6 +20,14 @@ fn test_read_libpostal_yaml_basic() {
             .get(&"3".to_string())
             .unwrap(),
         &AdminType::Country
+    );
+
+    assert_eq!(
+        deserialized_levels
+            .admin_level
+            .get(&"5".to_string())
+            .unwrap(),
+        &AdminType::CityDistrict
     );
 }
 
