@@ -108,7 +108,7 @@ fn create_ontology(
         let country = get_country(&z, &country_code)?;
         let type_res = zone_typer.get_zone_type(&z, &country);
         match type_res {
-            Ok(t) => z.admin_type = Some(t),
+            Ok(t) => z.zone_type = Some(t),
             Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
                 info!("impossible to find {}", c);
                 let zone_with_unkwown_country =

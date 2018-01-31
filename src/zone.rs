@@ -29,7 +29,7 @@ pub enum ZoneType {
 pub struct Zone {
     pub id: String,
     pub admin_level: Option<u32>,
-    pub admin_type: Option<ZoneType>,
+    pub zone_type: Option<ZoneType>,
     pub name: String,
     pub zip_codes: Vec<String>,
     pub center: Option<Coord>,
@@ -44,7 +44,7 @@ pub struct Zone {
 
 impl Zone {
     pub fn is_admin(&self) -> bool {
-        match self.admin_type {
+        match self.zone_type {
             None => false,
             Some(ZoneType::NonAdministrative) => false,
             _ => true,
@@ -83,7 +83,7 @@ impl Zone {
         Some(Self {
             id: relation.id.0.to_string(),
             admin_level: level,
-            admin_type: None,
+            zone_type: None,
             name: name.to_string(),
             zip_codes: zip_codes,
             center: None,
