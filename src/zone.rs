@@ -15,13 +15,13 @@ use std::collections::BTreeMap;
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ZoneType {
-    State,
-    StateDistrict,
-    Country,
-    CountryRegion,
-    City,
-    CityDistrict,
     Suburb,
+    CityDistrict,
+    City,
+    StateDistrict,
+    State,
+    CountryRegion,
+    Country,
     NonAdministrative,
 }
 
