@@ -12,13 +12,24 @@ use osmpbfreader::objects::{OsmId, OsmObj, Relation};
 use self::mimirsbrunn::boundaries::{build_boundary, make_centroid};
 use std::collections::BTreeMap;
 
-use admin_type::AdminType;
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ZoneType {
+    State,
+    StateDistrict,
+    Country,
+    CountryRegion,
+    City,
+    CityDistrict,
+    Suburb,
+    NonAdministrative,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Zone {
     pub id: String,
     pub admin_level: Option<u32>,
-    pub admin_type: Option<AdminType>,
+    pub admin_type: Option<ZoneType>,
     pub name: String,
     pub zip_codes: Vec<String>,
     pub center: Option<Coord>,
@@ -35,7 +46,7 @@ impl Zone {
     pub fn is_admin(&self) -> bool {
         match self.admin_type {
             None => false,
-            Some(AdminType::NonAdministrative) => false,
+            Some(ZoneType::NonAdministrative) => false,
             _ => true,
         }
     }
