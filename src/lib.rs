@@ -1,5 +1,7 @@
 extern crate failure;
 #[macro_use]
+extern crate failure_derive;
+#[macro_use]
 extern crate log;
 extern crate mimirsbrunn;
 extern crate osmpbfreader;
@@ -16,7 +18,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use osmpbfreader::{OsmObj, OsmPbfReader};
-
+use std::collections::BTreeMap;
 use failure::Error;
 use failure::ResultExt;
 
@@ -86,6 +88,14 @@ pub fn get_zones_and_stats_without_geom(
     Ok((zones, stats))
 }
 
+fn get_country<'a>(_zone: &zone::Zone, country_code: &'a Option<String>) -> Result<&'a str, Error> {
+    if let &Some(ref c) = country_code {
+        Ok(c)
+    } else {
+        Err(failure::err_msg("Cannot find the country of the zone"))//TODO pass a nice country
+    }
+}
+
 fn create_ontology(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
@@ -94,7 +104,29 @@ fn create_ontology(
 ) -> Result<(), Error> {
     let zone_typer = zone_typer::ZoneTyper::create(libpostal_file_path)?;
 
-    info!("zone typer = {:?}", zone_typer);
+    for mut z in zones {
+        let country = get_country(&z, &country_code)?;
+        let type_res = zone_typer.get_zone_type(&z, &country);
+        match type_res {
+            Ok(t) => z.admin_type = Some(t),
+            Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
+                info!("impossible to find {}", c);
+                let zone_with_unkwown_country =
+                    stats.zone_with_unkwown_country.entry(c).or_insert(0);
+                *zone_with_unkwown_country += 1;
+            }
+            Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country)) => {
+                info!("impossible to find {:?} for {}", lvl, country);
+                let unhandled_admin_level_count = stats
+                    .unhandled_admin_level
+                    .entry(country)
+                    .or_insert(BTreeMap::new())
+                    .entry(lvl.unwrap_or(0))
+                    .or_insert(0);
+                *unhandled_admin_level_count += 1;
+            }
+        }
+    }
     Ok(())
 }
 

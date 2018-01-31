@@ -9,14 +9,12 @@ extern crate structopt;
 extern crate structopt_derive;
 
 use std::fs::File;
-use std::path::PathBuf;
 use std::io::prelude::*;
 use cosmogony::build_cosmogony;
 use cosmogony::cosmogony::Cosmogony;
 use structopt::StructOpt;
 
 use failure::Error;
-use failure::Fail;
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -28,8 +26,7 @@ struct Args {
     output: Option<String>,
     #[structopt(long = "print-stats", default_value = "true")]
     print_stats: bool,
-    #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom",
-                default_value = "false")]
+    #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom")]
     disable_geom: bool,
     #[structopt(help = "country code if the pbf file does not contains any country",
                 long = "country-code")]
@@ -73,8 +70,13 @@ fn main() {
     let args = Args::from_args();
     match cosmogony(args) {
         Err(e) => {
-            error!("cosmogony in error!");
-            e.causes().map(|c| error!("{}", c)).collect::<Vec<_>>();
+            error!("cosmogony in error! {:?}", e);
+            e.causes().for_each(|c| {
+                error!("{}", c);
+                if let Some(b) = c.backtrace() {
+                    error!("  - {}", b);
+                }
+            });
 
             std::process::exit(1);
         }

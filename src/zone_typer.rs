@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use zone::{Zone, ZoneType};
 use std::fs;
-use std::io;
 use std::path::PathBuf;
 use std::io::prelude::*;
 use failure::Error;
@@ -15,10 +14,18 @@ pub struct ZoneTyper {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CountryAdminTypeRules {
-    pub admin_level: BTreeMap<String, ZoneType>,
+    #[serde(rename = "admin_level")]
+    pub type_by_level: BTreeMap<String, ZoneType>,
     // WIP
     //#[serde(default)]
     //pub overrides: Option<Overrides>,
+}
+
+#[derive(Debug, Fail)]
+pub enum ZoneTyperError {
+    #[fail(display = "impossible to find country {}", _0)] InvalidCountry(String),
+    #[fail(display = "no lvl {:?} in libpostal rule for {}", _0, _1)]
+    UnkownLevel(Option<u32>, String),
 }
 
 impl ZoneTyper {
@@ -28,8 +35,22 @@ impl ZoneTyper {
         })
     }
 
-    pub fn get_zone_type(zone: &Zone, country_code: &str) -> ZoneType {
-        panic!("")
+    pub fn get_zone_type(
+        &self,
+        zone: &Zone,
+        country_code: &str,
+    ) -> Result<ZoneType, ZoneTyperError> {
+        let country_rules = self.countries_rules
+            .get(country_code)
+            .ok_or(ZoneTyperError::InvalidCountry(country_code.to_string()))?;
+        Ok(country_rules
+            .type_by_level
+            .get(&zone.admin_level.unwrap_or(0).to_string())
+            .ok_or(ZoneTyperError::UnkownLevel(
+                zone.admin_level.clone(),
+                country_code.to_string(),
+            ))?
+            .clone())
     }
 }
 
@@ -73,7 +94,7 @@ fn read_libpostal_yaml_folder(
 
                     let country_code = match a_path
                         .path()
-                        .file_name()
+                        .file_stem()
                         .and_then(|f| f.to_str())
                         .map(|f| f.to_string())
                     {
@@ -118,7 +139,7 @@ mod test {
 
         assert_eq!(
             deserialized_levels
-                .admin_level
+                .type_by_level
                 .get(&"3".to_string())
                 .unwrap(),
             &ZoneType::Country
@@ -126,7 +147,7 @@ mod test {
 
         assert_eq!(
             deserialized_levels
-                .admin_level
+                .type_by_level
                 .get(&"5".to_string())
                 .unwrap(),
             &ZoneType::CityDistrict
