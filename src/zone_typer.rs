@@ -16,9 +16,6 @@ pub struct ZoneTyper {
 struct CountryAdminTypeRules {
     #[serde(rename = "admin_level")]
     pub type_by_level: BTreeMap<String, ZoneType>,
-    // WIP
-    //#[serde(default)]
-    //pub overrides: Option<Overrides>,
 }
 
 #[derive(Debug, Fail)]
@@ -53,19 +50,6 @@ impl ZoneTyper {
             .clone())
     }
 }
-
-// WIP
-//#[derive(Serialize, Deserialize, Debug)]
-//pub struct Overrides {
-//    #[serde(default)]
-//    pub id: Option<Id>,
-//}
-//
-//#[derive(Serialize, Deserialize, Debug)]
-//pub struct Id {
-//    #[serde(default)]
-//    pub relation: BTreeMap<String, String>,
-//}
 
 fn read_libpostal_yaml_folder(
     yaml_files_folder: PathBuf,
@@ -153,33 +137,6 @@ mod test {
             &ZoneType::CityDistrict
         );
     }
-
-    // WIP...
-    //#[test]
-    //fn test_read_libpostal_yaml_overrides() {
-    //    let yaml_overrides = r#"---
-    //    admin_level:
-    //        "3": "country"
-    //        "7": "state"
-    //        "8": "city"
-    //    overrides:
-    //        id:
-    //            relation:
-    //                 "5829526": "city""#.to_string();
-    //
-    //    let deserialized_levels = cosmogony::read_libpostal_yaml(&yaml_overrides).expect("invalid yaml");
-    //
-    //    let id = deserialized_levels
-    //        .overrides
-    //        .expect("overrides problem")
-    //        .id
-    //        .expect("id problem");
-    //
-    //    assert_eq!(
-    //        id.relation.get(&"5829526".to_string()),
-    //        Some(&"city".to_string())
-    //    );
-    //}
 
     /// Ensure that read_libpostal_yaml() returns an error when the yaml file is not valid.
     /// Specifically here the indentation of the "overrides" field is not ok.
