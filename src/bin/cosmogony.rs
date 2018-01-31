@@ -16,6 +16,7 @@ use cosmogony::cosmogony::Cosmogony;
 use structopt::StructOpt;
 
 use failure::Error;
+use failure::Fail;
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -72,7 +73,9 @@ fn main() {
     let args = Args::from_args();
     match cosmogony(args) {
         Err(e) => {
-            error!("error in cosmogony: {:?}", e);
+            error!("cosmogony in error!");
+            e.causes().map(|c| error!("{}", c)).collect::<Vec<_>>();
+
             std::process::exit(1);
         }
         _ => (),

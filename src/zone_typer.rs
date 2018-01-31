@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::io::prelude::*;
 use failure::Error;
 use serde_yaml;
+use failure::ResultExt;
 
 #[derive(Debug)]
 pub struct ZoneTyper {
@@ -47,56 +48,51 @@ impl ZoneTyper {
 
 fn read_libpostal_yaml_folder(
     yaml_files_folder: PathBuf,
-) -> io::Result<BTreeMap<String, CountryAdminTypeRules>> {
+) -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
     let mut admin_levels: BTreeMap<String, CountryAdminTypeRules> = BTreeMap::new();
+    let paths = fs::read_dir(&yaml_files_folder).context(format!(
+        "error while reading libpostal directory {:?}",
+        yaml_files_folder
+    ))?;
+    for entry in paths {
+        let mut contents = String::new();
 
-    match fs::read_dir(&yaml_files_folder) {
-        Err(e) => {
-            warn!(
-                "Impossible to read files in folder {:?}.",
-                &yaml_files_folder
-            );
-            return Err(e);
-        }
-        Ok(paths) => for entry in paths {
-            let mut contents = String::new();
-
-            if let Ok(a_path) = entry {
-                if let Ok(mut f) = fs::File::open(&a_path.path()) {
-                    if let Ok(_) = f.read_to_string(&mut contents) {
-                        let deserialized_level = match read_libpostal_yaml(&contents) {
-                            Ok(a) => a,
-                            Err(_) => {
-                                warn!(
-                                    "Levels corresponding to file: {:?} have been skipped",
-                                    &a_path.path()
-                                );
-                                continue;
-                            }
-                        };
-
-                        let country_code = match a_path
-                            .path()
-                            .file_name()
-                            .and_then(|f| f.to_str())
-                            .map(|f| f.to_string())
-                        {
-                            Some(name) => name.into(),
-                            None => {
-                                warn!(
-                                    "Levels corresponding to file: {:?} have been skipped",
-                                    &a_path.path()
-                                );
-                                continue;
-                            }
-                        };
-
-                        admin_levels.insert(country_code, deserialized_level);
+        if let Ok(a_path) = entry {
+            if let Ok(mut f) = fs::File::open(&a_path.path()) {
+                if let Ok(_) = f.read_to_string(&mut contents) {
+                    let deserialized_level = match read_libpostal_yaml(&contents) {
+                        Ok(a) => a,
+                        Err(_) => {
+                            warn!(
+                                "Levels corresponding to file: {:?} have been skipped",
+                                &a_path.path()
+                            );
+                            continue;
+                        }
                     };
-                }
+
+                    let country_code = match a_path
+                        .path()
+                        .file_name()
+                        .and_then(|f| f.to_str())
+                        .map(|f| f.to_string())
+                    {
+                        Some(name) => name.into(),
+                        None => {
+                            warn!(
+                                "Levels corresponding to file: {:?} have been skipped",
+                                &a_path.path()
+                            );
+                            continue;
+                        }
+                    };
+
+                    admin_levels.insert(country_code, deserialized_level);
+                };
             }
-        },
+        }
     }
+
     Ok(admin_levels)
 }
 

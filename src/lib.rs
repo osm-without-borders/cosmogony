@@ -115,7 +115,7 @@ pub fn build_cosmogony(
         get_zones_and_stats_without_geom(&mut parsed_pbf)?
     };
 
-    create_ontology(&mut zones, &mut stats, libpostal_file_path, country_code);
+    create_ontology(&mut zones, &mut stats, libpostal_file_path, country_code)?;
 
     let cosmogony = Cosmogony {
         zones: zones,
