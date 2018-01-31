@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use zone::{Zone, ZoneType};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::io::prelude::*;
-use failure::Error;
+use failure::{Error, err_msg};
 use serde_yaml;
 use failure::ResultExt;
 
@@ -27,9 +27,14 @@ pub enum ZoneTyperError {
 
 impl ZoneTyper {
     pub fn create(libpostal_files_path: PathBuf) -> Result<ZoneTyper, Error> {
-        Ok(ZoneTyper {
-            countries_rules: read_libpostal_yaml_folder(libpostal_files_path)?,
-        })
+        let z = ZoneTyper {
+            countries_rules: read_libpostal_yaml_folder(&libpostal_files_path)?,
+        };
+        if z.countries_rules.is_empty() {
+            Err(err_msg(format!("no country rules have been loaded, the directory {:?} must not contain valid libpostal rules", &libpostal_files_path)))
+        } else {
+            Ok(z)
+        }
     }
 
     pub fn get_zone_type(
@@ -52,7 +57,7 @@ impl ZoneTyper {
 }
 
 fn read_libpostal_yaml_folder(
-    yaml_files_folder: PathBuf,
+    yaml_files_folder: &Path,
 ) -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
     let mut admin_levels: BTreeMap<String, CountryAdminTypeRules> = BTreeMap::new();
     let paths = fs::read_dir(&yaml_files_folder).context(format!(
