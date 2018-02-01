@@ -92,7 +92,8 @@ fn get_country<'a>(_zone: &zone::Zone, country_code: &'a Option<String>) -> Resu
     if let &Some(ref c) = country_code {
         Ok(c)
     } else {
-        Err(failure::err_msg("Cannot find the country of the zone")) //TODO add a realway to find the country
+        //TODO add a realway to find the country
+        Err(failure::err_msg("Cannot find the country of the zone"))
     }
 }
 

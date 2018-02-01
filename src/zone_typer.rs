@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use zone::{Zone, ZoneType};
 use std::fs;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::io::prelude::*;
-use failure::{Error, err_msg};
+use failure::{err_msg, Error};
 use serde_yaml;
 use failure::ResultExt;
 
@@ -20,7 +20,8 @@ struct CountryAdminTypeRules {
 
 #[derive(Debug, Fail)]
 pub enum ZoneTyperError {
-    #[fail(display = "impossible to find country {}", _0)] InvalidCountry(String),
+    #[fail(display = "impossible to find country {}", _0)]
+    InvalidCountry(String),
     #[fail(display = "no lvl {:?} in libpostal rule for {}", _0, _1)]
     UnkownLevel(Option<u32>, String),
 }
