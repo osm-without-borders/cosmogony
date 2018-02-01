@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use zone::{Zone, ZoneType};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::fmt::Debug;
 use std::io::prelude::*;
 use failure::{err_msg, Error};
 use serde_yaml;
@@ -27,7 +28,10 @@ pub enum ZoneTyperError {
 }
 
 impl ZoneTyper {
-    pub fn create(libpostal_files_path: PathBuf) -> Result<ZoneTyper, Error> {
+    pub fn new<T>(libpostal_files_path: T) -> Result<ZoneTyper, Error>
+    where
+        T: AsRef<Path> + Debug,
+    {
         let z = ZoneTyper {
             countries_rules: read_libpostal_yaml_folder(&libpostal_files_path)?,
         };
@@ -57,57 +61,53 @@ impl ZoneTyper {
     }
 }
 
-fn read_libpostal_yaml_folder(
-    yaml_files_folder: &Path,
-) -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
-    let mut admin_levels: BTreeMap<String, CountryAdminTypeRules> = BTreeMap::new();
-    let paths = fs::read_dir(&yaml_files_folder).context(format!(
-        "error while reading libpostal directory {:?}",
-        yaml_files_folder
-    ))?;
-    for entry in paths {
+fn read_libpostal_yaml_folder<T>(
+    yaml_files_folder: T,
+) -> Result<BTreeMap<String, CountryAdminTypeRules>, Error>
+where
+    T: AsRef<Path> + Debug,
+{
+    use std::fs::DirEntry;
+
+    let read_libpostal_file = |entry: Result<DirEntry, _>| {
+        let a_path = entry.ok()?;
+        let mut f = fs::File::open(&a_path.path()).ok()?;
         let mut contents = String::new();
+        f.read_to_string(&mut contents).ok()?;
+        let deserialized_level = read_libpostal_yaml(&contents)
+            .map_err(|_| {
+                warn!(
+                    "Levels corresponding to file: {:?} have been skipped",
+                    &a_path.path()
+                )
+            })
+            .ok()?;
+        let country_code = a_path
+            .path()
+            .file_stem()
+            .and_then(|f| f.to_str())
+            .map(|f| f.to_string())
+            .ok_or_else(|| {
+                warn!(
+                    "Levels corresponding to file: {:?} have been skipped",
+                    &a_path.path()
+                )
+            })
+            .ok()?;
 
-        if let Ok(a_path) = entry {
-            if let Ok(mut f) = fs::File::open(&a_path.path()) {
-                if let Ok(_) = f.read_to_string(&mut contents) {
-                    let deserialized_level = match read_libpostal_yaml(&contents) {
-                        Ok(a) => a,
-                        Err(_) => {
-                            warn!(
-                                "Levels corresponding to file: {:?} have been skipped",
-                                &a_path.path()
-                            );
-                            continue;
-                        }
-                    };
+        Some((country_code, deserialized_level))
+    };
 
-                    let country_code = match a_path
-                        .path()
-                        .file_stem()
-                        .and_then(|f| f.to_str())
-                        .map(|f| f.to_string())
-                    {
-                        Some(name) => name.into(),
-                        None => {
-                            warn!(
-                                "Levels corresponding to file: {:?} have been skipped",
-                                &a_path.path()
-                            );
-                            continue;
-                        }
-                    };
-
-                    admin_levels.insert(country_code, deserialized_level);
-                };
-            }
-        }
-    }
-
-    Ok(admin_levels)
+    Ok(fs::read_dir(&yaml_files_folder)
+        .context(format!(
+            "error while reading libpostal directory {:?}",
+            yaml_files_folder
+        ))?
+        .filter_map(read_libpostal_file)
+        .collect())
 }
 
-fn read_libpostal_yaml(contents: &String) -> Result<CountryAdminTypeRules, Error> {
+fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
     Ok(serde_yaml::from_str(&contents)?)
 }
 
@@ -123,7 +123,7 @@ mod test {
         "3": "country"
         "7": "state"
         "5": "city_district"
-        "8": "city""#.to_string();
+        "8": "city""#;
 
         let deserialized_levels = read_libpostal_yaml(&yaml_basic).expect("invalid yaml");
 
@@ -159,7 +159,7 @@ mod test {
                 relation:
                     "5829526":
                         admin_level:
-                            "10": "suburb""#.to_string();
+                            "10": "suburb""#;
 
         let deserialized_levels = read_libpostal_yaml(&yaml_ko);
 

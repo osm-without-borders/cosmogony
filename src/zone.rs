@@ -12,7 +12,7 @@ use osmpbfreader::objects::{OsmId, OsmObj, Relation};
 use self::mimirsbrunn::boundaries::{build_boundary, make_centroid};
 use std::collections::BTreeMap;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ZoneType {
     Suburb,

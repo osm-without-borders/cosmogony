@@ -1,6 +1,5 @@
-extern crate failure;
 #[macro_use]
-extern crate failure_derive;
+extern crate failure;
 #[macro_use]
 extern crate log;
 extern crate mimirsbrunn;
@@ -103,7 +102,7 @@ fn create_ontology(
     libpostal_file_path: PathBuf,
     country_code: Option<String>,
 ) -> Result<(), Error> {
-    let zone_typer = zone_typer::ZoneTyper::create(libpostal_file_path)?;
+    let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
 
     for mut z in zones {
         let country = get_country(&z, &country_code)?;
@@ -112,19 +111,16 @@ fn create_ontology(
             Ok(t) => z.zone_type = Some(t),
             Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
                 info!("impossible to find {}", c);
-                let zone_with_unkwown_country =
-                    stats.zone_with_unkwown_country.entry(c).or_insert(0);
-                *zone_with_unkwown_country += 1;
+                *stats.zone_with_unkwown_country.entry(c).or_insert(0) += 1;
             }
             Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country)) => {
                 info!("impossible to find {:?} for {}", lvl, country);
-                let unhandled_admin_level_count = stats
+                *stats
                     .unhandled_admin_level
                     .entry(country)
                     .or_insert(BTreeMap::new())
                     .entry(lvl.unwrap_or(0))
-                    .or_insert(0);
-                *unhandled_admin_level_count += 1;
+                    .or_insert(0) += 1;
             }
         }
     }
