@@ -7,8 +7,8 @@ build = "build.rs"
 [dependencies]
 log = "0.4"
 geo = "0.4.7"
-mimir = { git = "https://github.com/CanalTP/mimirsbrunn.git" }
-mimirsbrunn = { git = "https://github.com/CanalTP/mimirsbrunn.git" }
+mimirsbrunn = {  }
+mimir = {  }
 structopt = "0.1"
 structopt-derive = "0.1"
 osmpbfreader = "*"
@@ -20,3 +20,7 @@ itertools = "*"
 geojson = "0.8"
 failure = "0.1"
 failure_derive = "0.1"
+
+[patch.crates-io]
+mimir = { path = "../mimirsbrunn/libs/mimir" }
+mimirsbrunn = { path = "../mimirsbrunn" }
