@@ -26,9 +26,13 @@ struct Args {
     output: Option<String>,
     #[structopt(long = "print-stats", default_value = "true")]
     print_stats: bool,
-    #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom",
-                default_value = "false")]
+    #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom")]
     disable_geom: bool,
+    #[structopt(help = "country code if the pbf file does not contains any country",
+                long = "country-code")]
+    country_code: Option<String>,
+    #[structopt(help = "libpostal path", long = "libpostal")]
+    libpostal_path: String,
 }
 
 fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), Error> {
@@ -40,7 +44,12 @@ fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), E
 }
 
 fn cosmogony(args: Args) -> Result<(), Error> {
-    let cosmogony = build_cosmogony(args.input, !args.disable_geom)?;
+    let cosmogony = build_cosmogony(
+        args.input,
+        !args.disable_geom,
+        args.libpostal_path.into(),
+        args.country_code,
+    )?;
 
     if let Some(output) = args.output {
         serialize_to_json(&cosmogony, output)?;
@@ -61,7 +70,14 @@ fn main() {
     let args = Args::from_args();
     match cosmogony(args) {
         Err(e) => {
-            error!("error in cosmogony: {:?}", e);
+            error!("cosmogony in error! {:?}", e);
+            e.causes().for_each(|c| {
+                error!("{}", c);
+                if let Some(b) = c.backtrace() {
+                    error!("  - {}", b);
+                }
+            });
+
             std::process::exit(1);
         }
         _ => (),
