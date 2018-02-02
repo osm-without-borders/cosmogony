@@ -14,6 +14,8 @@ extern crate structopt;
 
 pub mod zone;
 mod hierarchy_builder;
+mod country_finder;
+mod utils;
 pub mod cosmogony;
 pub mod zone_typer;
 
@@ -26,6 +28,7 @@ use hierarchy_builder::build_hierarchy;
 use failure::Error;
 use failure::ResultExt;
 use zone::ZoneIndex;
+use country_finder::CountryFinder;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -59,8 +62,7 @@ pub fn get_zones_and_stats(
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
             if let Some(zone) = zone::Zone::from_osm_with_geom(relation, &objects, next_index) {
-                // Ignore zone without boundary polygon
-
+                // Ignore zone without boundary polygon for the moment
                 if zone.boundary.is_some() {
                     stats.process(&zone);
                     zones.push(zone);
@@ -96,12 +98,11 @@ pub fn get_zones_and_stats_without_geom(
     Ok((zones, stats))
 }
 
-fn get_country<'a>(_zone: &zone::Zone, country_code: &'a Option<String>) -> Result<&'a str, Error> {
+fn get_country_code<'a>(country_finder: &'a CountryFinder, zone: &zone::Zone, country_code: &'a Option<String>) -> Option<String> {
     if let &Some(ref c) = country_code {
-        Ok(c)
+        Some(c.clone())
     } else {
-        //TODO add a realway to find the country
-        Err(failure::err_msg("Cannot find the country of the zone"))
+        country_finder.find_zone_country(&zone)
     }
 }
 
@@ -112,24 +113,34 @@ fn type_zones(
     country_code: Option<String>,
 ) -> Result<(), Error> {
     let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
+    let country_finder: CountryFinder = zones.iter().collect();
 
     for mut z in zones {
-        let country = get_country(&z, &country_code)?;
-        let type_res = zone_typer.get_zone_type(&z, &country);
-        match type_res {
-            Ok(t) => z.zone_type = Some(t),
-            Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
-                info!("impossible to find {}", c);
-                *stats.zone_with_unkwown_country.entry(c).or_insert(0) += 1;
-            }
-            Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country)) => {
-                info!("impossible to find {:?} for {}", lvl, country);
-                *stats
-                    .unhandled_admin_level
-                    .entry(country)
-                    .or_insert(BTreeMap::new())
-                    .entry(lvl.unwrap_or(0))
-                    .or_insert(0) += 1;
+        let country_code = get_country_code(&country_finder, &z, &country_code);
+        match country_code {
+            None => {
+                info!("impossible to find a country for {}, skipping", &z.name);
+                continue;
+            },
+            Some(country) => {
+                debug!("Country of {} is {:?}", &z.name, &country);
+                let type_res = zone_typer.get_zone_type(&z, &country);
+                match type_res {
+                    Ok(t) => z.zone_type = Some(t),
+                    Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
+                        info!("impossible to find rules for country {}", c);
+                        *stats.zone_with_unkwown_country.entry(c).or_insert(0) += 1;
+                    }
+                    Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country)) => {
+                        info!("impossible to find a rule for level {:?} for country {}", lvl, country);
+                        *stats
+                            .unhandled_admin_level
+                            .entry(country)
+                            .or_insert(BTreeMap::new())
+                            .entry(lvl.unwrap_or(0))
+                            .or_insert(0) += 1;
+                    }
+                }
             }
         }
     }
