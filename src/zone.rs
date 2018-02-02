@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 use self::geos::GGeom;
 use self::serde::Serialize;
 
-#[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(rename_all = "snake_case")]
 pub enum ZoneType {
     Suburb,
