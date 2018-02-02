@@ -16,24 +16,27 @@ pub struct Country {
 }
 
 pub struct CountryFinder {
-    tree: RTree<Country>
+    tree: RTree<Country>,
+    empty: bool, // There is no is_empty() method in the Rtree library nor easy means to check it
 }
 
 impl Default for CountryFinder {
     fn default() -> Self {
-        CountryFinder { tree: RTree::new() }
+        CountryFinder { tree: RTree::new(), empty: true }
     }
 }
 
 impl<'a> FromIterator<&'a Zone> for CountryFinder {
     fn from_iter<I: IntoIterator<Item = &'a Zone>>(zones: I) -> Self {
         let mut cfinder = CountryFinder::default();
+        let mut is_empty = true;
         zones.into_iter()
             .filter_map(|z| {
                 match z.tags.get(COUNTRY_CODE_TAG){
                     Some(country_code) => {
                         let code = country_code.to_lowercase();
                         info!("adding country {}", &code);
+                        is_empty = false;
                         Some(Country{
                             iso: code,
                             ggeom: z.get_prepared_ggeom().unwrap(),
@@ -46,6 +49,7 @@ impl<'a> FromIterator<&'a Zone> for CountryFinder {
             .for_each(|c| {
                 cfinder.insert_country(c);
             });
+            cfinder.empty = is_empty;
         cfinder
     }
 }
@@ -85,5 +89,9 @@ impl CountryFinder {
             },
             None => None
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.empty
     }
 }

@@ -114,12 +114,17 @@ fn type_zones(
 ) -> Result<(), Error> {
     let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
     let country_finder: CountryFinder = zones.iter().collect();
+    if country_code.is_none() && country_finder.is_empty() {
+        return Err(failure::err_msg("no country_code has been provided and no country have been found,
+        we won't be able to make a cosmogony"));
+    }
 
     for mut z in zones {
         let country_code = get_country_code(&country_finder, &z, &country_code);
         match country_code {
             None => {
                 info!("impossible to find a country for {}, skipping", &z.name);
+                stats.zone_without_country += 1;
                 continue;
             },
             Some(country) => {
@@ -129,7 +134,7 @@ fn type_zones(
                     Ok(t) => z.zone_type = Some(t),
                     Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
                         info!("impossible to find rules for country {}", c);
-                        *stats.zone_with_unkwown_country.entry(c).or_insert(0) += 1;
+                        *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
                     }
                     Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country)) => {
                         info!("impossible to find a rule for level {:?} for country {}", lvl, country);
