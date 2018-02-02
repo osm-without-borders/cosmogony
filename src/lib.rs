@@ -98,7 +98,11 @@ pub fn get_zones_and_stats_without_geom(
     Ok((zones, stats))
 }
 
-fn get_country_code<'a>(country_finder: &'a CountryFinder, zone: &zone::Zone, country_code: &'a Option<String>) -> Option<String> {
+fn get_country_code<'a>(
+    country_finder: &'a CountryFinder,
+    zone: &zone::Zone,
+    country_code: &'a Option<String>,
+) -> Option<String> {
     if let &Some(ref c) = country_code {
         Some(c.clone())
     } else {
@@ -115,8 +119,9 @@ fn type_zones(
     let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
     let country_finder: CountryFinder = zones.iter().collect();
     if country_code.is_none() && country_finder.is_empty() {
-        return Err(failure::err_msg("no country_code has been provided and no country have been found,
-        we won't be able to make a cosmogony"));
+        return Err(failure::err_msg(
+            "no country_code has been provided and no country have been found, we won't be able to make a cosmogony",
+        ));
     }
 
     for mut z in zones {
@@ -126,7 +131,7 @@ fn type_zones(
                 info!("impossible to find a country for {}, skipping", &z.name);
                 stats.zone_without_country += 1;
                 continue;
-            },
+            }
             Some(country) => {
                 debug!("Country of {} is {:?}", &z.name, &country);
                 let type_res = zone_typer.get_zone_type(&z, &country);
@@ -137,7 +142,10 @@ fn type_zones(
                         *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
                     }
                     Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country)) => {
-                        info!("impossible to find a rule for level {:?} for country {}", lvl, country);
+                        info!(
+                            "impossible to find a rule for level {:?} for country {}",
+                            lvl, country
+                        );
                         *stats
                             .unhandled_admin_level
                             .entry(country)

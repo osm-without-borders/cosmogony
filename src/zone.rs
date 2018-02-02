@@ -11,7 +11,7 @@ use self::mimir::Coord;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use self::mimirsbrunn::boundaries::{build_boundary, make_centroid};
 use std::collections::BTreeMap;
-use self::geos::{GGeom};
+use self::geos::GGeom;
 use self::serde::Serialize;
 
 #[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -154,8 +154,8 @@ impl Zone {
                 let ggeom: GGeom = b.into();
                 // Some(PreparedGGeom::new(&ggeom))
                 Some(ggeom)
-            },
-            None => None
+            }
+            None => None,
         }
     }
 }

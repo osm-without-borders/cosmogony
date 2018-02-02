@@ -22,7 +22,10 @@ pub struct CountryFinder {
 
 impl Default for CountryFinder {
     fn default() -> Self {
-        CountryFinder { tree: RTree::new(), empty: true }
+        CountryFinder {
+            tree: RTree::new(),
+            empty: true,
+        }
     }
 }
 
@@ -30,26 +33,25 @@ impl<'a> FromIterator<&'a Zone> for CountryFinder {
     fn from_iter<I: IntoIterator<Item = &'a Zone>>(zones: I) -> Self {
         let mut cfinder = CountryFinder::default();
         let mut is_empty = true;
-        zones.into_iter()
-            .filter_map(|z| {
-                match z.tags.get(COUNTRY_CODE_TAG){
-                    Some(country_code) => {
-                        let code = country_code.to_lowercase();
-                        info!("adding country {}", &code);
-                        is_empty = false;
-                        Some(Country{
-                            iso: code,
-                            ggeom: z.get_prepared_ggeom().unwrap(),
-                            zone: z.clone(),
-                        })
-                    },
-                    None => None
+        zones
+            .into_iter()
+            .filter_map(|z| match z.tags.get(COUNTRY_CODE_TAG) {
+                Some(country_code) => {
+                    let code = country_code.to_lowercase();
+                    info!("adding country {}", &code);
+                    is_empty = false;
+                    Some(Country {
+                        iso: code,
+                        ggeom: z.get_prepared_ggeom().unwrap(),
+                        zone: z.clone(),
+                    })
                 }
+                None => None,
             })
             .for_each(|c| {
                 cfinder.insert_country(c);
             });
-            cfinder.empty = is_empty;
+        cfinder.empty = is_empty;
         cfinder
     }
 }
@@ -81,13 +83,12 @@ impl CountryFinder {
                         .filter(|c| c.ggeom.contains(&(&z.boundary.clone().unwrap()).into()))
                         .next()
                         .map(|c| c.iso.clone())
-                    
                 } else {
                     warn!("No bbox: Cannot fetch country of zone {}", z.osm_id);
                     None
                 }
-            },
-            None => None
+            }
+            None => None,
         }
     }
 
