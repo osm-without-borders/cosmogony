@@ -273,7 +273,7 @@ mod test {
     }
 
     #[test]
-    fn hierarchy_test_parent_parent_repect_hierarchy_equals() {
+    fn hierarchy_test_parent_parent_respect_hierarchy_equals() {
         let mut zones = create_zones();
 
         // now we change the zone type of z2 to a State,
@@ -290,7 +290,7 @@ mod test {
 
     /// A zone with a lower zone type should never be a parent to a zone with a higher zone type
     #[test]
-    fn hierarchy_test_parent_parent_repect_hierarchy() {
+    fn hierarchy_test_parent_parent_respect_hierarchy() {
         let mut zones = create_zones();
 
         // now we change the zone type of z2 to a CountryRegion,
@@ -308,7 +308,7 @@ mod test {
     /// a zone without a zone_type should not be a parent
     ///(but should be attached to an admin
     #[test]
-    fn hierarchy_test_parent_parent_repect_hierarchy_no_type() {
+    fn hierarchy_test_parent_parent_respect_hierarchy_no_type() {
         let mut zones = create_zones();
 
         // now we change the zone type of z1 to None, so it cannot be parent anymore
