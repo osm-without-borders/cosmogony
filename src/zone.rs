@@ -147,17 +147,6 @@ impl Zone {
             _ => false,
         };
     }
-
-    pub fn get_prepared_ggeom(&self) -> Option<GGeom> {
-        match self.boundary {
-            Some(ref b) => {
-                let ggeom: GGeom = b.into();
-                // Some(PreparedGGeom::new(&ggeom))
-                Some(ggeom)
-            }
-            None => None,
-        }
-    }
 }
 
 // those 2 methods have been shamelessly copied from https://github.com/CanalTP/mimirsbrunn/blob/master/libs/mimir/src/objects.rs#L277

@@ -5,14 +5,12 @@ use gst::rtree::RTree;
 use zone::Zone;
 use utils::bbox_to_rect;
 use geo::boundingbox::BoundingBox;
-use self::geos::GGeom;
 
 const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
 
 pub struct Country {
     iso: String, // ISO3166-1:alpha2 code (eg: FR, DE, US, etc.),
     zone: Zone,
-    ggeom: GGeom,
 }
 
 pub struct CountryFinder {
@@ -37,12 +35,10 @@ impl<'a> FromIterator<&'a Zone> for CountryFinder {
             .into_iter()
             .filter_map(|z| match z.tags.get(COUNTRY_CODE_TAG) {
                 Some(country_code) => {
-                    let code = country_code.to_lowercase();
-                    info!("adding country {}", &code);
+                    info!("adding country {}", &country_code);
                     is_empty = false;
                     Some(Country {
-                        iso: code,
-                        ggeom: z.get_prepared_ggeom().unwrap(),
+                        iso: country_code.clone(),
                         zone: z.clone(),
                     })
                 }
@@ -80,7 +76,7 @@ impl CountryFinder {
                     candidates.sort_by_key(|c| -1 * c.zone.admin_level.unwrap_or(0) as i32);
                     candidates
                         .iter()
-                        .filter(|c| c.ggeom.contains(&(&z.boundary.clone().unwrap()).into()))
+                        .filter(|c| c.zone.contains(&z))
                         .next()
                         .map(|c| c.iso.clone())
                 } else {

@@ -36,7 +36,11 @@ impl ZoneTyper {
             countries_rules: read_libpostal_yaml_folder(&libpostal_files_path)?,
         };
         if z.countries_rules.is_empty() {
-            Err(err_msg(format!("no country rules have been loaded, the directory {:?} must not contain valid libpostal rules", &libpostal_files_path)))
+            Err(err_msg(format!(
+                "no country rules have been loaded, the directory {:?} \
+                 must contains valid libpostal rules",
+                &libpostal_files_path
+            )))
         } else {
             Ok(z)
         }
@@ -48,7 +52,7 @@ impl ZoneTyper {
         country_code: &str,
     ) -> Result<ZoneType, ZoneTyperError> {
         let country_rules = self.countries_rules
-            .get(country_code)
+            .get(&country_code.to_lowercase()) // file postal code are lowercase
             .ok_or(ZoneTyperError::InvalidCountry(country_code.to_string()))?;
         Ok(country_rules
             .type_by_level
