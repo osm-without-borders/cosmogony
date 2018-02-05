@@ -1,7 +1,7 @@
 extern crate geo;
 
 use std::iter::FromIterator;
-use zone::{Zone, ZoneIndex, ZoneType};
+use zone::{Zone, ZoneIndex};
 use gst::rtree::{RTree, Rect};
 use ordered_float::OrderedFloat;
 use geo::Bbox;
@@ -67,25 +67,12 @@ pub fn bbox_to_rect(bbox: Bbox<f64>) -> Rect {
     }
 }
 
-/// Function that tests if an Option<ZoneType> is smaller than other Option<ZoneType>
-/// the ordering depends on the postion in the enum, eg a City is smaller than a State
-fn is_smaller(a: Option<ZoneType>, b: Option<ZoneType>) -> bool {
-    match (a, b) {
-        (None, _) => false,
-        (_, None) => true,
-        (Some(a), Some(b)) => a < b,
-    }
-}
-
 impl Zone {
     /// a zone can be a child of another zone z if:
     /// z is an admin (we don't want to have non administrative zones as parent)
     /// z's type is larger (so a State cannot have a City as parent)
-    fn can_be_linked_to(&self, z: &Zone) -> bool {
-        z.is_admin() && match self.zone_type {
-            Some(ZoneType::NonAdministrative) | None => true,
-            _ => is_smaller(self.zone_type, z.zone_type),
-        }
+    fn can_be_child_of(&self, z: &Zone) -> bool {
+        z.is_admin() && (!self.is_admin() || self.zone_type < z.zone_type)
     }
 }
 
@@ -115,7 +102,7 @@ pub fn build_hierarchy(zones: &mut [Zone]) {
             .filter(|c_idx| c_idx.index != i)
             .filter_map(|c_idx| {
                 let c = mslice.get(&c_idx);
-                if z.can_be_linked_to(c) {
+                if z.can_be_child_of(c) {
                     Some(c)
                 } else {
                     None
@@ -125,10 +112,9 @@ pub fn build_hierarchy(zones: &mut [Zone]) {
                 // we test first that the candidate's type is smaller that the smallest
                 // since the contains is not cheap and if we already found a State that
                 // contains `z` we can skip testing the country
-                if is_smaller(
-                    candidate.zone_type,
-                    smallest.and_then(|s: &Zone| s.zone_type),
-                ) && candidate.contains(z)
+                if (smallest.is_none()
+                    || candidate.zone_type < smallest.and_then(|s: &Zone| s.zone_type))
+                    && candidate.contains(z)
                 {
                     Some(candidate)
                 } else {
@@ -206,31 +192,6 @@ mod test {
             wikidata: None,
             zip_codes: vec![],
         }
-    }
-
-    #[test]
-    fn test_is_smaller_simple() {
-        let smallest = Some(ZoneType::City);
-        let candidate = Some(ZoneType::Country);
-        assert_eq!(super::is_smaller(smallest, candidate), true);
-    }
-    #[test]
-    fn test_is_smaller_first_none() {
-        let smallest = None;
-        let candidate = Some(ZoneType::Country);
-        assert_eq!(super::is_smaller(smallest, candidate), false);
-    }
-    #[test]
-    fn test_is_smaller_second_none() {
-        let smallest = Some(ZoneType::City);
-        let candidate = None;
-        assert_eq!(super::is_smaller(smallest, candidate), true);
-    }
-    #[test]
-    fn test_is_smaller_equal() {
-        let smallest = Some(ZoneType::City);
-        let candidate = Some(ZoneType::City);
-        assert_eq!(super::is_smaller(smallest, candidate), false);
     }
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -316,7 +277,7 @@ mod test {
         let mut zones = create_zones();
 
         // now we change the zone type of z2 to a State,
-        // so it cannot have a state has parent anymore
+        // so it cannot have a state as parent anymore
         zones[2].zone_type = Some(ZoneType::State);
 
         build_hierarchy(&mut zones);
@@ -333,7 +294,7 @@ mod test {
         let mut zones = create_zones();
 
         // now we change the zone type of z2 to a CountryRegion,
-        // so it cannot have a state has parent anymore
+        // so it cannot have a state as parent anymore
         zones[2].zone_type = Some(ZoneType::CountryRegion);
 
         build_hierarchy(&mut zones);
