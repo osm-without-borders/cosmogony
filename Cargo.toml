@@ -7,8 +7,8 @@ build = "build.rs"
 [dependencies]
 log = "0.4"
 geo = "0.4"
-mimir = { git = "https://github.com/antoine-de/mimirsbrunn.git", branch = "fix_lat_lon" }
-mimirsbrunn = { git = "https://github.com/antoine-de/mimirsbrunn.git", branch = "fix_lat_lon" }
+mimir = { git = "https://github.com/CanalTP/mimirsbrunn.git" }
+mimirsbrunn = { git = "https://github.com/CanalTP/mimirsbrunn.git" }
 structopt = "0.1"
 structopt-derive = "0.1"
 osmpbfreader = "*"
