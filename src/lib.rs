@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate failure;
+extern crate geo;
+extern crate gst;
 #[macro_use]
 extern crate log;
 extern crate mimirsbrunn;
+extern crate ordered_float;
 extern crate osmpbfreader;
 #[macro_use]
 extern crate serde_derive;
@@ -10,6 +13,7 @@ extern crate serde_yaml;
 extern crate structopt;
 
 pub mod zone;
+mod hierarchy_builder;
 pub mod cosmogony;
 pub mod zone_typer;
 
@@ -18,8 +22,10 @@ use std::path::{Path, PathBuf};
 use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
+use hierarchy_builder::build_hierarchy;
 use failure::Error;
 use failure::ResultExt;
+use zone::ZoneIndex;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -51,13 +57,15 @@ pub fn get_zones_and_stats(
             continue;
         }
         if let OsmObj::Relation(ref relation) = *obj {
-            if let Some(zone) = zone::Zone::from_osm_with_geom(relation, &objects) {
+            let next_index = ZoneIndex { index: zones.len() };
+            if let Some(zone) = zone::Zone::from_osm_with_geom(relation, &objects, next_index) {
                 // Ignore zone without boundary polygon
+
                 if zone.boundary.is_some() {
                     stats.process(&zone);
                     zones.push(zone);
                 }
-            }
+            };
         }
     }
 
@@ -77,7 +85,8 @@ pub fn get_zones_and_stats_without_geom(
             continue;
         }
         if let OsmObj::Relation(ref relation) = obj {
-            if let Some(zone) = zone::Zone::from_osm(relation) {
+            let next_index = ZoneIndex { index: zones.len() };
+            if let Some(zone) = zone::Zone::from_osm(relation, next_index) {
                 stats.process(&zone);
                 zones.push(zone);
             }
@@ -96,7 +105,7 @@ fn get_country<'a>(_zone: &zone::Zone, country_code: &'a Option<String>) -> Resu
     }
 }
 
-fn create_ontology(
+fn type_zones(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
     libpostal_file_path: PathBuf,
@@ -124,6 +133,18 @@ fn create_ontology(
             }
         }
     }
+    Ok(())
+}
+
+fn create_ontology(
+    zones: &mut Vec<zone::Zone>,
+    stats: &mut CosmogonyStats,
+    libpostal_file_path: PathBuf,
+    country_code: Option<String>,
+) -> Result<(), Error> {
+    type_zones(zones, stats, libpostal_file_path, country_code)?;
+
+    build_hierarchy(zones);
     Ok(())
 }
 
