@@ -2,8 +2,9 @@ extern crate geo;
 
 use std::iter::FromIterator;
 use zone::{Zone, ZoneIndex};
-use gst::rtree::{RTree, Rect};
+use gst::rtree::RTree;
 use geo::boundingbox::BoundingBox;
+use utils::bbox_to_rect;
 
 pub struct ZonesTree {
     tree: RTree<ZoneIndex>,
