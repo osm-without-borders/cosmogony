@@ -15,18 +15,24 @@ The general idea of the project is to take OpenStreetMap data and:
 ### Get data
 :construction: We may provide direct data download in the future. For now, you have to extract your geographic regions by yourself :construction:
 
+### Create data
+You can build cosmogony to extract the regions on your own.
 #### Build
 You will need
 * rust (`curl https://sh.rustup.rs -sSf | sh`)
 * GEOS (`apt-get install libgeos-dev`)
 
+Clone this repo and update the git submodules (`git submodule update --init`)
+
 Then, build cosmogony: `cargo build --release`
+
+#### Run
 
 You can now grab some OSM pbf and extract your geographic zones:
 
-`./target/release/cosmogony -i /path/to/your/file.osm.pbf --libpostal /path/to/libpostal/rules/folder/ -o /path/for/output/file`
+`cargo run --release -- --libpostal ./libpostal/resources/boundaries/osm/ -i /path/to/your/file.osm.pbf -o /path/for/output/file`
 
-Check out cosmogony help for more options: `./target/release/cosmogony -h`
+Check out cosmogony help for more options: `cargo run --release -- -h`
 
 ### Use data
 :construction: In the future, we may provide tools to explore, debug and use the data. Please share your ideas and needs in the issues :construction:
@@ -75,7 +81,7 @@ The libpostal types seems nice (and made by brighter people than us):
 :construction:
 
 ## Dataset quality test
-:construction: how we plan to ensure the quality of the released dataset. Contributions welcomed in issue #4 :construction:
+:construction: how we plan to ensure the quality of the released dataset. Contributions welcomed in [issue #4](https://github.com/osm-without-borders/cosmogony/issues/4) :construction:
 
 ## See also
 #### [Mapzen borders](https://mapzen.com/data/borders/) project
