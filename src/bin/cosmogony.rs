@@ -1,8 +1,8 @@
 extern crate cosmogony;
+extern crate env_logger;
 extern crate failure;
 #[macro_use]
 extern crate log;
-extern crate mimir;
 extern crate serde_json;
 extern crate structopt;
 #[macro_use]
@@ -66,7 +66,7 @@ fn cosmogony(args: Args) -> Result<(), Error> {
 }
 
 fn main() {
-    mimir::logger_init();
+    env_logger::init();
     let args = Args::from_args();
     match cosmogony(args) {
         Err(e) => {
