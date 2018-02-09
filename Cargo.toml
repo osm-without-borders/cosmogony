@@ -22,4 +22,4 @@ failure_derive = "0.1"
 gst = "0.1.3"
 ordered-float = "0.0.2"
 geos = { git = "https://github.com/amatissart/rust-geos.git" }
-osm_boundaries_utils = { git = "https://github.com/QwantResearch/osm_boundaries_utils_rs", branch = "init" }
+osm_boundaries_utils = { git = "https://github.com/QwantResearch/osm_boundaries_utils_rs", version = "0.1" }
