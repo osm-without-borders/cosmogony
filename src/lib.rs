@@ -4,8 +4,8 @@ extern crate geo;
 extern crate gst;
 #[macro_use]
 extern crate log;
-extern crate mimirsbrunn;
 extern crate ordered_float;
+extern crate osm_boundaries_utils;
 extern crate osmpbfreader;
 #[macro_use]
 extern crate serde_derive;
