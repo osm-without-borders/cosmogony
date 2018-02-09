@@ -10,7 +10,6 @@ use osm_boundaries_utils::build_boundary;
 use std::collections::BTreeMap;
 use self::geos::GGeom;
 use self::serde::Serialize;
-use self::serde;
 use std::fmt;
 use geo::Point;
 
