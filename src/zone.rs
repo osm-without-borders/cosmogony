@@ -10,6 +10,8 @@ use osm_boundaries_utils::build_boundary;
 use std::collections::BTreeMap;
 use self::geos::GGeom;
 use self::serde::Serialize;
+use self::serde;
+use std::fmt;
 use geo::Point;
 
 type Coord = Point<f64>;
@@ -32,7 +34,7 @@ pub struct ZoneIndex {
     pub index: usize,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Zone {
     pub id: ZoneIndex,
     pub osm_id: String,
@@ -40,12 +42,12 @@ pub struct Zone {
     pub zone_type: Option<ZoneType>,
     pub name: String,
     pub zip_codes: Vec<String>,
+    #[serde(serialize_with = "serialize_as_geojson", deserialize_with = "deserialize_as_coord")]
     pub center: Option<Coord>,
-    #[serde(serialize_with = "serialize_as_geojson", deserialize_with = "deserialize_as_geojson",
-            rename = "geometry", default)]
+    #[serde(serialize_with = "serialize_as_geojson",
+            deserialize_with = "deserialize_as_multipolygon", rename = "geometry", default)]
     pub boundary: Option<geo::MultiPolygon<f64>>,
 
-    #[serde(skip_serializing)]
     pub tags: Tags,
 
     pub parent: Option<ZoneIndex>,
@@ -151,11 +153,12 @@ impl Zone {
 
 // those 2 methods have been shamelessly copied from https://github.com/CanalTP/mimirsbrunn/blob/master/libs/mimir/src/objects.rs#L277
 // see if there is a good way to share the code
-fn serialize_as_geojson<S>(
-    multi_polygon_option: &Option<geo::MultiPolygon<f64>>,
+fn serialize_as_geojson<'a, S, T>(
+    multi_polygon_option: &'a Option<T>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
+    geojson::Value: From<&'a T>,
     S: serde::Serializer,
 {
     use self::geojson::{GeoJson, Geometry, Value};
@@ -169,7 +172,7 @@ where
     }
 }
 
-fn deserialize_as_geojson<'de, D>(d: D) -> Result<Option<geo::MultiPolygon<f64>>, D::Error>
+fn deserialize_geom<'de, D>(d: D) -> Result<Option<geo::Geometry<f64>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -182,8 +185,7 @@ where
             geojson::GeoJson::Geometry(geojson_geom) => {
                 let geo_geom: Result<geo::Geometry<f64>, _> = geojson_geom.value.try_into();
                 match geo_geom {
-                    Ok(geo::Geometry::MultiPolygon(geo_multi_polygon)) => Some(geo_multi_polygon),
-                    Ok(_) => None,
+                    Ok(g) => Some(g),
                     Err(e) => {
                         warn!("Error deserializing geometry: {}", e);
                         None
@@ -195,11 +197,65 @@ where
     })
 }
 
+fn deserialize_as_multipolygon<'de, D>(d: D) -> Result<Option<geo::MultiPolygon<f64>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match deserialize_geom(d)? {
+        Some(geo::Geometry::MultiPolygon(geo_multi_polygon)) => Ok(Some(geo_multi_polygon)),
+        None => Ok(None),
+        Some(_) => Err(serde::de::Error::custom(
+            "invalid geometry type, should be a multipolygon",
+        )),
+    }
+}
+
+fn deserialize_as_coord<'de, D>(d: D) -> Result<Option<Coord>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match deserialize_geom(d)? {
+        Some(geo::Geometry::Point(p)) => Ok(Some(p)),
+        None => Ok(None),
+        Some(_) => Err(serde::de::Error::custom(
+            "invalid geometry type, should be a point",
+        )),
+    }
+}
+
 impl Serialize for ZoneIndex {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         serializer.serialize_u64(self.index as u64)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ZoneIndex {
+    fn deserialize<D>(deserializer: D) -> Result<ZoneIndex, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_u64(ZoneIndexVisitor)
+    }
+}
+
+struct ZoneIndexVisitor;
+
+impl<'de> serde::de::Visitor<'de> for ZoneIndexVisitor {
+    type Value = ZoneIndex;
+
+    fn visit_u64<E>(self, data: u64) -> Result<ZoneIndex, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(ZoneIndex {
+            index: data as usize,
+        })
+    }
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a zone index")
     }
 }
