@@ -29,7 +29,7 @@ use failure::Error;
 use failure::ResultExt;
 use country_finder::CountryFinder;
 
-pub use zone::{Zone, ZoneType, ZoneIndex};
+pub use zone::{Zone, ZoneIndex, ZoneType};
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn is_admin(obj: &OsmObj) -> bool {
