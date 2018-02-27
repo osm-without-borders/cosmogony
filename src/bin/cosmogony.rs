@@ -24,8 +24,8 @@ struct Args {
     /// output file name
     #[structopt(short = "o", long = "output")]
     output: Option<String>,
-    #[structopt(long = "print-stats", default_value = "true")]
-    print_stats: bool,
+    #[structopt(help = "Do not display the stats", long = "no-stats")]
+    no_stats: bool,
     #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom")]
     disable_geom: bool,
     #[structopt(help = "country code if the pbf file does not contains any country",
@@ -55,7 +55,7 @@ fn cosmogony(args: Args) -> Result<(), Error> {
         serialize_to_json(&cosmogony, output)?;
     }
 
-    if args.print_stats {
+    if !args.no_stats {
         println!(
             "Statistics for {}:\n{}",
             cosmogony.meta.osm_filename, cosmogony.meta.stats
