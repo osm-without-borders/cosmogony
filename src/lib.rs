@@ -64,7 +64,7 @@ pub fn get_zones_and_stats(
             if let Some(zone) = zone::Zone::from_osm_with_geom(relation, &objects, next_index) {
                 // Ignore zone without boundary polygon for the moment
                 if zone.boundary.is_some() {
-                    stats.process(&zone);
+                    stats.init(&zone);
                     zones.push(zone);
                 }
             };
@@ -89,7 +89,7 @@ pub fn get_zones_and_stats_without_geom(
         if let OsmObj::Relation(ref relation) = obj {
             let next_index = ZoneIndex { index: zones.len() };
             if let Some(zone) = zone::Zone::from_osm(relation, next_index) {
-                stats.process(&zone);
+                stats.init(&zone);
                 zones.push(zone);
             }
         }
@@ -190,6 +190,10 @@ pub fn build_cosmogony(
     };
 
     create_ontology(&mut zones, &mut stats, libpostal_file_path, country_code)?;
+
+    if with_geom {
+        stats.process_zone_types(&zones);
+    }
 
     let cosmogony = Cosmogony {
         zones: zones,

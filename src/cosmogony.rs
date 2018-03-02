@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use zone::Zone;
+use zone::ZoneType;
 
 #[derive(Serialize, Debug, Clone)]
 pub struct Cosmogony {
@@ -18,6 +19,7 @@ pub struct CosmogonyMetadata {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct CosmogonyStats {
     pub level_counts: BTreeMap<u32, u64>,
+    pub zone_type_counts: BTreeMap<ZoneType, u64>,
     pub wikidata_counts: BTreeMap<u32, u64>,
     pub zone_with_unkwown_country_rules: BTreeMap<String, usize>,
     pub unhandled_admin_level: BTreeMap<String, BTreeMap<u32, usize>>,
@@ -25,7 +27,7 @@ pub struct CosmogonyStats {
 }
 
 impl CosmogonyStats {
-    pub fn process(&mut self, zone: &Zone) {
+    pub fn init(&mut self, zone: &Zone) {
         zone.admin_level.map(|level| {
             let count = self.level_counts.entry(level).or_insert(0);
             *count += 1;
@@ -35,6 +37,15 @@ impl CosmogonyStats {
             }
         });
     }
+    pub fn process_zone_types(&mut self, zones: &Vec<Zone>) {
+        for zone in zones {
+            let type_ = zone.zone_type
+                .unwrap_or(ZoneType::NonAdministrative)
+                .to_owned();
+            let count = self.zone_type_counts.entry(type_).or_insert(0);
+            *count += 1;
+        }
+    }
 }
 
 impl fmt::Display for CosmogonyStats {
@@ -43,6 +54,9 @@ impl fmt::Display for CosmogonyStats {
             let wd = self.wikidata_counts.get(level).unwrap_or(&0u64);
             write!(f, "Admin level {}: {} elements\n", level, count)?;
             write!(f, "    {} with wikidata id\n", wd)?;
+        }
+        for (zone_type, count) in &self.zone_type_counts {
+            write!(f, "{:?}: {} elements\n", zone_type, count)?;
         }
 
         Ok(())
