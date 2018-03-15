@@ -87,3 +87,26 @@ fn test_lux_admin_levels_with_serialisation() {
 
     test_wrapper_for_lux_admin_levels(cosmogony_from_json);
 }
+
+#[test]
+fn test_lux_zone_types() {
+    // Check the zone types in the built cosmogony
+    let cosmogony = create_cosmogony_for_lux();
+    let zone_type_counts = cosmogony.meta.stats.zone_type_counts;
+
+    fn assert_count(counts: &BTreeMap<String, u64>, key: String, value: u64) {
+        assert_eq!(
+            *counts.get(&key).unwrap_or(&0),
+            value,
+            "Expected {} elements of type {}",
+            value,
+            key
+        )
+    }
+    assert_count(&zone_type_counts, format!("Suburb"), 79);
+    assert_count(&zone_type_counts, format!("City"), 105);
+    assert_count(&zone_type_counts, format!("StateDistrict"), 13);
+    assert_count(&zone_type_counts, format!("State"), 0);
+    assert_count(&zone_type_counts, format!("Country"), 1);
+    assert_count(&zone_type_counts, format!("None"), 3);
+}
