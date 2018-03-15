@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use zone::Zone;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Cosmogony {
     pub zones: Vec<Zone>,
     pub meta: CosmogonyMetadata,
