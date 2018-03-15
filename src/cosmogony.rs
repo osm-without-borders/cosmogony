@@ -3,7 +3,7 @@ use std::fmt;
 use zone::Zone;
 extern crate serde;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Cosmogony {
     pub zones: Vec<Zone>,
     pub meta: CosmogonyMetadata,
