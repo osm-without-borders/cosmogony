@@ -35,7 +35,10 @@ You can now grab some OSM pbf and extract your geographic zones:
 Check out cosmogony help for more options: `cargo run --release -- -h`
 
 ### Use data
-:construction: In the future, we may provide tools to explore, debug and use the data. Please share your ideas and needs in the issues :construction:
+
+You can get an idea of the coverage, view zones metadata and inspect the hierarchy with our awesome [Cosmogony Explorer]( https://github.com/osm-without-borders/cosmogony_explorer)
+
+:construction: In the future, we may provide other tools to explore, debug and use the data. Please share your ideas and needs in the issues :construction:
 
 ## Why ?
 
