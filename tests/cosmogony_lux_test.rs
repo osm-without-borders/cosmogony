@@ -73,6 +73,7 @@ fn test_lux_admin_levels() {
     // administrative zones are loaded from the sample .osm.pbf file,
     // with correct counts per admin_level.
     let cosmogony = create_cosmogony_for_lux();
+
     test_wrapper_for_lux_admin_levels(cosmogony);
 }
 
@@ -94,19 +95,19 @@ fn test_lux_zone_types() {
     let cosmogony = create_cosmogony_for_lux();
     let zone_type_counts = cosmogony.meta.stats.zone_type_counts;
 
-    fn assert_count(counts: &BTreeMap<String, u64>, key: String, value: u64) {
+    fn assert_count(counts: &BTreeMap<String, u64>, key: &str, value: u64) {
         assert_eq!(
-            *counts.get(&key).unwrap_or(&0),
+            *counts.get(key).unwrap_or(&0),
             value,
             "Expected {} elements of type {}",
             value,
             key
         )
     }
-    assert_count(&zone_type_counts, format!("Suburb"), 79);
-    assert_count(&zone_type_counts, format!("City"), 105);
-    assert_count(&zone_type_counts, format!("StateDistrict"), 13);
-    assert_count(&zone_type_counts, format!("State"), 0);
-    assert_count(&zone_type_counts, format!("Country"), 1);
-    assert_count(&zone_type_counts, format!("None"), 3);
+    assert_count(&zone_type_counts, "Suburb", 79);
+    assert_count(&zone_type_counts, "City", 105);
+    assert_count(&zone_type_counts, "StateDistrict", 13);
+    assert_count(&zone_type_counts, "State", 0);
+    assert_count(&zone_type_counts, "Country", 1);
+    assert_count(&zone_type_counts, "None", 3);
 }
