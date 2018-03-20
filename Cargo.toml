@@ -7,7 +7,7 @@ build = "build.rs"
 [dependencies]
 log = "0.4"
 env_logger = "0.5"
-geo = "0.4"
+geo = "0.6"
 structopt = "0.1"
 structopt-derive = "0.1"
 osmpbfreader = "*"
@@ -16,13 +16,11 @@ serde_derive = "1"
 serde_json = "1"
 serde_yaml = "0.7"
 itertools = "*"
-geojson = "0.8"
+geojson = "0.9"
 failure = "0.1"
 failure_derive = "0.1"
 gst = "0.1.3"
 ordered-float = "0.0.2"
-geos = { git = "https://github.com/amatissart/rust-geos.git" }
-osm_boundaries_utils = { git = "https://github.com/QwantResearch/osm_boundaries_utils_rs", version = "0.1" }
+geos = { git = "https://github.com/QwantResearch/rust-geos.git", branch="deps" }
+osm_boundaries_utils = { git = "https://github.com/QwantResearch/osm_boundaries_utils_rs", branch="inner" }
 
-[patch.crates-io]
-osmpbfreader = { git = "https://github.com/antoine-de/osmpbfreader-rs", branch = "flat_map_serialiaze" }
