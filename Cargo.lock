@@ -127,12 +127,12 @@ dependencies = [
  "failure_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "geo 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "geojson 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "geos 0.0.1 (git+https://github.com/QwantResearch/rust-geos.git?branch=deps)",
+ "geos 0.0.1 (git+https://github.com/QwantResearch/rust-geos.git)",
  "gst 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ordered-float 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "osm_boundaries_utils 0.1.0 (git+https://github.com/QwantResearch/osm_boundaries_utils_rs?branch=inner)",
+ "osm_boundaries_utils 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "osmpbfreader 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -263,7 +263,7 @@ dependencies = [
 [[package]]
 name = "geos"
 version = "0.0.1"
-source = "git+https://github.com/QwantResearch/rust-geos.git?branch=deps#627cd62963302760361906ba96adea03a4433f40"
+source = "git+https://github.com/QwantResearch/rust-geos.git#21ffe68ea525016b199653df4b55ec8e4d2e3be7"
 dependencies = [
  "geo 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.39 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -466,8 +466,8 @@ dependencies = [
 
 [[package]]
 name = "osm_boundaries_utils"
-version = "0.1.0"
-source = "git+https://github.com/QwantResearch/osm_boundaries_utils_rs?branch=inner#4bfb92e0837f9f3e97d58aa12d77dc2e87bf9033"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "geo 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -911,7 +911,7 @@ dependencies = [
 "checksum generic-array 0.8.3 (registry+https://github.com/rust-lang/crates.io-index)" = "fceb69994e330afed50c93524be68c42fa898c2d9fd4ee8da03bd7363acd26f2"
 "checksum geo 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)" = "0f3f587a8e7ce8b1633c44a4a24bbeb6dad09f1db740ec335a072e7a1eeb6de8"
 "checksum geojson 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b3484ce9e9560be7e5dffe685dfe2cf2dbf785fc3dac2f193fb42c56a797c3d1"
-"checksum geos 0.0.1 (git+https://github.com/QwantResearch/rust-geos.git?branch=deps)" = "<none>"
+"checksum geos 0.0.1 (git+https://github.com/QwantResearch/rust-geos.git)" = "<none>"
 "checksum gst 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "89d64d16c4e0ab924799d713bf939dd16a2e9d3e71afe9f2b2977f38a04e0188"
 "checksum humantime 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0484fda3e7007f2a4a0d9c3a703ca38c71c54c55602ce4660c419fd32e188c9e"
 "checksum itertools 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)" = "23d53b4c7394338044c3b9c8c5b2caaf7b40ae049ecd321578ebdc2e13738cd1"
@@ -936,7 +936,7 @@ dependencies = [
 "checksum num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c51a3322e4bca9d212ad9a158a02abc6934d005490c054a2778df73a70aa0a30"
 "checksum odds 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)" = "4eae0151b9dacf24fcc170d9995e511669a082856a91f958a2fe380bfab3fb22"
 "checksum ordered-float 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e312d9bf410688e9c292d9e7da4567143c0ad18df8fceb6ce99156f40cef2"
-"checksum osm_boundaries_utils 0.1.0 (git+https://github.com/QwantResearch/osm_boundaries_utils_rs?branch=inner)" = "<none>"
+"checksum osm_boundaries_utils 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f61323c1b76e2a196489df9e021a6270443a6354530794c0ee4892da8a3ff0d8"
 "checksum osmpbfreader 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)" = "bda4b6655f97c1ed0f0e93a95bc231de3b519364d389496092353b2a9bd478d0"
 "checksum par-map 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a148044b62c5002054d4a164b352cf1439fffed060073703e08ba0863d56fdaf"
 "checksum pdqselect 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4ec91767ecc0a0bbe558ce8c9da33c068066c57ecc8bb8477ef8c1ad3ef77c27"
