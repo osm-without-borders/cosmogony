@@ -2,7 +2,6 @@
 name = "cosmogony"
 version = "0.1.0"
 authors = ["Adrien Matissart <a.matissart@qwantresearch.com>"]
-build = "build.rs"
 
 [dependencies]
 log = "0.4"
@@ -22,4 +21,4 @@ failure_derive = "0.1"
 gst = "0.1.3"
 ordered-float = "0.0.2"
 osm_boundaries_utils = "0.2"
-geos = { git = "https://github.com/QwantResearch/rust-geos.git"}
+geos = "0.2"
