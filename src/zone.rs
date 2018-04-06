@@ -13,7 +13,9 @@ use self::geos::GGeom;
 use self::serde::Serialize;
 use std::fmt;
 use geo::Point;
+use mutable_slice::MutableSlice;
 use zone::geos::from_geo::TryInto;
+
 type Coord = Point<f64>;
 
 #[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -29,7 +31,7 @@ pub enum ZoneType {
     NonAdministrative,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZoneIndex {
     pub index: usize,
 }
@@ -41,6 +43,7 @@ pub struct Zone {
     pub admin_level: Option<u32>,
     pub zone_type: Option<ZoneType>,
     pub name: String,
+    pub label: String,
     pub zip_codes: Vec<String>,
     #[serde(serialize_with = "serialize_as_geojson", deserialize_with = "deserialize_as_coord")]
     pub center: Option<Coord>,
@@ -99,10 +102,11 @@ impl Zone {
 
         Some(Self {
             id: index,
-            osm_id: relation.id.0.to_string(),
+            osm_id: format!("relation:{}", relation.id.0.to_string()), // for the moment we can only read relation
             admin_level: level,
             zone_type: None,
             name: name.to_string(),
+            label: "".to_string(),
             zip_codes: zip_codes,
             center: None,
             boundary: None,
@@ -158,7 +162,7 @@ impl Zone {
                             serde_json::to_string(&self)
                         );
                         false
-                    }
+                    },
                     (_, &Err(ref e)) => {
                         info!(
                             "impossible to convert to geos for zone {:?}, error {}",
@@ -173,6 +177,84 @@ impl Zone {
                 }
             }
             _ => false,
+        }
+    }
+
+    pub fn iter_parents<'a>(&'a self, all_zones: &'a MutableSlice) -> ParentIterator<'a> {
+        ParentIterator {
+            zone: &self,
+            all_zones: all_zones,
+        }
+    }
+
+    /// compute a nice human readable label
+    /// The label carries the hierarchy of a zone.
+    ///
+    /// This label is inspired from
+    /// [opencage formatting](https://blog.opencagedata.com/post/99059889253/good-looking-addresses-solving-the-berlin-berlin)
+    ///
+    /// and from the [mimirsbrunn](https://github.com/CanalTP/mimirsbrunn) zip code formatting
+    ///
+    /// example of zone's label:
+    /// Paris (75000-75116), Île-de-France, France
+    pub fn compute_label(&mut self, all_zones: &MutableSlice) {
+        let mut label = format!(
+            "{n}{zip}",
+            n = self.name.clone(),
+            zip = format_zip_code(&self.zip_codes)
+        );
+        {
+            let parent_labels = self.iter_parents(all_zones)
+                .map(|z| z.name.clone())
+                .filter(|n| n != &self.name)
+                .dedup()
+                .join(", ");
+
+            if !parent_labels.is_empty() {
+                label.push_str(", ");
+                label.push_str(&parent_labels);
+            }
+        }
+
+        self.label = label;
+    }
+}
+
+/// format the zone's zip code
+/// if no zipcode, we return an empty string
+/// if only one zipcode, we return it between ()
+/// if more than one we display the range of zips code
+///
+/// This way for example Paris will get " (75000-75116)"
+///
+/// ruthlessly taken from mimir
+fn format_zip_code(zip_codes: &[String]) -> String {
+    match zip_codes.len() {
+        0 => "".to_string(),
+        1 => format!(" ({})", zip_codes.first().unwrap()),
+        _ => format!(
+            " ({}-{})",
+            zip_codes.first().unwrap(),
+            zip_codes.last().unwrap()
+        ),
+    }
+}
+
+pub struct ParentIterator<'a> {
+    zone: &'a Zone,
+    all_zones: &'a MutableSlice<'a>,
+}
+
+impl<'a> Iterator for ParentIterator<'a> {
+    type Item = &'a Zone;
+    fn next(&mut self) -> Option<&'a Zone> {
+        let p = &self.zone.parent;
+        match p {
+            &Some(ref z_idx) => {
+                self.zone = self.all_zones.get(&z_idx);
+                Some(self.zone)
+            }
+            &None => None,
         }
     }
 }
@@ -283,5 +365,69 @@ impl<'de> serde::de::Visitor<'de> for ZoneIndexVisitor {
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("a zone index")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    fn make_zone(name: &str, id: usize) -> Zone {
+        make_zone_and_zip(name, id, vec![], None)
+    }
+
+    fn make_zone_and_zip(name: &str, id: usize, zips: Vec<&str>, parent: Option<usize>) -> Zone {
+        Zone {
+            id: ZoneIndex { index: id },
+            osm_id: "".into(),
+            admin_level: None,
+            zone_type: Some(ZoneType::City),
+            name: name.into(),
+            label: "".into(),
+            center: None,
+            boundary: None,
+            parent: parent.map(|p| ZoneIndex { index: p }),
+            tags: Tags::new(),
+            wikidata: None,
+            zip_codes: zips.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn simple_label_test() {
+        let mut zones = vec![make_zone("toto", 0)];
+
+        let (mslice, z) = MutableSlice::init(&mut zones, 0);
+        z.compute_label(&mslice);
+        assert_eq!(z.label, "toto");
+    }
+
+    #[test]
+    fn label_with_zip_and_parent() {
+        let mut zones = vec![
+            make_zone_and_zip("bob", 0, vec!["75020", "75021", "75022"], Some(1)),
+            make_zone_and_zip("bob sur mer", 1, vec!["75"], Some(2)), // it's zip code shouldn't be used
+            make_zone("bobette's land", 2),
+        ];
+
+        let (mslice, z) = MutableSlice::init(&mut zones, 0);
+        z.compute_label(&mslice);
+        assert_eq!(z.label, "bob (75020-75022), bob sur mer, bobette's land");
+    }
+
+    #[test]
+    fn label_with_zip_and_double_parent() {
+        // we should not have any double in the label
+        let mut zones = vec![
+            make_zone_and_zip("bob", 0, vec!["75020"], Some(1)),
+            make_zone_and_zip("bob", 1, vec![], Some(2)),
+            make_zone_and_zip("bob", 2, vec![], Some(3)),
+            make_zone_and_zip("bob sur mer", 3, vec!["75"], Some(4)),
+            make_zone_and_zip("bob sur mer", 4, vec!["75"], Some(5)),
+            make_zone("bobette's land", 5),
+        ];
+
+        let (mslice, z) = MutableSlice::init(&mut zones, 0);
+        z.compute_label(&mslice);
+        assert_eq!(z.label, "bob (75020), bob sur mer, bobette's land");
     }
 }

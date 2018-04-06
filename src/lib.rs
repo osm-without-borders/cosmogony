@@ -16,6 +16,7 @@ pub mod zone;
 mod hierarchy_builder;
 mod country_finder;
 mod utils;
+mod mutable_slice;
 pub mod cosmogony;
 pub mod zone_typer;
 
@@ -28,6 +29,7 @@ use hierarchy_builder::build_hierarchy;
 use failure::Error;
 use failure::ResultExt;
 use country_finder::CountryFinder;
+use mutable_slice::MutableSlice;
 
 pub use zone::{Zone, ZoneIndex, ZoneType};
 
@@ -159,6 +161,14 @@ fn type_zones(
     Ok(())
 }
 
+fn compute_labels(zones: &mut [Zone]) {
+    let nb_zones = zones.len();
+    for i in 0..nb_zones {
+        let (mslice, z) = MutableSlice::init(zones, i);
+        z.compute_label(&mslice);
+    }
+}
+
 fn create_ontology(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
@@ -168,6 +178,9 @@ fn create_ontology(
     type_zones(zones, stats, libpostal_file_path, country_code)?;
 
     build_hierarchy(zones);
+
+    compute_labels(zones);
+
     Ok(())
 }
 
