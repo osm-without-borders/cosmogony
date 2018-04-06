@@ -234,8 +234,8 @@ fn format_zip_code(zip_codes: &[String]) -> String {
         1 => format!(" ({})", zip_codes.first().unwrap()),
         _ => format!(
             " ({}-{})",
-            zip_codes.first().unwrap(),
-            zip_codes.last().unwrap()
+            zip_codes.first().unwrap_or(&"".to_string()),
+            zip_codes.last().unwrap_or(&"".to_string())
         ),
     }
 }
