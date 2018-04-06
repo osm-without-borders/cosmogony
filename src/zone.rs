@@ -3,6 +3,7 @@ extern crate geojson;
 extern crate geos;
 extern crate itertools;
 extern crate serde;
+extern crate serde_json;
 
 use self::itertools::Itertools;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
@@ -12,7 +13,7 @@ use self::geos::GGeom;
 use self::serde::Serialize;
 use std::fmt;
 use geo::Point;
-
+use zone::geos::from_geo::TryInto;
 type Coord = Point<f64>;
 
 #[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -136,17 +137,43 @@ impl Zone {
     }
 
     pub fn contains(&self, other: &Zone) -> bool {
-        return match (&self.boundary, &other.boundary) {
+        match (&self.boundary, &other.boundary) {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
-                let m_self: GGeom = mpoly1.into();
-                let m_other: GGeom = mpoly2.into();
+                let m_self: Result<GGeom, _> = mpoly1.try_into();
+                let m_other: Result<GGeom, _> = mpoly2.try_into();
 
-                // In GEOS, "covers" is less strict than "contains".
-                // eg: a polygon does NOT "contain" its boundary, but "covers" it.
-                m_self.covers(&m_other)
+                match (&m_self, &m_other) {
+                    (&Ok(ref m_self), &Ok(ref m_other)) => {
+                        // In GEOS, "covers" is less strict than "contains".
+                        // eg: a polygon does NOT "contain" its boundary, but "covers" it.
+                        m_self.covers(&m_other)
+                    }
+                    (&Err(ref e), _) => {
+                        info!(
+                            "impossible to convert to geos for zone {:?}, error {}",
+                            &self.osm_id, e
+                        );
+                        debug!(
+                            "impossible to convert to geos the zone {:?}",
+                            serde_json::to_string(&self)
+                        );
+                        false
+                    }
+                    (_, &Err(ref e)) => {
+                        info!(
+                            "impossible to convert to geos for zone {:?}, error {}",
+                            &other.osm_id, e
+                        );
+                        debug!(
+                            "impossible to convert to geos the zone {:?}",
+                            serde_json::to_string(&other)
+                        );
+                        false
+                    }
+                }
             }
             _ => false,
-        };
+        }
     }
 }
 
