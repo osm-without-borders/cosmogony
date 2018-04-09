@@ -44,6 +44,7 @@ pub struct Zone {
     pub admin_level: Option<u32>,
     pub zone_type: Option<ZoneType>,
     pub name: String,
+    #[serde(default)]
     pub label: String,
     pub zip_codes: Vec<String>,
     #[serde(serialize_with = "serialize_as_geojson", deserialize_with = "deserialize_as_coord")]
