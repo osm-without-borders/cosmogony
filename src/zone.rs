@@ -15,6 +15,7 @@ use std::fmt;
 use geo::Point;
 use mutable_slice::MutableSlice;
 use zone::geos::from_geo::TryInto;
+use std;
 
 type Coord = Point<f64>;
 
@@ -162,7 +163,7 @@ impl Zone {
                             serde_json::to_string(&self)
                         );
                         false
-                    },
+                    }
                     (_, &Err(ref e)) => {
                         info!(
                             "impossible to convert to geos for zone {:?}, error {}",
@@ -198,23 +199,15 @@ impl Zone {
     /// example of zone's label:
     /// Paris (75000-75116), Île-de-France, France
     pub fn compute_label(&mut self, all_zones: &MutableSlice) {
-        let mut label = format!(
-            "{n}{zip}",
-            n = self.name.clone(),
-            zip = format_zip_code(&self.zip_codes)
-        );
-        {
-            let parent_labels = self.iter_parents(all_zones)
-                .map(|z| z.name.clone())
-                .filter(|n| n != &self.name)
-                .dedup()
-                .join(", ");
+        let mut hierarchy: Vec<_> = std::iter::once(self.name.clone())
+            .chain(self.iter_parents(all_zones).map(|z| z.name.clone()))
+            .dedup()
+            .collect();
 
-            if !parent_labels.is_empty() {
-                label.push_str(", ");
-                label.push_str(&parent_labels);
-            }
+        if let Some(ref mut zone_name) = hierarchy.first_mut() {
+            zone_name.push_str(&format_zip_code(&self.zip_codes));
         }
+        let label = hierarchy.join(", ");
 
         self.label = label;
     }
@@ -429,5 +422,20 @@ mod test {
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
         z.compute_label(&mslice);
         assert_eq!(z.label, "bob (75020), bob sur mer, bobette's land");
+    }
+
+    #[test]
+    fn label_with_zip_and_parent_named_as_zone() {
+        // we should not have any consecutive double in the labl
+        // but non consecutive double should not be cleaned
+        let mut zones = vec![
+            make_zone_and_zip("bob", 0, vec!["75020"], Some(1)),
+            make_zone_and_zip("bob sur mer", 1, vec!["75"], Some(2)),
+            make_zone("bob", 2),
+        ];
+
+        let (mslice, z) = MutableSlice::init(&mut zones, 0);
+        z.compute_label(&mslice);
+        assert_eq!(z.label, "bob (75020), bob sur mer, bob");
     }
 }
