@@ -1,7 +1,18 @@
 [package]
 name = "cosmogony"
-version = "0.1.0"
-authors = ["Adrien Matissart <a.matissart@qwantresearch.com>"]
+version = "0.2.0"
+authors = ["Adrien Matissart <a.matissart@qwantresearch.com>", "Antoine Desbordes <antoine.desbordes@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/osm-without-borders/cosmogony"
+homepage = "https://github.com/osm-without-borders/cosmogony" # update this if a hosted website is available
+keywords = ["osm", "boundary", "geography", "administrative regions"]
+categories = ["science", "algorithms"]
+description = "Provides geographical zones with a structured hierarchy"
+readme = "README.md"
+
+
+[badges]
+travis-ci = { repository = "osm-without-borders/cosmogony" }
 
 [dependencies]
 log = "0.4"
