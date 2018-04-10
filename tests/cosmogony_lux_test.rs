@@ -1,6 +1,6 @@
 extern crate cosmogony;
 extern crate serde_json;
-use cosmogony::Cosmogony;
+use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 
 use std::collections::BTreeMap;
 
@@ -89,12 +89,15 @@ fn test_lux_admin_levels_with_serialisation() {
     test_wrapper_for_lux_admin_levels(cosmogony_from_json);
 }
 
+fn get_zone<'a>(cosmogony: &'a Cosmogony, idx: &'a ZoneIndex) -> Option<&'a Zone> {
+    cosmogony.zones.iter().find(|z| z.id == *idx)
+}
+
 #[test]
 fn test_lux_zone_types() {
     // Check the zone types in the built cosmogony
     let cosmogony = create_cosmogony_for_lux();
-    let zone_type_counts = cosmogony.meta.stats.zone_type_counts;
-
+    let zone_type_counts = &cosmogony.meta.stats.zone_type_counts;
     fn assert_count(counts: &BTreeMap<String, u64>, key: &str, value: u64) {
         assert_eq!(
             *counts.get(key).unwrap_or(&0),
@@ -110,4 +113,39 @@ fn test_lux_zone_types() {
     assert_count(&zone_type_counts, "State", 0);
     assert_count(&zone_type_counts, "Country", 1);
     assert_count(&zone_type_counts, "None", 3);
+
+    // check luxembroug city
+    let lux = cosmogony
+        .zones
+        .iter()
+        .find(|z| z.name == "Luxembourg" && z.zone_type == Some(ZoneType::City))
+        .unwrap();
+    assert_eq!(lux.osm_id, "relation:407489");
+    assert_eq!(lux.admin_level, Some(8));
+    assert_eq!(lux.label, "Luxembourg, Canton Luxembourg, Lëtzebuerg");
+    assert!(lux.zip_codes.is_empty());
+    assert!(lux.center.is_some());
+    assert_eq!(
+        get_zone(&cosmogony, &lux.parent.clone().unwrap())
+            .unwrap()
+            .name,
+        "Canton Luxembourg"
+    );
+    assert_eq!(lux.wikidata, Some("Q1842".into()));
+    assert!(!lux.tags.is_empty());
+
+    // check the country
+    let lux = cosmogony
+        .zones
+        .iter()
+        .find(|z| z.name == "Lëtzebuerg" && z.zone_type == Some(ZoneType::Country))
+        .unwrap();
+    assert_eq!(lux.osm_id, "relation:2171347");
+    assert_eq!(lux.admin_level, Some(2));
+    assert_eq!(lux.label, "Lëtzebuerg");
+    assert!(lux.zip_codes.is_empty());
+    assert!(lux.center.is_some());
+    assert_eq!(&lux.parent, &None::<ZoneIndex>);
+    assert_eq!(lux.wikidata, Some("Q32".into()));
+    assert!(!lux.tags.is_empty());
 }
