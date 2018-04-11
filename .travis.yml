@@ -8,11 +8,11 @@ matrix:
   - rust: stable
     script:
     - cargo test
-after_success:
-- |-
-  [ $TRAVIS_BRANCH = master ] &&
-  [ $TRAVIS_PULL_REQUEST = false ] &&
-  cargo publish --token ${CRATESIO_TOKEN}
+    after_success:
+    - |-
+      [ $TRAVIS_BRANCH = master ] &&
+      [ $TRAVIS_PULL_REQUEST = false ] &&
+      cargo publish --token ${CRATESIO_TOKEN}
 env:
   global:
     secure: JMZv9YXBsdAbd8VxdKYXHVuMvv8/PnBrixCc0drCXxwv727tTYHjAlUodUd6xoNTXL+OTy3MahBeho2KbS6Vjz0Rd6Ryvv0EbizrOMzJWvCzCrrwDbuTqtQ+sAp5xZwTJPxgqnQzk0yWy81x/rE/PUliJxb/iupsrH6Pc8UATZSFblgl7PLVFBVIiI8TJOQNkSrZkyXNgpE4UNYMZfGx3zGDYalSH3R7LaBxPNGkbNX7YK50293dHU3o6z166KfL3Il8OfBqW1VAeoC/VdBqgaCteDhd8OmvDECtDCJkX7QzfDs9AyvT8FtOIw4JrxW7Y6munixA61g07b/jYEMxDZetQ9r9MSmM6+YdpU8FBGxS1NLbpz5R6BN8tv9CbWAN0LbkzyuKwfKCvmwa1VG/3p5dF0piNGBI2dsJI1J6MZHhuN7paWiR6JvnSZNWh51J0xP1F2nrZ4lqIg/x0wZNYL93q2aDxtvf/MBpvR/dktrSd0Xal+ABaWx1YczILLxUBIOfZOt10UeE3EPsIwM+KJqB6Y8wt0xTqdIwPB0iSnE8qPyHqVTdOZ0tRGPcbt6Zv0A1ozksOS+9K6AEWsDWUgr+Em7DVlaf/u5zCHDh9IMdgLN+Dj1cUkzW4KMuPl0EAxEJdZhycmu/FMLiKPgnutyA5+80zCs0XSBTqrHwqew=
