@@ -144,7 +144,7 @@ mod test {
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn create_zones() -> Vec<Zone> {
-                let l0 = LineString(vec![
+        let l0 = LineString(vec![
             Point::new(0., 0.),     //  +------+
             Point::new(0., 10.),    //  |      |
             Point::new(10., 10.),   //  |  z0  |
