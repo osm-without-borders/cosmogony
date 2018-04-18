@@ -8,10 +8,10 @@ extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
 
-use std::fs::File;
-use std::io::prelude::*;
 use cosmogony::build_cosmogony;
 use cosmogony::cosmogony::Cosmogony;
+use std::fs::File;
+use std::io::prelude::*;
 use structopt::StructOpt;
 
 use failure::Error;
@@ -28,10 +28,16 @@ struct Args {
     no_stats: bool,
     #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom")]
     disable_geom: bool,
-    #[structopt(help = "country code if the pbf file does not contains any country",
-                long = "country-code")]
+    #[structopt(
+        help = "country code if the pbf file does not contains any country", long = "country-code"
+    )]
     country_code: Option<String>,
-    #[structopt(help = "libpostal path", long = "libpostal", short = "l", default_value = "./libpostal/resources/boundaries/osm/")]
+    #[structopt(
+        help = "libpostal path",
+        long = "libpostal",
+        short = "l",
+        default_value = "./libpostal/resources/boundaries/osm/"
+    )]
     libpostal_path: String,
 }
 

@@ -12,24 +12,24 @@ extern crate serde_derive;
 extern crate serde_yaml;
 extern crate structopt;
 
-pub mod zone;
-mod hierarchy_builder;
-mod country_finder;
-mod utils;
-mod mutable_slice;
 pub mod cosmogony;
+mod country_finder;
+mod hierarchy_builder;
+mod mutable_slice;
+mod utils;
+pub mod zone;
 pub mod zone_typer;
 
-use std::fs::File;
-use std::path::{Path, PathBuf};
 pub use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
-use osmpbfreader::{OsmObj, OsmPbfReader};
-use std::collections::BTreeMap;
-use hierarchy_builder::build_hierarchy;
+use country_finder::CountryFinder;
 use failure::Error;
 use failure::ResultExt;
-use country_finder::CountryFinder;
+use hierarchy_builder::build_hierarchy;
 use mutable_slice::MutableSlice;
+use osmpbfreader::{OsmObj, OsmPbfReader};
+use std::collections::BTreeMap;
+use std::fs::File;
+use std::path::{Path, PathBuf};
 
 pub use zone::{Zone, ZoneIndex, ZoneType};
 

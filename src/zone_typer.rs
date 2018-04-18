@@ -1,12 +1,12 @@
-use std::collections::BTreeMap;
-use zone::{Zone, ZoneType};
-use std::fs;
-use std::path::Path;
-use std::fmt::Debug;
-use std::io::prelude::*;
+use failure::ResultExt;
 use failure::{err_msg, Error};
 use serde_yaml;
-use failure::ResultExt;
+use std::collections::BTreeMap;
+use std::fmt::Debug;
+use std::fs;
+use std::io::prelude::*;
+use std::path::Path;
+use zone::{Zone, ZoneType};
 
 #[derive(Debug)]
 pub struct ZoneTyper {
@@ -117,8 +117,8 @@ fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
 
 #[cfg(test)]
 mod test {
-    use zone_typer::read_libpostal_yaml;
     use zone::ZoneType;
+    use zone_typer::read_libpostal_yaml;
 
     #[test]
     fn test_read_libpostal_yaml_basic() {

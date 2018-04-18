@@ -1,10 +1,10 @@
 extern crate geos;
 
-use std::iter::FromIterator;
-use gst::rtree::RTree;
-use zone::Zone;
-use utils::bbox_to_rect;
 use geo::boundingbox::BoundingBox;
+use gst::rtree::RTree;
+use std::iter::FromIterator;
+use utils::bbox_to_rect;
+use zone::Zone;
 
 const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
 
