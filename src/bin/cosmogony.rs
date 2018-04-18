@@ -31,7 +31,7 @@ struct Args {
     #[structopt(help = "country code if the pbf file does not contains any country",
                 long = "country-code")]
     country_code: Option<String>,
-    #[structopt(help = "libpostal path", long = "libpostal")]
+    #[structopt(help = "libpostal path", long = "libpostal", short = "l", default_value = "./libpostal/resources/boundaries/osm/")]
     libpostal_path: String,
 }
 
