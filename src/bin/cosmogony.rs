@@ -22,7 +22,7 @@ struct Args {
     #[structopt(short = "i", long = "input")]
     input: String,
     /// output file name
-    #[structopt(short = "o", long = "output")]
+    #[structopt(short = "o", long = "output", default_value = "cosmogony.json")]
     output: Option<String>,
     #[structopt(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
