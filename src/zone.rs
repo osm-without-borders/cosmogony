@@ -246,6 +246,17 @@ impl Zone {
         }
     }
 
+    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice, f: F) -> String where F: Fn(&Zone) -> String {
+        let mut hierarchy: Vec<String> = self.iter_hierarchy(all_zones)
+        .map(f)
+            .dedup()
+            .collect();
+
+        if let Some(ref mut zone_name) = hierarchy.first_mut() {
+            zone_name.push_str(&format_zip_code(&self.zip_codes));
+        }
+        hierarchy.join(", ")
+    }
     /// compute a nice human readable label
     /// The label carries the hierarchy of a zone.
     ///
@@ -261,29 +272,7 @@ impl Zone {
     /// Note: for the moment we use the same format for every language, 
     /// but in the future we might use opencage's configuration for this
     pub fn compute_labels(&mut self, all_zones: &MutableSlice) {
-        // iter branch gives an iterator over the whole hierachy including self
-
-        // let create_lbl = |f| {
-        //     let mut hierarchy: Vec<String> = iter_branch()
-        //     .map(f)
-        //         .dedup()
-        //         .collect();
-
-        //     if let Some(ref mut zone_name) = hierarchy.first_mut() {
-        //         zone_name.push_str(&format_zip_code(&self.zip_codes));
-        //     }
-        //     hierarchy.join(", ")
-        // };
-
-        let mut hierarchy: Vec<String> = self.iter_hierarchy(all_zones)
-        .map(|z| z.name.clone())
-            .dedup()
-            .collect();
-
-        if let Some(ref mut zone_name) = hierarchy.first_mut() {
-            zone_name.push_str(&format_zip_code(&self.zip_codes));
-        }
-        let label = hierarchy.join(", ");
+        let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
         let all_lang: BTreeSet<String> = self.iter_hierarchy(all_zones).map(|z| z.international_names.keys())
@@ -292,15 +281,7 @@ impl Zone {
             .collect();
 
         let international_labels = all_lang.iter().map(|lang| {
-            let mut hierarchy: Vec<String> = self.iter_hierarchy(all_zones)
-                .map(|z: &Zone| z.international_names.get(lang).unwrap_or(&z.name).clone())
-                .dedup()
-                .collect();
-
-            if let Some(ref mut zone_name) = hierarchy.first_mut() {
-                zone_name.push_str(&format_zip_code(&self.zip_codes));
-            }
-            let lbl = hierarchy.join(", ");
+            let lbl = self.create_lbl(all_zones, |z: &Zone| z.international_names.get(lang).unwrap_or(&z.name).clone());
             (lang.to_string(), lbl)
         }).collect();
 
