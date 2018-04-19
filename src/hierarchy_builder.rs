@@ -1,11 +1,11 @@
 extern crate geo;
 
-use std::iter::FromIterator;
-use zone::{Zone, ZoneIndex};
-use mutable_slice::MutableSlice;
-use gst::rtree::RTree;
 use geo::boundingbox::BoundingBox;
+use gst::rtree::RTree;
+use mutable_slice::MutableSlice;
+use std::iter::FromIterator;
 use utils::bbox_to_rect;
+use zone::{Zone, ZoneIndex};
 
 pub struct ZonesTree {
     tree: RTree<ZoneIndex>,
@@ -118,9 +118,9 @@ pub fn build_hierarchy(zones: &mut [Zone]) {
 #[cfg(test)]
 mod test {
     use geo::{LineString, MultiPolygon, Point, Polygon};
-    use zone::{Zone, ZoneIndex, ZoneType};
     use hierarchy_builder::build_hierarchy;
     use osmpbfreader::Tags;
+    use zone::{Zone, ZoneIndex, ZoneType};
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);
@@ -144,7 +144,7 @@ mod test {
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn create_zones() -> Vec<Zone> {
-                let l0 = LineString(vec![
+        let l0 = LineString(vec![
             Point::new(0., 0.),     //  +------+
             Point::new(0., 10.),    //  |      |
             Point::new(10., 10.),   //  |  z0  |

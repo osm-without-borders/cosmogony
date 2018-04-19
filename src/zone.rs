@@ -5,17 +5,17 @@ extern crate itertools;
 extern crate serde;
 extern crate serde_json;
 
-use self::itertools::Itertools;
-use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
-use osm_boundaries_utils::build_boundary;
-use std::collections::BTreeMap;
 use self::geos::GGeom;
+use self::itertools::Itertools;
 use self::serde::Serialize;
-use std::fmt;
 use geo::Point;
 use mutable_slice::MutableSlice;
-use zone::geos::from_geo::TryInto;
+use osm_boundaries_utils::build_boundary;
+use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use std;
+use std::collections::BTreeMap;
+use std::fmt;
+use zone::geos::from_geo::TryInto;
 
 type Coord = Point<f64>;
 
@@ -49,8 +49,12 @@ pub struct Zone {
     pub zip_codes: Vec<String>,
     #[serde(serialize_with = "serialize_as_geojson", deserialize_with = "deserialize_as_coord")]
     pub center: Option<Coord>,
-    #[serde(serialize_with = "serialize_as_geojson",
-            deserialize_with = "deserialize_as_multipolygon", rename = "geometry", default)]
+    #[serde(
+        serialize_with = "serialize_as_geojson",
+        deserialize_with = "deserialize_as_multipolygon",
+        rename = "geometry",
+        default
+    )]
     pub boundary: Option<geo::MultiPolygon<f64>>,
 
     pub tags: Tags,
@@ -279,8 +283,8 @@ where
     D: serde::Deserializer<'de>,
 {
     use self::geojson;
-    use self::serde::Deserialize;
     use self::geojson::conversion::TryInto;
+    use self::serde::Deserialize;
 
     Option::<geojson::GeoJson>::deserialize(d).map(|option| {
         option.and_then(|geojson| match geojson {

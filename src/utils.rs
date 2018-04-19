@@ -1,8 +1,8 @@
 extern crate geo;
 
+use geo::Bbox;
 use gst::rtree::Rect;
 use ordered_float::OrderedFloat;
-use geo::Bbox;
 
 pub fn bbox_to_rect(bbox: Bbox<f64>) -> Rect {
     // rust-geo bbox algorithm returns `Bbox`,
