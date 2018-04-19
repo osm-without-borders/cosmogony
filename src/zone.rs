@@ -2,21 +2,21 @@ extern crate geo;
 extern crate geojson;
 extern crate geos;
 extern crate itertools;
+extern crate regex;
 extern crate serde;
 extern crate serde_json;
-extern crate regex;
 
-use self::itertools::Itertools;
-use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
-use osm_boundaries_utils::build_boundary;
-use std::collections::{BTreeMap, BTreeSet};
 use self::geos::GGeom;
+use self::itertools::Itertools;
 use self::serde::Serialize;
-use std::fmt;
 use geo::Point;
 use mutable_slice::MutableSlice;
-use zone::geos::from_geo::TryInto;
+use osm_boundaries_utils::build_boundary;
+use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+use zone::geos::from_geo::TryInto;
 
 type Coord = Point<f64>;
 
@@ -49,7 +49,7 @@ pub struct Zone {
     pub label: String,
     #[serde(default)]
     pub international_labels: BTreeMap<String, String>,
-    // we do not serialize the internal_names, 
+    // we do not serialize the internal_names,
     // it's only used temporary to build the international_labels
     #[serde(skip)]
     international_names: BTreeMap<String, String>,
@@ -72,10 +72,10 @@ pub struct Zone {
 }
 
 /// get all the international names from the osn tags
-/// 
+///
 /// the names in osm are in a tag names `name:<lang>`,
 /// eg `name:fr`, `name:de`, ...
-/// 
+///
 /// we don't add the international names that are equivalent to the default name
 /// to reduce the size of the map
 fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, String> {
@@ -83,18 +83,17 @@ fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, 
         static ref LANG_NAME_REG: Regex = Regex::new("name:(.+)").unwrap();
     }
 
-    tags
-    .iter()
-    .filter(|&(_, v)| v != default_name)
-    .filter_map(|(k, v)| {
-        let lang = LANG_NAME_REG.captures(k)?.get(1)?;
+    tags.iter()
+        .filter(|&(_, v)| v != default_name)
+        .filter_map(|(k, v)| {
+            let lang = LANG_NAME_REG.captures(k)?.get(1)?;
 
-        Some((lang.as_str().into(), v.clone()))
-    }).collect()
+            Some((lang.as_str().into(), v.clone()))
+        })
+        .collect()
 }
 
 impl Zone {
-
     pub fn default() -> Self {
         Zone {
             id: ZoneIndex { index: 0 },
@@ -246,11 +245,11 @@ impl Zone {
         }
     }
 
-    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice, f: F) -> String where F: Fn(&Zone) -> String {
-        let mut hierarchy: Vec<String> = self.iter_hierarchy(all_zones)
-        .map(f)
-            .dedup()
-            .collect();
+    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice, f: F) -> String
+    where
+        F: Fn(&Zone) -> String,
+    {
+        let mut hierarchy: Vec<String> = self.iter_hierarchy(all_zones).map(f).dedup().collect();
 
         if let Some(ref mut zone_name) = hierarchy.first_mut() {
             zone_name.push_str(&format_zip_code(&self.zip_codes));
@@ -267,23 +266,29 @@ impl Zone {
     ///
     /// example of zone's label:
     /// Paris (75000-75116), Île-de-France, France
-    /// 
-    /// We compute a default label, and a label per language 
-    /// Note: for the moment we use the same format for every language, 
+    ///
+    /// We compute a default label, and a label per language
+    /// Note: for the moment we use the same format for every language,
     /// but in the future we might use opencage's configuration for this
     pub fn compute_labels(&mut self, all_zones: &MutableSlice) {
         let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
-        let all_lang: BTreeSet<String> = self.iter_hierarchy(all_zones).map(|z| z.international_names.keys())
-            .flat_map(|i|i)
+        let all_lang: BTreeSet<String> = self.iter_hierarchy(all_zones)
+            .map(|z| z.international_names.keys())
+            .flat_map(|i| i)
             .map(|n| n.as_str().into())
             .collect();
 
-        let international_labels = all_lang.iter().map(|lang| {
-            let lbl = self.create_lbl(all_zones, |z: &Zone| z.international_names.get(lang).unwrap_or(&z.name).clone());
-            (lang.to_string(), lbl)
-        }).collect();
+        let international_labels = all_lang
+            .iter()
+            .map(|lang| {
+                let lbl = self.create_lbl(all_zones, |z: &Zone| {
+                    z.international_names.get(lang).unwrap_or(&z.name).clone()
+                });
+                (lang.to_string(), lbl)
+            })
+            .collect();
 
         self.international_labels = international_labels;
         self.label = label;
@@ -322,10 +327,8 @@ impl<'a> Iterator for HierarchyIterator<'a> {
         match z {
             Some(z) => {
                 self.zone = match &z.parent {
-                    &Some(ref p_idx) => {
-                        Some(self.all_zones.get(&p_idx))
-                    },
-                    _ => None
+                    &Some(ref p_idx) => Some(self.all_zones.get(&p_idx)),
+                    _ => None,
                 };
                 Some(z)
             }
@@ -360,8 +363,8 @@ where
     D: serde::Deserializer<'de>,
 {
     use self::geojson;
-    use self::serde::Deserialize;
     use self::geojson::conversion::TryInto;
+    use self::serde::Deserialize;
 
     Option::<geojson::GeoJson>::deserialize(d).map(|option| {
         option.and_then(|geojson| match geojson {
@@ -525,18 +528,24 @@ mod test {
 
     #[test]
     fn test_international_names() {
-        let tags = vec![("another_tag", "useless"),
-        ("name:fr", "bob"),
-        ("name:es", "bobito"),
-        ("name", "bobito"),
-        ("name:a_strange_lang_name", "bibi"),
-        ].into_iter().map(|(k, v)| (k.into(), v.into())).collect();
+        let tags = vec![
+            ("another_tag", "useless"),
+            ("name:fr", "bob"),
+            ("name:es", "bobito"),
+            ("name", "bobito"),
+            ("name:a_strange_lang_name", "bibi"),
+        ].into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
 
         let names = get_international_names(&tags, "bob");
 
-        assert_eq!(names, vec![
-        ("es", "bobito"),
-        ("a_strange_lang_name", "bibi"),
-        ].into_iter().map(|(k, v)| (k.into(), v.into())).collect());
+        assert_eq!(
+            names,
+            vec![("es", "bobito"), ("a_strange_lang_name", "bibi")]
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect()
+        );
     }
 }

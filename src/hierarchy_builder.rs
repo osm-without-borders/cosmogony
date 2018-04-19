@@ -6,10 +6,6 @@ use mutable_slice::MutableSlice;
 use std::iter::FromIterator;
 use utils::bbox_to_rect;
 use zone::{Zone, ZoneIndex};
-use mutable_slice::MutableSlice;
-use gst::rtree::RTree;
-use geo::boundingbox::BoundingBox;
-use utils::bbox_to_rect;
 
 pub struct ZonesTree {
     tree: RTree<ZoneIndex>,
@@ -122,8 +118,8 @@ pub fn build_hierarchy(zones: &mut [Zone]) {
 #[cfg(test)]
 mod test {
     use geo::{LineString, MultiPolygon, Point, Polygon};
-    use zone::{Zone, ZoneType};
     use hierarchy_builder::build_hierarchy;
+    use zone::{Zone, ZoneType};
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);

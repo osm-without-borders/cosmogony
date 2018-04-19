@@ -9,10 +9,10 @@ extern crate osm_boundaries_utils;
 extern crate osmpbfreader;
 #[macro_use]
 extern crate serde_derive;
+extern crate regex;
 extern crate serde_yaml;
 extern crate structopt;
-extern crate regex;
-#[macro_use] 
+#[macro_use]
 extern crate lazy_static;
 
 pub mod cosmogony;
