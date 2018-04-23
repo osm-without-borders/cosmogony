@@ -29,7 +29,7 @@ struct Args {
         short = "o",
         long = "output",
         default_value = "cosmogony.json",
-        help = "Output file name. Accepted formats are '.json' and '.json.gz'"
+        help = "Output file name. Format will be deduced from the file extension. Accepted extensions are '.json' and '.json.gz'"
     )]
     output: Option<String>,
     #[structopt(help = "Do not display the stats", long = "no-stats")]
@@ -49,34 +49,38 @@ struct Args {
     libpostal_path: String,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 enum OutputFormat {
     Json,
     JsonGz,
 }
 
 impl OutputFormat {
-    fn all() -> Vec<OutputFormat> {
-        vec![OutputFormat::Json, OutputFormat::JsonGz]
-    }
-
-    fn get_extension(&self) -> &str {
-        match self {
-            &OutputFormat::Json => ".json",
-            &OutputFormat::JsonGz => ".json.gz",
-        }
+    fn all_extensions() -> Vec<(String, OutputFormat)> {
+        vec![
+            (".json".into(), OutputFormat::Json),
+            (".json.gz".into(), OutputFormat::JsonGz),
+        ]
     }
 
     fn from_filename(filename: &str) -> Result<OutputFormat, Error> {
-        for f in OutputFormat::all() {
-            if filename.ends_with(f.get_extension()) {
-                return Ok(f);
-            }
-        }
-        Err(failure::err_msg(format!(
-            "Unknown format in '{}'",
-            filename
-        )))
+        let extensions = OutputFormat::all_extensions();
+        extensions
+            .iter()
+            .find(|&&(ref e, _)| filename.ends_with(e))
+            .map(|&(_, ref f)| f.clone())
+            .ok_or_else(|| {
+                let extensions_str = extensions
+                    .into_iter()
+                    .map(|(e, _)| e)
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                failure::err_msg(format!(
+                    "Unable to detect the file format from filename '{}'. \
+                     Accepted extensions are: {}",
+                    filename, extensions_str
+                ))
+            })
     }
 }
 
