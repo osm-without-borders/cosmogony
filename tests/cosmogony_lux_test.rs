@@ -133,6 +133,14 @@ fn test_lux_zone_types() {
     );
     assert_eq!(lux.wikidata, Some("Q1842".into()));
     assert!(!lux.tags.is_empty());
+    assert_eq!(
+        lux.international_labels.get("fr"),
+        Some(&"Luxembourg, Canton Luxembourg, Grand-duché de Luxembourg".to_string())
+    );
+    assert_eq!(
+        lux.international_labels.get("de"),
+        Some(&"Luxemburg, Kanton Luxemburg, Großherzogtum Luxemburg".to_string())
+    );
 
     // check the country
     let lux = cosmogony
@@ -148,4 +156,12 @@ fn test_lux_zone_types() {
     assert_eq!(&lux.parent, &None::<ZoneIndex>);
     assert_eq!(lux.wikidata, Some("Q32".into()));
     assert!(!lux.tags.is_empty());
+    assert_eq!(
+        lux.international_labels.get("fr"),
+        Some(&"Grand-duché de Luxembourg".to_string())
+    );
+    assert_eq!(
+        lux.international_labels.get("de"),
+        Some(&"Großherzogtum Luxemburg".to_string())
+    );
 }

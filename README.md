@@ -2,6 +2,8 @@
 
 The goal of the project is to have easy to use, easy to update geographic regions.
 
+The data can be browsed at http://cosmogony.world.
+
 It provides geographical zones with a structured hierarchy to easily know that [Paris](https://www.openstreetmap.org/relation/7444) is `city` in the `state` [Île-de-France](https://www.openstreetmap.org/relation/8649) in the `country` [France](https://www.openstreetmap.org/relation/2202162).
 
 The general idea of the project is to take OpenStreetMap data and:
@@ -44,7 +46,7 @@ Then, build cosmogony: `cargo build --release`
 
 You can now grab some OSM pbf and extract your geographic zones:
 
-`cargo run --release -- --libpostal ./libpostal/resources/boundaries/osm/ -i /path/to/your/file.osm.pbf -o /path/for/output/file`
+`cargo run --release -- -i /path/to/your/file.osm.pbf`
 
 Check out cosmogony help for more options: `cargo run --release -- -h`
 

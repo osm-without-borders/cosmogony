@@ -119,27 +119,17 @@ pub fn build_hierarchy(zones: &mut [Zone]) {
 mod test {
     use geo::{LineString, MultiPolygon, Point, Polygon};
     use hierarchy_builder::build_hierarchy;
-    use osmpbfreader::Tags;
-    use zone::{Zone, ZoneIndex, ZoneType};
+    use zone::{Zone, ZoneType};
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);
         let mp = MultiPolygon(vec![p.clone()]);
 
-        Zone {
-            id: ZoneIndex { index: idx },
-            osm_id: "".into(),
-            admin_level: None,
-            zone_type: zone_type,
-            name: "".into(),
-            label: "".into(),
-            center: None,
-            boundary: Some(mp),
-            parent: None,
-            tags: Tags::new(),
-            wikidata: None,
-            zip_codes: vec![],
-        }
+        let mut z = Zone::default();
+        z.id.index = idx;
+        z.boundary = Some(mp);
+        z.zone_type = zone_type;
+        z
     }
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
