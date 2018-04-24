@@ -7,9 +7,12 @@ extern crate serde_json;
 extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
+extern crate flate2;
 
 use cosmogony::build_cosmogony;
 use cosmogony::cosmogony::Cosmogony;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use std::fs::File;
 use std::io::prelude::*;
 use structopt::StructOpt;
@@ -22,7 +25,12 @@ struct Args {
     #[structopt(short = "i", long = "input")]
     input: String,
     /// output file name
-    #[structopt(short = "o", long = "output", default_value = "cosmogony.json")]
+    #[structopt(
+        short = "o",
+        long = "output",
+        default_value = "cosmogony.json",
+        help = "Output file name. Format will be deduced from the file extension. Accepted extensions are '.json' and '.json.gz'"
+    )]
     output: Option<String>,
     #[structopt(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
@@ -41,15 +49,67 @@ struct Args {
     libpostal_path: String,
 }
 
-fn serialize_to_json(cosmogony: &Cosmogony, output_file: String) -> Result<(), Error> {
-    let json = serde_json::to_string(cosmogony)?;
+#[derive(PartialEq, Clone)]
+enum OutputFormat {
+    Json,
+    JsonGz,
+}
 
+impl OutputFormat {
+    fn all_extensions() -> Vec<(String, OutputFormat)> {
+        vec![
+            (".json".into(), OutputFormat::Json),
+            (".json.gz".into(), OutputFormat::JsonGz),
+        ]
+    }
+
+    fn from_filename(filename: &str) -> Result<OutputFormat, Error> {
+        let extensions = OutputFormat::all_extensions();
+        extensions
+            .iter()
+            .find(|&&(ref e, _)| filename.ends_with(e))
+            .map(|&(_, ref f)| f.clone())
+            .ok_or_else(|| {
+                let extensions_str = extensions
+                    .into_iter()
+                    .map(|(e, _)| e)
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                failure::err_msg(format!(
+                    "Unable to detect the file format from filename '{}'. \
+                     Accepted extensions are: {}",
+                    filename, extensions_str
+                ))
+            })
+    }
+}
+
+fn serialize_cosmogony(
+    cosmogony: &Cosmogony,
+    output_file: String,
+    format: OutputFormat,
+) -> Result<(), Error> {
+    let json = serde_json::to_string(cosmogony)?;
+    let output_bytes = match format {
+        OutputFormat::JsonGz => {
+            let mut e = GzEncoder::new(vec![], Compression::default());
+            e.write_all(json.as_bytes())?;
+            e.finish()?
+        }
+        OutputFormat::Json => json.into_bytes(),
+    };
     let mut file = File::create(output_file)?;
-    file.write_all(json.as_bytes())?;
+    file.write_all(&output_bytes)?;
     Ok(())
 }
 
 fn cosmogony(args: Args) -> Result<(), Error> {
+    let format = if let Some(ref output_filename) = args.output {
+        OutputFormat::from_filename(&output_filename)?
+    } else {
+        OutputFormat::Json
+    };
+
     let cosmogony = build_cosmogony(
         args.input,
         !args.disable_geom,
@@ -58,7 +118,7 @@ fn cosmogony(args: Args) -> Result<(), Error> {
     )?;
 
     if let Some(output) = args.output {
-        serialize_to_json(&cosmogony, output)?;
+        serialize_cosmogony(&cosmogony, output, format)?;
     }
 
     if !args.no_stats {
@@ -67,7 +127,6 @@ fn cosmogony(args: Args) -> Result<(), Error> {
             cosmogony.meta.osm_filename, cosmogony.meta.stats
         );
     }
-
     Ok(())
 }
 

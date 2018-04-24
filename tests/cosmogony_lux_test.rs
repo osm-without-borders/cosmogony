@@ -3,6 +3,50 @@ extern crate serde_json;
 use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 
 use std::collections::BTreeMap;
+use std::process::{Command, Output};
+
+fn launch_command_line(args: Vec<&str>) -> Output {
+    let cosmogony_bin = concat!(env!("OUT_DIR"), "/../../../cosmogony");
+    Command::new(cosmogony_bin)
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .args(&args)
+        .output()
+        .expect("command failed")
+}
+
+#[test]
+fn test_cmd_with_json_output() {
+    let output = launch_command_line(vec![
+        "-i",
+        "./tests/data/luxembourg_filtered.osm.pbf",
+        "-o",
+        concat!(env!("OUT_DIR"), "/test_cosmogony.json"),
+    ]);
+    assert!(output.status.success());
+}
+
+#[test]
+fn test_cmd_with_json_gz_output() {
+    let output = launch_command_line(vec![
+        "-i",
+        "./tests/data/luxembourg_filtered.osm.pbf",
+        "-o",
+        concat!(env!("OUT_DIR"), "/test_cosmogony.json.gz"),
+    ]);
+    assert!(output.status.success());
+}
+
+#[test]
+fn test_cmd_with_unknown_format() {
+    let output = launch_command_line(vec![
+        "-i",
+        "./tests/data/luxembourg_filtered.osm.pbf",
+        "-o",
+        "cosmogony.bad",
+    ]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Unable to detect the file format"));
+}
 
 fn create_cosmogony_for_lux() -> Cosmogony {
     let test_file = concat!(
