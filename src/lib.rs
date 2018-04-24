@@ -9,8 +9,11 @@ extern crate osm_boundaries_utils;
 extern crate osmpbfreader;
 #[macro_use]
 extern crate serde_derive;
+extern crate regex;
 extern crate serde_yaml;
 extern crate structopt;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod cosmogony;
 mod country_finder;
@@ -165,7 +168,7 @@ fn compute_labels(zones: &mut [Zone]) {
     let nb_zones = zones.len();
     for i in 0..nb_zones {
         let (mslice, z) = MutableSlice::init(zones, i);
-        z.compute_label(&mslice);
+        z.compute_labels(&mslice);
     }
 }
 
