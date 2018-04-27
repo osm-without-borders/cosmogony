@@ -13,10 +13,28 @@ pub struct ZoneTyper {
     countries_rules: BTreeMap<String, CountryAdminTypeRules>,
 }
 
+#[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug)]
+enum OsmPrimaryObects {
+    #[serde(rename = "node")]
+    Node,
+    #[serde(rename = "way")]
+    Way,
+    #[serde(rename = "relation")]
+    Relation
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct RulesOverrides {
+    contained_by: BTreeMap<OsmPrimaryObects, BTreeMap<String, CountryAdminTypeRules>>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct CountryAdminTypeRules {
     #[serde(rename = "admin_level")]
     pub type_by_level: BTreeMap<String, ZoneType>,
+    #[serde(default)]
+    overrides: RulesOverrides,
+    // we don't implement libpostal's 'use_admin_center' as we don't need it
 }
 
 #[derive(Debug, Fail)]
@@ -119,6 +137,7 @@ fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
 mod test {
     use zone::ZoneType;
     use zone_typer::read_libpostal_yaml;
+    use super::OsmPrimaryObects;
 
     #[test]
     fn test_read_libpostal_yaml_basic() {
@@ -170,4 +189,44 @@ mod test {
         assert_eq!(deserialized_levels.is_err(), true);
     }
 
+    #[test]
+    fn test_read_libpostal_contained_overrides() {
+        let yaml = r#"---
+    admin_level:
+        "2": "country"
+        "4": "state"
+        "5": "state_district"
+        "6": "state_district"
+        "8": "city"
+        "9": "suburb"
+
+    overrides:
+        contained_by:
+            relation:
+                # Luxembourg City
+                "407489":
+                    admin_level:
+                        "9": "city_district""#;
+        let deserialized_levels = read_libpostal_yaml(&yaml).expect("invalid yaml");
+
+        assert_eq!(
+            deserialized_levels
+                .type_by_level
+                .get(&"2".to_string())
+                .unwrap(),
+            &ZoneType::Country
+        );
+
+        assert_eq!(
+            deserialized_levels
+                .overrides
+                .contained_by
+                .get(&OsmPrimaryObects::Relation).unwrap()
+                .get(&"407489".to_string()).unwrap()
+                .type_by_level
+                .get(&"9".to_string())
+                .unwrap(),
+            &ZoneType::CityDistrict
+        );
+    }
 }
