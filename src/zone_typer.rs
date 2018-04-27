@@ -280,4 +280,20 @@ mod test {
             &None
         );
     }
+
+    /// test reading all the libpostal files
+    #[test]
+    fn test_read_all_libpostal_files() {
+        use std::io::Read;
+        let libpostal_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/libpostal/resources/boundaries/osm/");
+
+        for f in fs::read_dir(&libpostal_dir).unwrap() {
+            let a_path = f.unwrap();
+            let mut f = fs::File::open(&a_path.path()).unwrap();
+            let mut contents = String::new();
+            f.read_to_string(&mut contents).map_err(|e| warn!("impossible to read file {:?} because {}", a_path, e)).unwrap();
+            // there should be no error while reading a file
+            read_libpostal_yaml(&contents).unwrap();
+        }
+    }
 }
