@@ -14,7 +14,7 @@ pub struct ZoneTyper {
 }
 
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug)]
-enum OsmPrimaryObects {
+enum OsmPrimaryObjects {
     #[serde(rename = "node")]
     Node,
     #[serde(rename = "way")]
@@ -26,9 +26,9 @@ enum OsmPrimaryObects {
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct RulesOverrides {
     #[serde(default)]
-    contained_by: BTreeMap<OsmPrimaryObects, BTreeMap<String, CountryAdminTypeRules>>,
+    contained_by: BTreeMap<OsmPrimaryObjects, BTreeMap<String, CountryAdminTypeRules>>,
     #[serde(rename = "id", default)]
-    id_rules: BTreeMap<OsmPrimaryObects, BTreeMap<String, Option<ZoneType>>>,
+    id_rules: BTreeMap<OsmPrimaryObjects, BTreeMap<String, Option<ZoneType>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -141,7 +141,7 @@ fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
 mod test {
     use zone::ZoneType;
     use zone_typer::read_libpostal_yaml;
-    use super::OsmPrimaryObects;
+    use super::OsmPrimaryObjects;
     use std::fs;
 
     #[test]
@@ -226,7 +226,7 @@ mod test {
             deserialized_levels
                 .overrides
                 .contained_by
-                .get(&OsmPrimaryObects::Relation).unwrap()
+                .get(&OsmPrimaryObjects::Relation).unwrap()
                 .get(&"407489".to_string()).unwrap()
                 .type_by_level
                 .get(&"9".to_string())
@@ -266,7 +266,7 @@ mod test {
             deserialized_levels
                 .overrides
                 .id_rules
-                .get(&OsmPrimaryObects::Relation).unwrap()
+                .get(&OsmPrimaryObjects::Relation).unwrap()
                 .get(&"1803923".to_string()).unwrap(),
             &Some(ZoneType::CityDistrict)
         );
@@ -275,7 +275,7 @@ mod test {
             deserialized_levels
                 .overrides
                 .id_rules
-                .get(&OsmPrimaryObects::Relation).unwrap()
+                .get(&OsmPrimaryObjects::Relation).unwrap()
                 .get(&"42".to_string()).unwrap(),
             &None
         );
