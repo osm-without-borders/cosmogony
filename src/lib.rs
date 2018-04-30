@@ -27,7 +27,7 @@ pub use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use country_finder::CountryFinder;
 use failure::Error;
 use failure::ResultExt;
-use hierarchy_builder::build_hierarchy;
+use hierarchy_builder::{build_hierarchy, find_inclusions};
 use mutable_slice::MutableSlice;
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
@@ -115,10 +115,11 @@ fn get_country_code<'a>(
 }
 
 fn type_zones(
-    zones: &mut Vec<zone::Zone>,
+    zones: &mut [zone::Zone],
     stats: &mut CosmogonyStats,
     libpostal_file_path: PathBuf,
     country_code: Option<String>,
+    inclusions: &Vec<Vec<ZoneIndex>>,
 ) -> Result<(), Error> {
     let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
     let country_finder: CountryFinder = zones.iter().collect();
@@ -128,19 +129,22 @@ fn type_zones(
         ));
     }
 
-    for mut z in zones {
-        let country_code = get_country_code(&country_finder, &z, &country_code);
+    for i in 0..zones.len() {
+        let country_code = get_country_code(&country_finder, &zones[i], &country_code);
         match country_code {
             None => {
-                info!("impossible to find a country for {}, skipping", &z.name);
+                info!(
+                    "impossible to find a country for {}, skipping",
+                    &zones[i].name
+                );
                 stats.zone_without_country += 1;
                 continue;
             }
             Some(country) => {
-                debug!("Country of {} is {:?}", &z.name, &country);
-                let type_res = zone_typer.get_zone_type(&z, &country);
+                debug!("Country of {} is {:?}", &zones[i].name, &country);
+                let type_res = zone_typer.get_zone_type(&zones[i], &country, &inclusions[i], zones);
                 match type_res {
-                    Ok(t) => z.zone_type = Some(t),
+                    Ok(t) => zones[i].zone_type = Some(t),
                     Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
                         info!("impossible to find rules for country {}", c);
                         *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
@@ -173,14 +177,16 @@ fn compute_labels(zones: &mut [Zone]) {
 }
 
 fn create_ontology(
-    zones: &mut Vec<zone::Zone>,
+    zones: &mut [zone::Zone],
     stats: &mut CosmogonyStats,
     libpostal_file_path: PathBuf,
     country_code: Option<String>,
 ) -> Result<(), Error> {
-    type_zones(zones, stats, libpostal_file_path, country_code)?;
+    let inclusions = find_inclusions(zones);
 
-    build_hierarchy(zones);
+    type_zones(zones, stats, libpostal_file_path, country_code, &inclusions)?;
+
+    build_hierarchy(zones, inclusions);
 
     compute_labels(zones);
 
