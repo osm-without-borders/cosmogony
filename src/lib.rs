@@ -177,8 +177,13 @@ fn compute_labels(zones: &mut [Zone]) {
     }
 }
 
+// we don't want to keep zone's without zone_type (but the zone_type could be ZoneType::NonAdministrative)
+fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
+    zones.retain(|z| z.zone_type.is_some());
+}
+
 fn create_ontology(
-    zones: &mut [zone::Zone],
+    zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
     libpostal_file_path: PathBuf,
     country_code: Option<String>,
@@ -186,6 +191,8 @@ fn create_ontology(
     let inclusions = find_inclusions(zones);
 
     type_zones(zones, stats, libpostal_file_path, country_code, &inclusions)?;
+
+    clean_untagged_zones(zones);
 
     build_hierarchy(zones, inclusions);
 
