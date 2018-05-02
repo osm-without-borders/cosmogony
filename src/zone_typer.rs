@@ -1,8 +1,9 @@
 use failure::ResultExt;
 use failure::{err_msg, Error};
+use serde;
 use serde_yaml;
 use std::collections::BTreeMap;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
@@ -13,7 +14,7 @@ pub struct ZoneTyper {
     countries_rules: BTreeMap<String, CountryAdminTypeRules>,
 }
 
-#[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug)]
+#[derive(Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug)]
 enum OsmPrimaryObjects {
     #[serde(rename = "node")]
     Node,
@@ -23,19 +24,28 @@ enum OsmPrimaryObjects {
     Relation,
 }
 
-#[derive(Serialize, Deserialize, Default, Debug)]
-struct RulesOverrides {
-    #[serde(default)]
-    contained_by: BTreeMap<OsmPrimaryObjects, BTreeMap<String, CountryAdminTypeRules>>,
-    #[serde(rename = "id", default)]
-    id_rules: BTreeMap<OsmPrimaryObjects, BTreeMap<String, Option<ZoneType>>>,
+impl fmt::Display for OsmPrimaryObjects {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &OsmPrimaryObjects::Node => fmt.write_str("node")?,
+            &OsmPrimaryObjects::Way => fmt.write_str("way")?,
+            &OsmPrimaryObjects::Relation => fmt.write_str("relation")?,
+        }
+        Ok(())
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Debug)]
+struct RulesOverrides {
+    contained_by: BTreeMap<String, CountryAdminTypeRules>,
+    id_rules: BTreeMap<String, Option<ZoneType>>,
+}
+
+#[derive(Deserialize, Debug)]
 struct CountryAdminTypeRules {
     #[serde(rename = "admin_level", default)]
     type_by_level: BTreeMap<String, ZoneType>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_with_from::<_, SerdeRulesOverrides, _>")]
     overrides: RulesOverrides,
     // we don't implement libpostal's 'use_admin_center' as we don't need it
 }
@@ -122,22 +132,24 @@ impl RulesOverrides {
         all_zones: &[Zone],
     ) -> Option<Option<ZoneType>> {
         // check id overrides
-        let id_overrides = self.id_rules
-        .get(&OsmPrimaryObjects::Relation) // for the moment we only have relations
-        .and_then(|m| m.get(&zone.osm_id));
+        let id_overrides = self.id_rules.get(&zone.osm_id);
         // if there is no override for this specific object, we check the contained_by overrides
         match id_overrides {
             Some(overrides) => Some(overrides.clone()),
-            None => self.contained_by
-        .get(&OsmPrimaryObjects::Relation) // still only relations
-        .and_then(|relations_rules| {
-            let parents_osm_id: Vec<_> = zone_inclusions.iter().map(|idx| &all_zones[idx.index].osm_id).collect();
+            None => {
+                let parents_osm_id = zone_inclusions
+                    .iter()
+                    .map(|idx| &all_zones[idx.index].osm_id);
 
-            relations_rules
-            .iter()
-            .find(|&(ref osm_id, _)| parents_osm_id.contains(osm_id))
-            .and_then(|(_, ref country_rules)| country_rules.get_zone_type(zone, zone_inclusions, all_zones).map(|r| Some(r)))
-        }),
+                parents_osm_id
+                    .filter_map(|parent_osm_id| self.contained_by.get(parent_osm_id))
+                    .next()
+                    .and_then(|ref country_rules| {
+                        country_rules
+                            .get_zone_type(zone, zone_inclusions, all_zones)
+                            .map(|r| Some(r))
+                    })
+            }
         }
     }
 }
@@ -193,9 +205,56 @@ fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
     Ok(serde_yaml::from_str(&contents)?)
 }
 
+// stuff used for serde
+// to simplify serde, we use a strcut mapping exactly the file schema
+// and this struct is transformed to RulesOverrides with the 'From' trait
+#[derive(Deserialize, Default, Debug)]
+struct SerdeRulesOverrides {
+    #[serde(default)]
+    contained_by: BTreeMap<OsmPrimaryObjects, BTreeMap<String, CountryAdminTypeRules>>,
+    #[serde(rename = "id", default)]
+    id_rules: BTreeMap<OsmPrimaryObjects, BTreeMap<String, Option<ZoneType>>>,
+}
+
+impl From<SerdeRulesOverrides> for RulesOverrides {
+    fn from(serde: SerdeRulesOverrides) -> RulesOverrides {
+        let c = serde
+            .contained_by
+            .into_iter()
+            .flat_map(|(osm_type, map)| {
+                map.into_iter().map(move |(osm_id, rules)| {
+                    (format!("{}:{}", osm_type.to_string(), osm_id), rules)
+                })
+            })
+            .collect();
+        let i = serde
+            .id_rules
+            .into_iter()
+            .flat_map(|(osm_type, map)| {
+                map.into_iter().map(move |(osm_id, rules)| {
+                    (format!("{}:{}", osm_type.to_string(), osm_id), rules)
+                })
+            })
+            .collect();
+        RulesOverrides {
+            contained_by: c,
+            id_rules: i,
+        }
+    }
+}
+
+fn de_with_from<'de, D, T, U>(de: D) -> Result<U, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+    U: From<T>,
+{
+    T::deserialize(de).map(U::from)
+}
+
 #[cfg(test)]
 mod test {
-    use super::{CountryAdminTypeRules, OsmPrimaryObjects};
+    use super::CountryAdminTypeRules;
     use std::fs;
     use zone::{Zone, ZoneIndex, ZoneType};
     use zone_typer::read_libpostal_yaml;
@@ -282,9 +341,7 @@ mod test {
             deserialized_levels
                 .overrides
                 .contained_by
-                .get(&OsmPrimaryObjects::Relation)
-                .unwrap()
-                .get(&"407489".to_string())
+                .get(&"relation:407489".to_string())
                 .unwrap()
                 .type_by_level
                 .get(&"9".to_string())
@@ -324,9 +381,7 @@ mod test {
             deserialized_levels
                 .overrides
                 .id_rules
-                .get(&OsmPrimaryObjects::Relation)
-                .unwrap()
-                .get(&"1803923".to_string())
+                .get(&"relation:1803923".to_string())
                 .unwrap(),
             &Some(ZoneType::CityDistrict)
         );
@@ -335,9 +390,7 @@ mod test {
             deserialized_levels
                 .overrides
                 .id_rules
-                .get(&OsmPrimaryObjects::Relation)
-                .unwrap()
-                .get(&"42".to_string())
+                .get(&"relation:42".to_string())
                 .unwrap(),
             &None
         );
@@ -400,7 +453,7 @@ mod test {
             let mut z = Zone::default();
             z.id = ZoneIndex { index: idx };
             idx += 1;
-            z.osm_id = id.to_string();
+            z.osm_id = format!("relation:{}", id.to_string());
             z.admin_level = lvl;
             z
         };
@@ -421,7 +474,7 @@ mod test {
                 let find_zone_id = |osm_id: &str| {
                     zones
                         .iter()
-                        .find(|z| z.osm_id == osm_id.to_string())
+                        .find(|z| z.osm_id == format!("relation:{}", osm_id))
                         .unwrap()
                         .id
                         .clone()
@@ -442,7 +495,7 @@ mod test {
         let get_zone_type = |osm_id: &str| {
             let z = zones
                 .iter()
-                .find(|z| z.osm_id == osm_id.to_string())
+                .find(|z| z.osm_id == format!("relation:{}", osm_id))
                 .unwrap();
             rules.get_zone_type(&z, &inclusions[z.id.index], &zones)
         };

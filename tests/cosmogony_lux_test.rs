@@ -151,7 +151,7 @@ fn test_lux_zone_types() {
             key
         )
     }
-    assert_count(&zone_type_counts, "Suburb", 79);
+    assert_count(&zone_type_counts, "Suburb", 55);
     assert_count(&zone_type_counts, "City", 105);
     assert_count(&zone_type_counts, "StateDistrict", 13);
     assert_count(&zone_type_counts, "State", 0);
