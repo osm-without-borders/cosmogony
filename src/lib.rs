@@ -177,8 +177,13 @@ fn compute_labels(zones: &mut [Zone]) {
     }
 }
 
+// we don't want to keep zone's without zone_type (but the zone_type could be ZoneType::NonAdministrative)
+fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
+    zones.retain(|z| z.zone_type.is_some());
+}
+
 fn create_ontology(
-    zones: &mut [zone::Zone],
+    zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
     libpostal_file_path: PathBuf,
     country_code: Option<String>,
@@ -190,6 +195,12 @@ fn create_ontology(
     build_hierarchy(zones, inclusions);
 
     compute_labels(zones);
+
+    // we remove the useless zones from cosmogony
+    // WARNING: this invalidate the different indexes  (we can no longer lookup a Zone by it's id in the zones's vector)
+    // this should be removed later on (and switch to a map by osm_id ?) as it's not elegant,
+    // but for the moment it'll do
+    clean_untagged_zones(zones);
 
     Ok(())
 }

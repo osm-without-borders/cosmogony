@@ -68,7 +68,7 @@ fn test_lux_cosmogony() {
     // from the sample .osm.pbf file,
     let cosmogony = create_cosmogony_for_lux();
     assert_eq!(cosmogony.meta.osm_filename, "luxembourg_filtered.osm.pbf");
-    assert_eq!(cosmogony.zones.len(), 201);
+    assert_eq!(cosmogony.zones.len(), 198);
 
     assert!(
         cosmogony
@@ -108,7 +108,8 @@ fn test_wrapper_for_lux_admin_levels(a_cosmogony: Cosmogony) {
     assert_count(&level_counts, 8, 105); // 104 + 1 outside LU
     assert_count(&wikidata_counts, 8, 105);
     assert_count(&level_counts, 9, 79);
-    assert_count(&level_counts, 10, 3); // 2 + 1 outside LU
+    // the level 10 is not defined in the libpostal hierarchy, we should not have level 10 admins
+    assert_count(&level_counts, 10, 0);
 }
 
 #[test]
@@ -156,7 +157,7 @@ fn test_lux_zone_types() {
     assert_count(&zone_type_counts, "StateDistrict", 13);
     assert_count(&zone_type_counts, "State", 0);
     assert_count(&zone_type_counts, "Country", 1);
-    assert_count(&zone_type_counts, "None", 3);
+    assert_count(&zone_type_counts, "None", 0); // all the zones without zone_type should be filtered
 
     // check luxembroug city
     let lux = cosmogony
