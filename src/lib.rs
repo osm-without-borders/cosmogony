@@ -192,11 +192,15 @@ fn create_ontology(
 
     type_zones(zones, stats, libpostal_file_path, country_code, &inclusions)?;
 
-    clean_untagged_zones(zones);
-
     build_hierarchy(zones, inclusions);
 
     compute_labels(zones);
+
+    // we remove the useless zones from cosmogony
+    // WARNING: this invalidate the different indexes  (we can no longer lookup a Zone by it's id in the zones's vector)
+    // this should be removed later on (and switch to a map by osm_id ?) as it's not elegant,
+    // but for the moment it'll do
+    clean_untagged_zones(zones);
 
     Ok(())
 }
