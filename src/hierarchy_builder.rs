@@ -65,6 +65,24 @@ impl Zone {
     }
 }
 
+pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
+    let ztree: ZonesTree = zones.iter().collect();
+    let mut result = vec![vec![]; zones.len()];
+
+    for z in zones {
+        let parents = ztree
+            .fetch_zone_bbox(z)
+            .into_iter()
+            .filter(|z_idx| z_idx != &z.id)
+            .filter(|z_idx| zones[z_idx.index].contains(z))
+            .collect();
+
+        result[z.id.index] = parents;
+    }
+
+    result
+}
+
 /// Build the cosmogony hierarchy for all the zones
 ///
 /// The hierarchy is a tree.
@@ -75,20 +93,14 @@ impl Zone {
 /// * a zone must be attached to zone with a 'greater' zone_type
 ///     a City cannot be attached to a CityDistrict or a Suburb, it should be attached to a
 ///     StateDistrict, a State, a CountryRegion or a Country
-pub fn build_hierarchy(zones: &mut [Zone]) {
-    let ztree: ZonesTree = zones.iter().collect();
+pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
     let nb_zones = zones.len();
 
     for i in 0..nb_zones {
         let (mslice, z) = MutableSlice::init(zones, i);
-        if z.parent.is_some() {
-            continue;
-        }
 
-        let parent = ztree
-            .fetch_zone_bbox(z)
-            .into_iter()
-            .filter(|c_idx| c_idx.index != i)
+        let parent = inclusions[i]
+            .iter()
             .filter_map(|c_idx| {
                 let c = mslice.get(&c_idx);
                 if z.can_be_child_of(c) {
@@ -118,7 +130,7 @@ pub fn build_hierarchy(zones: &mut [Zone]) {
 #[cfg(test)]
 mod test {
     use geo::{LineString, MultiPolygon, Point, Polygon};
-    use hierarchy_builder::build_hierarchy;
+    use hierarchy_builder::{build_hierarchy, find_inclusions};
     use zone::{Zone, ZoneType};
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
@@ -186,7 +198,8 @@ mod test {
     fn hierarchy_test() {
         let mut zones = create_zones();
 
-        build_hierarchy(&mut zones);
+        let inclusions = find_inclusions(&zones);
+        build_hierarchy(&mut zones, inclusions);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -202,7 +215,8 @@ mod test {
         // it should not be a parent anymore
         zones[1].zone_type = Some(ZoneType::NonAdministrative);
 
-        build_hierarchy(&mut zones);
+        let inclusions = find_inclusions(&zones);
+        build_hierarchy(&mut zones, inclusions);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -218,7 +232,8 @@ mod test {
         // so it cannot have a state as parent anymore
         zones[2].zone_type = Some(ZoneType::State);
 
-        build_hierarchy(&mut zones);
+        let inclusions = find_inclusions(&zones);
+        build_hierarchy(&mut zones, inclusions);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -235,7 +250,8 @@ mod test {
         // so it cannot have a state as parent anymore
         zones[2].zone_type = Some(ZoneType::CountryRegion);
 
-        build_hierarchy(&mut zones);
+        let inclusions = find_inclusions(&zones);
+        build_hierarchy(&mut zones, inclusions);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -252,7 +268,8 @@ mod test {
         // now we change the zone type of z1 to None, so it cannot be parent anymore
         zones[1].zone_type = None;
 
-        build_hierarchy(&mut zones);
+        let inclusions = find_inclusions(&zones);
+        build_hierarchy(&mut zones, inclusions);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
