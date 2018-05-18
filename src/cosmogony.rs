@@ -29,7 +29,8 @@ pub struct CosmogonyStats {
 impl CosmogonyStats {
     pub fn compute(&mut self, zones: &Vec<Zone>) {
         for zone in zones {
-            let type_ = zone.zone_type
+            let type_ = zone
+                .zone_type
                 .map(|t| format!("{:?}", t))
                 .unwrap_or("None".into());
             let count = self.zone_type_counts.entry(type_).or_insert(0);

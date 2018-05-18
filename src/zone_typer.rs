@@ -108,11 +108,13 @@ impl CountryAdminTypeRules {
         zone_inclusions: &Vec<ZoneIndex>,
         all_zones: &[Zone],
     ) -> Option<ZoneType> {
-        let overrides = self.overrides
+        let overrides = self
+            .overrides
             .get_overrided_type(zone, zone_inclusions, all_zones);
         match overrides {
             Some(o) => o,
-            None => self.type_by_level
+            None => self
+                .type_by_level
                 .get(&zone.admin_level.unwrap_or(0).to_string())
                 .cloned(),
         }

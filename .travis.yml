@@ -4,7 +4,7 @@ matrix:
   include:
   - rust: nightly
     before_script: rustup component add rustfmt-preview
-    script: cargo fmt --all -- --write-mode diff
+    script:  cargo fmt --all -- --check
   - rust: stable
     script:
     - cargo test
