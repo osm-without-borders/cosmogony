@@ -67,7 +67,8 @@ impl CountryFinder {
         match z.boundary {
             Some(ref b) => {
                 if let Some(bbox) = b.bbox() {
-                    let mut candidates: Vec<_> = self.tree
+                    let mut candidates: Vec<_> = self
+                        .tree
                         .get(&bbox_to_rect(bbox))
                         .into_iter()
                         .map(|(_, country)| country)

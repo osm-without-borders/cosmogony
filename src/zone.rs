@@ -274,7 +274,8 @@ impl Zone {
         let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
-        let all_lang: BTreeSet<String> = self.iter_hierarchy(all_zones)
+        let all_lang: BTreeSet<String> = self
+            .iter_hierarchy(all_zones)
             .map(|z| z.international_names.keys())
             .flat_map(|i| i)
             .map(|n| n.as_str().into())

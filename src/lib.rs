@@ -55,7 +55,8 @@ pub fn get_zones_and_stats(
     pbf: &mut OsmPbfReader<File>,
 ) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
     info!("Reading pbf with geometries...");
-    let objects = pbf.get_objs_and_deps(|o| is_admin(o))
+    let objects = pbf
+        .get_objs_and_deps(|o| is_admin(o))
         .context("invalid osm file")?;
     info!("reading pbf done.");
 
@@ -229,7 +230,8 @@ pub fn build_cosmogony(
     let cosmogony = Cosmogony {
         zones: zones,
         meta: CosmogonyMetadata {
-            osm_filename: path.file_name()
+            osm_filename: path
+                .file_name()
                 .and_then(|f| f.to_str())
                 .map(|f| f.to_string())
                 .unwrap_or("invalid file name".into()),
