@@ -65,6 +65,7 @@ pub struct Zone {
     pub boundary: Option<geo::MultiPolygon<f64>>,
 
     pub tags: Tags,
+    #[serde(default = "Tags::new")] //to keep the retrocompatibility with cosmogony2mimir
     pub center_tags: Tags,
 
     pub parent: Option<ZoneIndex>,
