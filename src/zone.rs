@@ -65,13 +65,14 @@ pub struct Zone {
     pub boundary: Option<geo::MultiPolygon<f64>>,
 
     pub tags: Tags,
+    pub center_tags: Tags,
 
     pub parent: Option<ZoneIndex>,
     pub wikidata: Option<String>,
     // pub links: Vec<ZoneIndex>
 }
 
-/// get all the international names from the osn tags
+/// get all the international names from the osm tags
 ///
 /// the names in osm are in a tag names `name:<lang>`,
 /// eg `name:fr`, `name:de`, ...
@@ -108,6 +109,7 @@ impl Zone {
             boundary: None,
             parent: None,
             tags: Tags::new(),
+            center_tags: Tags::new(),
             wikidata: None,
             zip_codes: vec![],
         }
@@ -169,6 +171,7 @@ impl Zone {
             boundary: None,
             parent: None,
             tags: relation.tags.clone(),
+            center_tags: Tags::new(),
             wikidata: wikidata,
         })
     }
@@ -182,16 +185,19 @@ impl Zone {
         Self::from_osm(relation, index).map(|mut result| {
             result.boundary = build_boundary(relation, objects);
 
-            result.center = relation
+            let center = relation
                 .refs
                 .iter()
                 .find(|r| r.role == "admin_centre")
                 .and_then(|r| objects.get(&r.member))
-                .and_then(|o| o.node())
-                .map_or(
-                    result.boundary.as_ref().and_then(|b| b.centroid()),
-                    |node| Some(Coord::new(node.lon(), node.lat())),
-                );
+                .and_then(|o| o.node());
+
+            result.center = center.map_or(
+                result.boundary.as_ref().and_then(|b| b.centroid()),
+                |node| Some(Coord::new(node.lon(), node.lat())),
+            );
+
+            result.center_tags = center.map_or(Tags::new(), |n| n.tags.clone());
 
             result
         })
@@ -468,6 +474,7 @@ mod test {
             boundary: None,
             parent: parent.map(|p| ZoneIndex { index: p }),
             tags: Tags::new(),
+            center_tags: Tags::new(),
             wikidata: None,
             zip_codes: zips.iter().map(|s| s.to_string()).collect(),
         }

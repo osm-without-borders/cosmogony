@@ -159,7 +159,7 @@ fn test_lux_zone_types() {
     assert_count(&zone_type_counts, "Country", 1);
     assert_count(&zone_type_counts, "None", 0); // all the zones without zone_type should be filtered
 
-    // check luxembroug city
+    // check Luxembourg city
     let lux = cosmogony
         .zones
         .iter()
@@ -185,6 +185,12 @@ fn test_lux_zone_types() {
     assert_eq!(
         lux.international_labels.get("de"),
         Some(&"Luxemburg, Kanton Luxemburg, Großherzogtum Luxemburg".to_string())
+    );
+
+    assert!(!lux.center_tags.is_empty());
+    assert_eq!(
+        lux.center_tags.get("population"),
+        Some(&"103641".to_string())
     );
 
     // check the country
