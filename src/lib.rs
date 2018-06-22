@@ -124,6 +124,7 @@ fn type_zones(
     country_code: Option<String>,
     inclusions: &Vec<Vec<ZoneIndex>>,
 ) -> Result<(), Error> {
+    info!("typing zones");
     let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
     let country_finder: CountryFinder = zones.iter().collect();
     if country_code.is_none() && country_finder.is_empty() {
@@ -172,6 +173,7 @@ fn type_zones(
 }
 
 fn compute_labels(zones: &mut [Zone]) {
+    info!("computing all zones's label");
     let nb_zones = zones.len();
     for i in 0..nb_zones {
         let (mslice, z) = MutableSlice::init(zones, i);
@@ -181,7 +183,10 @@ fn compute_labels(zones: &mut [Zone]) {
 
 // we don't want to keep zone's without zone_type (but the zone_type could be ZoneType::NonAdministrative)
 fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
+    info!("cleaning untagged zones");
+    let nb_zones = zones.len();
     zones.retain(|z| z.zone_type.is_some());
+    info!("{} zones cleaned", (nb_zones - zones.len()));
 }
 
 fn create_ontology(
@@ -190,6 +195,7 @@ fn create_ontology(
     libpostal_file_path: PathBuf,
     country_code: Option<String>,
 ) -> Result<(), Error> {
+    info!("creating ontology for {} zones", zones.len());
     let inclusions = find_inclusions(zones);
 
     type_zones(zones, stats, libpostal_file_path, country_code, &inclusions)?;

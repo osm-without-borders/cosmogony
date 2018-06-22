@@ -89,6 +89,7 @@ fn serialize_cosmogony(
     output_file: String,
     format: OutputFormat,
 ) -> Result<(), Error> {
+    info!("serializing the cosmogony");
     let json = serde_json::to_string(cosmogony)?;
     let output_bytes = match format {
         OutputFormat::JsonGz => {
@@ -98,6 +99,7 @@ fn serialize_cosmogony(
         }
         OutputFormat::Json => json.into_bytes(),
     };
+    info!("writing the output file {}", output_file);
     let mut file = File::create(output_file)?;
     file.write_all(&output_bytes)?;
     Ok(())
@@ -122,7 +124,7 @@ fn cosmogony(args: Args) -> Result<(), Error> {
     }
 
     if !args.no_stats {
-        println!(
+        info!(
             "Statistics for {}:\n{}",
             cosmogony.meta.osm_filename, cosmogony.meta.stats
         );

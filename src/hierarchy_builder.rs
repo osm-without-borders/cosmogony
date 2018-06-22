@@ -67,6 +67,7 @@ impl Zone {
 
 pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
     use rayon::prelude::*;
+    info!("finding all the inclusions");
     let ztree: ZonesTree = zones.iter().collect();
     let mut result = vec![vec![]; zones.len()];
 
@@ -95,6 +96,7 @@ pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
 ///     a City cannot be attached to a CityDistrict or a Suburb, it should be attached to a
 ///     StateDistrict, a State, a CountryRegion or a Country
 pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
+    info!("building the zones's hierarchy");
     let nb_zones = zones.len();
 
     for i in 0..nb_zones {
