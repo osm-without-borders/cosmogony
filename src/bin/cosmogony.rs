@@ -132,8 +132,17 @@ fn cosmogony(args: Args) -> Result<(), Error> {
     Ok(())
 }
 
+fn init_logger() {
+    let mut builder = env_logger::Builder::new();
+    builder.filter(None, log::LevelFilter::Info);
+    if let Ok(s) = std::env::var("RUST_LOG") {
+        builder.parse(&s);
+    }
+    builder.init();
+}
+
 fn main() {
-    env_logger::init();
+    init_logger();
     let args = Args::from_args();
     match cosmogony(args) {
         Err(e) => {
