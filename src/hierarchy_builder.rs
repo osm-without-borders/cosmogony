@@ -109,19 +109,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
                     None
                 }
             })
-            .fold(None, |smallest, candidate| {
-                // we test first that the candidate's type is smaller that the smallest
-                // since the contains is not cheap and if we already found a State that
-                // contains `z` we can skip testing the country
-                if (smallest.is_none()
-                    || candidate.zone_type < smallest.and_then(|s: &Zone| s.zone_type))
-                    && candidate.contains(z)
-                {
-                    Some(candidate)
-                } else {
-                    smallest
-                }
-            });
+            .min_by_key(|z| z.zone_type);
 
         z.set_parent(parent.map(|z| z.id.clone()));
     }
