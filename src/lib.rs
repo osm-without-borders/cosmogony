@@ -15,6 +15,7 @@ extern crate serde_yaml;
 extern crate structopt;
 #[macro_use]
 extern crate lazy_static;
+extern crate rayon;
 
 pub mod cosmogony;
 mod country_finder;

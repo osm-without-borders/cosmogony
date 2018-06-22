@@ -66,19 +66,20 @@ impl Zone {
 }
 
 pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
+    use rayon::prelude::*;
     let ztree: ZonesTree = zones.iter().collect();
     let mut result = vec![vec![]; zones.len()];
 
-    for z in zones {
-        let parents = ztree
+    zones.par_iter()
+    .map(|z| {
+        ztree
             .fetch_zone_bbox(z)
             .into_iter()
             .filter(|z_idx| z_idx != &z.id)
             .filter(|z_idx| zones[z_idx.index].contains(z))
-            .collect();
-
-        result[z.id.index] = parents;
-    }
+            .collect()
+    })
+    .collect_into_vec(&mut result);
 
     result
 }
