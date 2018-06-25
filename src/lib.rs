@@ -109,11 +109,17 @@ fn get_country_code<'a>(
     country_finder: &'a CountryFinder,
     zone: &zone::Zone,
     country_code: &'a Option<String>,
+    inclusions: &Vec<ZoneIndex>,
 ) -> Option<String> {
     if let &Some(ref c) = country_code {
         Some(c.clone())
     } else {
-        country_finder.find_zone_country(&zone)
+        let c = country_finder.find_zone_country(&zone, &inclusions);
+        info!(
+            "for zone {}, country: {:?}, inclusion: {:?}",
+            &zone.name, &c, &inclusions
+        );
+        c
     }
 }
 
@@ -124,8 +130,10 @@ fn type_zones(
     country_code: Option<String>,
     inclusions: &Vec<Vec<ZoneIndex>>,
 ) -> Result<(), Error> {
-    info!("typing zones");
+    use rayon::prelude::*;
+    info!("reading libpostal's rules");
     let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
+    info!("creating a countrys rtree");
     let country_finder: CountryFinder = zones.iter().collect();
     if country_code.is_none() && country_finder.is_empty() {
         return Err(failure::err_msg(
@@ -133,42 +141,47 @@ fn type_zones(
         ));
     }
 
-    for i in 0..zones.len() {
-        let country_code = get_country_code(&country_finder, &zones[i], &country_code);
-        match country_code {
+    info!("typing zones");
+    // We type all the zones in parallele
+    // To not mutate the zones while doing it
+    // (the borrow checker would not be happy since we also need to access to the zone's vector
+    // to be able to transform the ZoneIndex to a zone)
+    // we collect all the types in a Vector, and assign the zone's zone_type as a post process
+    let zones_type: Vec<_> = zones
+        .par_iter()
+        .map(|z| {
+            get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index])
+                .map(|c| zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones))
+        })
+        .collect();
+
+    zones
+        .iter_mut()
+        .zip(zones_type.into_iter())
+        .for_each(|(z, zone_type)| match zone_type {
             None => {
-                info!(
-                    "impossible to find a country for {}, skipping",
-                    &zones[i].name
-                );
+                info!("impossible to find a country for {}, skipping", &z.name);
                 stats.zone_without_country += 1;
-                continue;
             }
-            Some(country) => {
-                debug!("Country of {} is {:?}", &zones[i].name, &country);
-                let type_res = zone_typer.get_zone_type(&zones[i], &country, &inclusions[i], zones);
-                match type_res {
-                    Ok(t) => zones[i].zone_type = Some(t),
-                    Err(zone_typer::ZoneTyperError::InvalidCountry(c)) => {
-                        info!("impossible to find rules for country {}", c);
-                        *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
-                    }
-                    Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country)) => {
-                        info!(
-                            "impossible to find a rule for level {:?} for country {}",
-                            lvl, country
-                        );
-                        *stats
-                            .unhandled_admin_level
-                            .entry(country)
-                            .or_insert(BTreeMap::new())
-                            .entry(lvl.unwrap_or(0))
-                            .or_insert(0) += 1;
-                    }
-                }
+            Some(Ok(t)) => z.zone_type = Some(t),
+            Some(Err(zone_typer::ZoneTyperError::InvalidCountry(c))) => {
+                info!("impossible to find rules for country {}", c);
+                *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
             }
-        }
-    }
+            Some(Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country))) => {
+                info!(
+                    "impossible to find a rule for level {:?} for country {}",
+                    lvl, country
+                );
+                *stats
+                    .unhandled_admin_level
+                    .entry(country)
+                    .or_insert(BTreeMap::new())
+                    .entry(lvl.unwrap_or(0))
+                    .or_insert(0) += 1;
+            }
+        });
+
     Ok(())
 }
 
