@@ -66,19 +66,22 @@ impl Zone {
 }
 
 pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
+    use rayon::prelude::*;
+    info!("finding all the inclusions");
     let ztree: ZonesTree = zones.iter().collect();
     let mut result = vec![vec![]; zones.len()];
 
-    for z in zones {
-        let parents = ztree
-            .fetch_zone_bbox(z)
-            .into_iter()
-            .filter(|z_idx| z_idx != &z.id)
-            .filter(|z_idx| zones[z_idx.index].contains(z))
-            .collect();
-
-        result[z.id.index] = parents;
-    }
+    zones
+        .par_iter()
+        .map(|z| {
+            ztree
+                .fetch_zone_bbox(z)
+                .into_iter()
+                .filter(|z_idx| z_idx != &z.id)
+                .filter(|z_idx| zones[z_idx.index].contains(z))
+                .collect()
+        })
+        .collect_into_vec(&mut result);
 
     result
 }
@@ -94,6 +97,7 @@ pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
 ///     a City cannot be attached to a CityDistrict or a Suburb, it should be attached to a
 ///     StateDistrict, a State, a CountryRegion or a Country
 pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
+    info!("building the zones's hierarchy");
     let nb_zones = zones.len();
 
     for i in 0..nb_zones {
@@ -109,19 +113,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
                     None
                 }
             })
-            .fold(None, |smallest, candidate| {
-                // we test first that the candidate's type is smaller that the smallest
-                // since the contains is not cheap and if we already found a State that
-                // contains `z` we can skip testing the country
-                if (smallest.is_none()
-                    || candidate.zone_type < smallest.and_then(|s: &Zone| s.zone_type))
-                    && candidate.contains(z)
-                {
-                    Some(candidate)
-                } else {
-                    smallest
-                }
-            });
+            .min_by_key(|z| z.zone_type);
 
         z.set_parent(parent.map(|z| z.id.clone()));
     }

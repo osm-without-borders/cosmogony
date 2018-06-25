@@ -89,6 +89,7 @@ fn serialize_cosmogony(
     output_file: String,
     format: OutputFormat,
 ) -> Result<(), Error> {
+    info!("serializing the cosmogony");
     let json = serde_json::to_string(cosmogony)?;
     let output_bytes = match format {
         OutputFormat::JsonGz => {
@@ -98,6 +99,7 @@ fn serialize_cosmogony(
         }
         OutputFormat::Json => json.into_bytes(),
     };
+    info!("writing the output file {}", output_file);
     let mut file = File::create(output_file)?;
     file.write_all(&output_bytes)?;
     Ok(())
@@ -122,7 +124,7 @@ fn cosmogony(args: Args) -> Result<(), Error> {
     }
 
     if !args.no_stats {
-        println!(
+        info!(
             "Statistics for {}:\n{}",
             cosmogony.meta.osm_filename, cosmogony.meta.stats
         );
@@ -130,8 +132,17 @@ fn cosmogony(args: Args) -> Result<(), Error> {
     Ok(())
 }
 
+fn init_logger() {
+    let mut builder = env_logger::Builder::new();
+    builder.filter(None, log::LevelFilter::Info);
+    if let Ok(s) = std::env::var("RUST_LOG") {
+        builder.parse(&s);
+    }
+    builder.init();
+}
+
 fn main() {
-    env_logger::init();
+    init_logger();
     let args = Args::from_args();
     match cosmogony(args) {
         Err(e) => {
