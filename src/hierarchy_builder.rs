@@ -71,16 +71,17 @@ pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
     let ztree: ZonesTree = zones.iter().collect();
     let mut result = vec![vec![]; zones.len()];
 
-    zones.par_iter()
-    .map(|z| {
-        ztree
-            .fetch_zone_bbox(z)
-            .into_iter()
-            .filter(|z_idx| z_idx != &z.id)
-            .filter(|z_idx| zones[z_idx.index].contains(z))
-            .collect()
-    })
-    .collect_into_vec(&mut result);
+    zones
+        .par_iter()
+        .map(|z| {
+            ztree
+                .fetch_zone_bbox(z)
+                .into_iter()
+                .filter(|z_idx| z_idx != &z.id)
+                .filter(|z_idx| zones[z_idx.index].contains(z))
+                .collect()
+        })
+        .collect_into_vec(&mut result);
 
     result
 }
