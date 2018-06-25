@@ -139,6 +139,9 @@ impl RulesOverrides {
         match id_overrides {
             Some(overrides) => Some(overrides.clone()),
             None => {
+                if self.contained_by.is_empty() {
+                    return None;
+                }
                 let parents_osm_id = zone_inclusions
                     .iter()
                     .map(|idx| &all_zones[idx.index].osm_id);
