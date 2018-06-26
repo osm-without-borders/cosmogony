@@ -1,95 +1,62 @@
 extern crate geos;
 
-use geo::boundingbox::BoundingBox;
-use gst::rtree::RTree;
+use std;
+use std::collections::BTreeMap;
 use std::iter::FromIterator;
-use utils::bbox_to_rect;
-use zone::Zone;
+use zone::{Zone, ZoneIndex};
 
 const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
 
+// to reduce the memory footprint we only store some of the countries information
 pub struct Country {
     iso: String, // ISO3166-1:alpha2 code (eg: FR, DE, US, etc.),
-    zone: Zone,
+    admin_level: Option<u32>,
 }
 
 pub struct CountryFinder {
-    tree: RTree<Country>,
-    empty: bool, // There is no is_empty() method in the Rtree library nor easy means to check it
+    countries: BTreeMap<ZoneIndex, Country>,
 }
 
 impl Default for CountryFinder {
     fn default() -> Self {
         CountryFinder {
-            tree: RTree::new(),
-            empty: true,
+            countries: BTreeMap::new(),
         }
     }
 }
 
 impl<'a> FromIterator<&'a Zone> for CountryFinder {
     fn from_iter<I: IntoIterator<Item = &'a Zone>>(zones: I) -> Self {
-        let mut cfinder = CountryFinder::default();
-        let mut is_empty = true;
-        zones
-            .into_iter()
-            .filter_map(|z| match z.tags.get(COUNTRY_CODE_TAG) {
-                Some(country_code) => {
-                    info!("adding country {}", &country_code);
-                    is_empty = false;
-                    Some(Country {
-                        iso: country_code.clone(),
-                        zone: z.clone(),
+        CountryFinder {
+            countries: zones
+                .into_iter()
+                .filter_map(|z| {
+                    z.tags.get(COUNTRY_CODE_TAG).map(|country_code| {
+                        (
+                            z.id.clone(),
+                            Country {
+                                iso: country_code.clone(),
+                                admin_level: z.admin_level.clone(),
+                            },
+                        )
                     })
-                }
-                None => None,
-            })
-            .for_each(|c| {
-                cfinder.insert_country(c);
-            });
-        cfinder.empty = is_empty;
-        cfinder
+                })
+                .collect(),
+        }
     }
 }
 
 impl CountryFinder {
-    pub fn insert_country(&mut self, c: Country) {
-        let boundary = c.zone.clone().boundary;
-        if let Some(ref b) = boundary {
-            match b.bbox() {
-                Some(b) => self.tree.insert(bbox_to_rect(b), c),
-                None => warn!("No bbox: Cannot insert country {}", c.iso),
-            }
-        }
-    }
-
-    pub fn find_zone_country(&self, z: &Zone) -> Option<String> {
-        match z.boundary {
-            Some(ref b) => {
-                if let Some(bbox) = b.bbox() {
-                    let mut candidates: Vec<_> = self
-                        .tree
-                        .get(&bbox_to_rect(bbox))
-                        .into_iter()
-                        .map(|(_, country)| country)
-                        .collect();
-
-                    candidates.sort_by_key(|c| -1 * c.zone.admin_level.unwrap_or(0) as i32);
-                    candidates
-                        .iter()
-                        .filter(|c| c.zone.contains(&z))
-                        .next()
-                        .map(|c| c.iso.clone())
-                } else {
-                    warn!("No bbox: Cannot fetch country of zone {}", z.osm_id);
-                    None
-                }
-            }
-            None => None,
-        }
+    pub fn find_zone_country(&self, z: &Zone, inclusion: &Vec<ZoneIndex>) -> Option<String> {
+        inclusion
+            .iter()
+            .chain(std::iter::once(&z.id)) // we also add the zone to check if it's itself a country
+            .filter_map(|parent_index| self.countries.get(&parent_index))
+            .max_by_key(|c| c.admin_level.unwrap_or(0u32))
+            .map(|c| c.iso.clone())
     }
 
     pub fn is_empty(&self) -> bool {
-        self.empty
+        self.countries.is_empty()
     }
 }

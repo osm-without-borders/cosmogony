@@ -33,7 +33,7 @@ pub enum ZoneType {
     NonAdministrative,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct ZoneIndex {
     pub index: usize,
 }
