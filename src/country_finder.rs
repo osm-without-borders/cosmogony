@@ -7,9 +7,10 @@ use zone::{Zone, ZoneIndex};
 
 const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
 
+// to reduce the memory footprint we only store some of the countries information
 pub struct Country {
     iso: String, // ISO3166-1:alpha2 code (eg: FR, DE, US, etc.),
-    zone: Zone,
+    admin_level: Option<u32>,
 }
 
 pub struct CountryFinder {
@@ -35,7 +36,7 @@ impl<'a> FromIterator<&'a Zone> for CountryFinder {
                             z.id.clone(),
                             Country {
                                 iso: country_code.clone(),
-                                zone: z.clone(),
+                                admin_level: z.admin_level.clone(),
                             },
                         )
                     })
@@ -49,9 +50,9 @@ impl CountryFinder {
     pub fn find_zone_country(&self, z: &Zone, inclusion: &Vec<ZoneIndex>) -> Option<String> {
         inclusion
             .iter()
-            .chain(std::iter::once(&z.id))
+            .chain(std::iter::once(&z.id)) // we also add the zone to check if it's itself a country
             .filter_map(|parent_index| self.countries.get(&parent_index))
-            .max_by_key(|c| c.zone.admin_level.unwrap_or(0u32))
+            .max_by_key(|c| c.admin_level.unwrap_or(0u32))
             .map(|c| c.iso.clone())
     }
 
