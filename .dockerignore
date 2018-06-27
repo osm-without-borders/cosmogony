@@ -3,3 +3,4 @@
 !tests/
 !Cargo*
 !build.rs
+!libpostal

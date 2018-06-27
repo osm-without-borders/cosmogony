@@ -17,5 +17,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y libcurl3 libgeos-c1 libgeos-dev libssl-dev && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY --from=builder /srv/cosmogony/target/release/cosmogony /usr/bin/cosmogony
+# we also need the libpostal files
+COPY --from=builder /srv/cosmogony/libpostal/resources/boundaries/osm /srv/libpostal/resources/boundaries/osm
 
-ENTRYPOINT cosmogony
+ENTRYPOINT ["cosmogony"]
