@@ -1,6 +1,5 @@
 extern crate geo;
 
-use geo::boundingbox::BoundingBox;
 use gst::rtree::RTree;
 use mutable_slice::MutableSlice;
 use std::iter::FromIterator;
@@ -19,29 +18,24 @@ impl Default for ZonesTree {
 
 impl ZonesTree {
     pub fn insert_zone(&mut self, z: &Zone) {
-        if let Some(ref b) = z.boundary {
-            match b.bbox() {
-                Some(b) => self.tree.insert(bbox_to_rect(b), z.id.clone()),
-                None => warn!("No bbox: Cannot insert zone with osm_id {}", z.osm_id),
-            }
+        match z.bbox {
+            Some(ref b) => self.tree.insert(bbox_to_rect(b), z.id.clone()),
+            None => warn!("No bbox: Cannot insert zone with osm_id {}", z.osm_id),
         }
     }
 
     pub fn fetch_zone_bbox(&self, z: &Zone) -> Vec<ZoneIndex> {
-        match z.boundary {
-            None => vec![],
-            Some(ref b) => {
-                if let Some(bbox) = b.bbox() {
-                    self.tree
-                        .get(&bbox_to_rect(bbox))
-                        .into_iter()
-                        .map(|(_, z_idx)| z_idx.clone())
-                        .collect()
-                } else {
-                    warn!("No bbox: Cannot fetch zone with osm_id {}", z.osm_id);
-                    vec![]
-                }
+        match z.bbox {
+            None => {
+                warn!("No bbox: Cannot fetch zone with osm_id {}", z.osm_id);
+                vec![]
             }
+            Some(ref bbox) => self
+                .tree
+                .get(&bbox_to_rect(bbox))
+                .into_iter()
+                .map(|(_, z_idx)| z_idx.clone())
+                .collect(),
         }
     }
 }
@@ -121,6 +115,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
 
 #[cfg(test)]
 mod test {
+    use geo::boundingbox::BoundingBox;
     use geo::{LineString, MultiPolygon, Point, Polygon};
     use hierarchy_builder::{build_hierarchy, find_inclusions};
     use zone::{Zone, ZoneType};
@@ -132,6 +127,7 @@ mod test {
         let mut z = Zone::default();
         z.id.index = idx;
         z.boundary = Some(mp);
+        z.bbox = z.boundary.as_ref().and_then(|b| b.bbox());
         z.zone_type = zone_type;
         z
     }

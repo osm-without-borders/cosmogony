@@ -4,7 +4,7 @@ use geo::Bbox;
 use gst::rtree::Rect;
 use ordered_float::OrderedFloat;
 
-pub fn bbox_to_rect(bbox: Bbox<f64>) -> Rect {
+pub fn bbox_to_rect(bbox: &Bbox<f64>) -> Rect {
     // rust-geo bbox algorithm returns `Bbox`,
     // while gst RTree uses `Rect` as index.
     Rect {
