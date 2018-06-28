@@ -66,7 +66,9 @@ pub struct Zone {
     pub boundary: Option<geo::MultiPolygon<f64>>,
 
     #[serde(
-        serialize_with = "serialize_bbox_as_geojson", deserialize_with = "deserialize_as_bbox"
+        serialize_with = "serialize_bbox_as_geojson",
+        deserialize_with = "deserialize_as_bbox",
+        default
     )]
     pub bbox: Option<Bbox<f64>>,
 
@@ -436,7 +438,9 @@ where
     use self::geojson::Bbox as GeojsonBbox;
     match bbox {
         Some(b) => {
-            // bbox serialized as an array (rfc7946)
+            // bbox serialized as an array
+            // using GeoJSON bounding box format
+            // See RFC 7946: https://tools.ietf.org/html/rfc7946#section-5
             let geojson_bbox: GeojsonBbox = vec![b.xmin, b.ymin, b.xmax, b.ymax];
             geojson_bbox.serialize(serializer)
         }
