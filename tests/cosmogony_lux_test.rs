@@ -1,5 +1,4 @@
 extern crate cosmogony;
-extern crate geo;
 extern crate serde_json;
 use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 
