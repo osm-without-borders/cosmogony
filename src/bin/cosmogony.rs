@@ -14,7 +14,7 @@ use cosmogony::cosmogony::Cosmogony;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::BufWriter;
 use structopt::StructOpt;
 
 use failure::Error;
@@ -89,18 +89,16 @@ fn serialize_cosmogony(
     output_file: String,
     format: OutputFormat,
 ) -> Result<(), Error> {
-    info!("serializing the cosmogony");
-    let json = serde_json::to_string(cosmogony)?;
     info!("writing the output file {}", output_file);
-    let mut file = File::create(output_file)?;
+    let file = File::create(output_file)?;
+    let stream = BufWriter::new(file);
     match format {
         OutputFormat::JsonGz => {
-            let mut e = GzEncoder::new(file, Compression::default());
-            e.write_all(json.as_bytes())?;
-            e.finish()?;
+            let e = GzEncoder::new(stream, Compression::default());
+            serde_json::to_writer(e, cosmogony)?;
         }
         OutputFormat::Json => {
-            file.write_all(&json.into_bytes())?;
+            serde_json::to_writer(stream, cosmogony)?;
         }
     };
     Ok(())
