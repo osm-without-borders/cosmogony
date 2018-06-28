@@ -2,7 +2,9 @@ extern crate cosmogony;
 extern crate geo;
 extern crate serde_json;
 use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
-use geo::Bbox;
+
+#[macro_use]
+extern crate approx;
 
 use std::collections::BTreeMap;
 use std::process::{Command, Output};
@@ -101,21 +103,17 @@ fn test_wrapper_for_lux_admin_levels(a_cosmogony: &Cosmogony) {
 }
 
 fn test_wrapper_for_lux_zones(a_cosmogony: &Cosmogony) {
-    let lux = a_cosmogony
+    let zone = a_cosmogony
         .zones
         .iter()
         .find(|z| z.name == "Esch-sur-Alzette" && z.zone_type == Some(ZoneType::City))
         .unwrap();
 
-    assert_eq!(
-        lux.bbox,
-        Some(Bbox {
-            xmin: 5.9432118,
-            ymin: 49.460907,
-            xmax: 6.005144,
-            ymax: 49.518616,
-        })
-    );
+    let bbox = zone.bbox.unwrap();
+    assert_relative_eq!(bbox.xmin, 5.9432118, epsilon = 1e-8);
+    assert_relative_eq!(bbox.ymin, 49.460907, epsilon = 1e-8);
+    assert_relative_eq!(bbox.xmax, 6.005144, epsilon = 1e-8);
+    assert_relative_eq!(bbox.ymax, 49.518616, epsilon = 1e-8);
 }
 
 #[test]
