@@ -88,14 +88,16 @@ Below is a brief example of the information contained in the cosmogony output.
 {
 	"zones":[
 		{"id":0,
-		"osm_id":"110114",
+		"osm_id":"relation:110114",
 		"admin_level":8,
 		"zone_type":"city",
 		"name":"Sand Rock",
 		"zip_codes":[],
 		"center":{"coordinates":[-85.77153961457083,34.2303942501858],"type":"Point"},
+		"bbox": [-85.803571, 34.203915, -85.745058, 34.26666],
 		"geometry":{
-			"coordinates":"..."},
+			"coordinates":"..."
+		},
 		"tags":{
 			"admin_level":"8",
 			"border_type":"city",
