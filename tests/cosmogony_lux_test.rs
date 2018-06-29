@@ -2,6 +2,9 @@ extern crate cosmogony;
 extern crate serde_json;
 use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 
+#[macro_use]
+extern crate approx;
+
 use std::collections::BTreeMap;
 use std::process::{Command, Output};
 
@@ -62,26 +65,12 @@ fn create_cosmogony_for_lux() -> Cosmogony {
     return cosmogony;
 }
 
-#[test]
-fn test_lux_cosmogony() {
-    // Check some random values in the built cosmogony
-    // from the sample .osm.pbf file,
-    let cosmogony = create_cosmogony_for_lux();
-    assert_eq!(cosmogony.meta.osm_filename, "luxembourg_filtered.osm.pbf");
-    assert_eq!(cosmogony.zones.len(), 198);
-
-    assert!(
-        cosmogony
-            .zones
-            .iter()
-            .map(|zone| zone.name.to_owned())
-            .any(|name| name == format!("Esch-sur-Alzette"))
-    );
-}
-
-fn test_wrapper_for_lux_admin_levels(a_cosmogony: Cosmogony) {
-    let level_counts = a_cosmogony.meta.stats.level_counts;
-    let wikidata_counts = a_cosmogony.meta.stats.wikidata_counts;
+fn test_wrapper_for_lux_admin_levels(a_cosmogony: &Cosmogony) {
+    // Ensure that all well-defined (with closed boundaries)
+    // administrative zones are loaded from the sample .osm.pbf file,
+    // with correct counts per admin_level.
+    let level_counts = a_cosmogony.meta.stats.level_counts.clone();
+    let wikidata_counts = a_cosmogony.meta.stats.wikidata_counts.clone();
 
     fn assert_count(counts: &BTreeMap<u32, u64>, key: u32, value: u64) {
         assert_eq!(
@@ -112,18 +101,34 @@ fn test_wrapper_for_lux_admin_levels(a_cosmogony: Cosmogony) {
     assert_count(&level_counts, 10, 0);
 }
 
-#[test]
-fn test_lux_admin_levels() {
-    // Ensure that all well-defined (with closed boundaries)
-    // administrative zones are loaded from the sample .osm.pbf file,
-    // with correct counts per admin_level.
-    let cosmogony = create_cosmogony_for_lux();
+fn test_wrapper_for_lux_zones(a_cosmogony: &Cosmogony) {
+    let zone = a_cosmogony
+        .zones
+        .iter()
+        .find(|z| z.name == "Esch-sur-Alzette" && z.zone_type == Some(ZoneType::City))
+        .unwrap();
 
-    test_wrapper_for_lux_admin_levels(cosmogony);
+    let bbox = zone.bbox.unwrap();
+    assert_relative_eq!(bbox.xmin, 5.9432118, epsilon = 1e-8);
+    assert_relative_eq!(bbox.ymin, 49.460907, epsilon = 1e-8);
+    assert_relative_eq!(bbox.xmax, 6.005144, epsilon = 1e-8);
+    assert_relative_eq!(bbox.ymax, 49.518616, epsilon = 1e-8);
 }
 
 #[test]
-fn test_lux_admin_levels_with_serialisation() {
+fn test_lux_cosmogony() {
+    // Check some random values in the built cosmogony
+    // from the sample .osm.pbf file,
+    let cosmogony = create_cosmogony_for_lux();
+    assert_eq!(cosmogony.meta.osm_filename, "luxembourg_filtered.osm.pbf");
+    assert_eq!(cosmogony.zones.len(), 198);
+
+    test_wrapper_for_lux_admin_levels(&cosmogony);
+    test_wrapper_for_lux_zones(&cosmogony);
+}
+
+#[test]
+fn test_lux_cosmogony_with_serialisation() {
     // Serialize and deserialize a built cosmogony
     // and check again the admin_level counts.
     let cosmogony = create_cosmogony_for_lux();
@@ -131,7 +136,8 @@ fn test_lux_admin_levels_with_serialisation() {
     let cosmogony_as_json = serde_json::to_string(&cosmogony).unwrap();
     let cosmogony_from_json: Cosmogony = serde_json::from_str(&cosmogony_as_json).unwrap();
 
-    test_wrapper_for_lux_admin_levels(cosmogony_from_json);
+    test_wrapper_for_lux_admin_levels(&cosmogony_from_json);
+    test_wrapper_for_lux_zones(&cosmogony_from_json);
 }
 
 fn get_zone<'a>(cosmogony: &'a Cosmogony, idx: &'a ZoneIndex) -> Option<&'a Zone> {

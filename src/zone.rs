@@ -9,7 +9,8 @@ extern crate serde_json;
 use self::geos::GGeom;
 use self::itertools::Itertools;
 use self::serde::Serialize;
-use geo::Point;
+use geo::algorithm::boundingbox::BoundingBox;
+use geo::{Bbox, Point};
 use mutable_slice::MutableSlice;
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
@@ -64,6 +65,13 @@ pub struct Zone {
     )]
     pub boundary: Option<geo::MultiPolygon<f64>>,
 
+    #[serde(
+        serialize_with = "serialize_bbox_as_geojson",
+        deserialize_with = "deserialize_as_bbox",
+        default
+    )]
+    pub bbox: Option<Bbox<f64>>,
+
     pub tags: Tags,
     #[serde(default = "Tags::new")] //to keep the retrocompatibility with cosmogony2mimir
     pub center_tags: Tags,
@@ -108,6 +116,7 @@ impl Zone {
             international_names: BTreeMap::default(),
             center: None,
             boundary: None,
+            bbox: None,
             parent: None,
             tags: Tags::new(),
             center_tags: Tags::new(),
@@ -170,6 +179,7 @@ impl Zone {
             zip_codes: zip_codes,
             center: None,
             boundary: None,
+            bbox: None,
             parent: None,
             tags: relation.tags.clone(),
             center_tags: Tags::new(),
@@ -185,6 +195,7 @@ impl Zone {
         use geo::centroid::Centroid;
         Self::from_osm(relation, index).map(|mut result| {
             result.boundary = build_boundary(relation, objects);
+            result.bbox = result.boundary.as_ref().and_then(|b| b.bbox());
 
             let center = relation
                 .refs
@@ -417,6 +428,42 @@ where
     }
 }
 
+fn serialize_bbox_as_geojson<'a, S>(
+    bbox: &'a Option<Bbox<f64>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    use self::geojson::Bbox as GeojsonBbox;
+    match bbox {
+        Some(b) => {
+            // bbox serialized as an array
+            // using GeoJSON bounding box format
+            // See RFC 7946: https://tools.ietf.org/html/rfc7946#section-5
+            let geojson_bbox: GeojsonBbox = vec![b.xmin, b.ymin, b.xmax, b.ymax];
+            geojson_bbox.serialize(serializer)
+        }
+        None => serializer.serialize_none(),
+    }
+}
+
+fn deserialize_as_bbox<'de, D>(d: D) -> Result<Option<Bbox<f64>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use self::serde::Deserialize;
+    Option::<Vec<f64>>::deserialize(d).map(|option| match option {
+        Some(b) => Some(Bbox {
+            xmin: b[0],
+            ymin: b[1],
+            xmax: b[2],
+            ymax: b[3],
+        }),
+        None => None,
+    })
+}
+
 impl Serialize for ZoneIndex {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -473,6 +520,7 @@ mod test {
             international_names: BTreeMap::default(),
             center: None,
             boundary: None,
+            bbox: None,
             parent: parent.map(|p| ZoneIndex { index: p }),
             tags: Tags::new(),
             center_tags: Tags::new(),
