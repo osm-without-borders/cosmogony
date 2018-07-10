@@ -114,12 +114,7 @@ fn get_country_code<'a>(
     if let &Some(ref c) = country_code {
         Some(c.clone())
     } else {
-        let c = country_finder.find_zone_country(&zone, &inclusions);
-        info!(
-            "for zone {}, country: {:?}, inclusion: {:?}",
-            &zone.name, &c, &inclusions
-        );
-        c
+        country_finder.find_zone_country(&zone, &inclusions)
     }
 }
 
