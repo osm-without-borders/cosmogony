@@ -55,7 +55,10 @@ pub struct Zone {
     #[serde(skip)]
     international_names: BTreeMap<String, String>,
     pub zip_codes: Vec<String>,
-    #[serde(serialize_with = "serialize_as_geojson", deserialize_with = "deserialize_as_coord")]
+    #[serde(
+        serialize_with = "serialize_as_geojson",
+        deserialize_with = "deserialize_as_coord"
+    )]
     pub center: Option<Coord>,
     #[serde(
         serialize_with = "serialize_as_geojson",

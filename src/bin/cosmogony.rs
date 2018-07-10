@@ -34,10 +34,14 @@ struct Args {
     output: Option<String>,
     #[structopt(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
-    #[structopt(help = "Do not read the geometry of the boundaries", long = "disable-geom")]
+    #[structopt(
+        help = "Do not read the geometry of the boundaries",
+        long = "disable-geom"
+    )]
     disable_geom: bool,
     #[structopt(
-        help = "country code if the pbf file does not contains any country", long = "country-code"
+        help = "country code if the pbf file does not contains any country",
+        long = "country-code"
     )]
     country_code: Option<String>,
     #[structopt(

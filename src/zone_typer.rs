@@ -45,7 +45,10 @@ struct RulesOverrides {
 struct CountryAdminTypeRules {
     #[serde(rename = "admin_level", default)]
     type_by_level: BTreeMap<String, ZoneType>,
-    #[serde(default, deserialize_with = "de_with_from::<_, SerdeRulesOverrides, _>")]
+    #[serde(
+        default,
+        deserialize_with = "de_with_from::<_, SerdeRulesOverrides, _>"
+    )]
     overrides: RulesOverrides,
     // we don't implement libpostal's 'use_admin_center' as we don't need it
 }
