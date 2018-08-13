@@ -35,6 +35,7 @@ Here are the necessary manual steps to build cosmogony:
 curl https://sh.rustup.rs -sSf | sh    # intall rust
 apt-get install libgeos-dev            # install GEOS
 git clone https://github.com/osm-without-borders/cosmogony.git     # Clone this repo
+cd cosmogony;                          # enter the directory
 git submodule update --init            # update the git submodules
 cargo build --release                  # finally build cosmogony
 ```
