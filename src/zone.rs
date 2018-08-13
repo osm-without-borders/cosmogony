@@ -102,8 +102,7 @@ fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, 
             let lang = LANG_NAME_REG.captures(k)?.get(1)?;
 
             Some((lang.as_str().into(), v.clone()))
-        })
-        .collect()
+        }).collect()
 }
 
 impl Zone {
@@ -309,8 +308,7 @@ impl Zone {
                     z.international_names.get(lang).unwrap_or(&z.name).clone()
                 });
                 (lang.to_string(), lbl)
-            })
-            .collect();
+            }).collect();
 
         self.international_labels = international_labels;
         self.label = label;
@@ -595,8 +593,8 @@ mod test {
             ("name", "bobito"),
             ("name:a_strange_lang_name", "bibi"),
         ].into_iter()
-            .map(|(k, v)| (k.into(), v.into()))
-            .collect();
+        .map(|(k, v)| (k.into(), v.into()))
+        .collect();
 
         let names = get_international_names(&tags, "bob");
 

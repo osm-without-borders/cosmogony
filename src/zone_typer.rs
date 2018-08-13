@@ -95,8 +95,7 @@ impl ZoneTyper {
             .ok_or(ZoneTyperError::UnkownLevel(
                 zone.admin_level.clone(),
                 country_code.to_string(),
-            ))?
-            .clone())
+            ))?.clone())
     }
 }
 
@@ -182,8 +181,7 @@ where
                     &a_path.path(),
                     e
                 )
-            })
-            .ok()?;
+            }).ok()?;
         let country_code = a_path
             .path()
             .file_stem()
@@ -204,8 +202,7 @@ where
         .context(format!(
             "error while reading libpostal directory {:?}",
             yaml_files_folder
-        ))?
-        .filter_map(read_libpostal_file)
+        ))?.filter_map(read_libpostal_file)
         .collect())
 }
 
@@ -233,8 +230,7 @@ impl From<SerdeRulesOverrides> for RulesOverrides {
                 map.into_iter().map(move |(osm_id, rules)| {
                     (format!("{}:{}", osm_type.to_string(), osm_id), rules)
                 })
-            })
-            .collect();
+            }).collect();
         let i = serde
             .id_rules
             .into_iter()
@@ -242,8 +238,7 @@ impl From<SerdeRulesOverrides> for RulesOverrides {
                 map.into_iter().map(move |(osm_id, rules)| {
                     (format!("{}:{}", osm_type.to_string(), osm_id), rules)
                 })
-            })
-            .collect();
+            }).collect();
         RulesOverrides {
             contained_by: c,
             id_rules: i,

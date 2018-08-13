@@ -147,8 +147,7 @@ fn type_zones(
         .map(|z| {
             get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index])
                 .map(|c| zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones))
-        })
-        .collect();
+        }).collect();
 
     zones
         .iter_mut()
