@@ -40,8 +40,7 @@ impl<'a> FromIterator<&'a Zone> for CountryFinder {
                             },
                         )
                     })
-                })
-                .collect(),
+                }).collect(),
         }
     }
 }
