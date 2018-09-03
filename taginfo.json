@@ -1,0 +1,44 @@
+{
+    "data_format": 1,
+    "project": {
+        "name": "Cosmogony",
+        "description": "Easy to use & easy to update geographic regions",
+        "project_url": "http://cosmogony.world",
+        "doc_url": "https://github.com/osm-without-borders/cosmogony",
+        "contact_name": "Noémie Lehuby",
+        "contact_email": "n.lehuby@qwant.com"
+    },
+    "tags": [{
+            "key": "boundary",
+            "value": "administrative",
+            "object_types": ["relation"],
+            "description": "to filter administrative zones"
+        },
+        {
+            "key": "ISO3166-1:alpha2",
+            "object_types": ["relation"],
+            "description": "to get the country of the administrative zone"
+        },
+        {
+            "key": "admin_level",
+            "object_types": ["relation"],
+            "description": "to build a hierarchy of administrative zones"
+        },
+        {
+            "key": "name",
+            "object_types": ["relation"]
+        },
+        {
+            "key": "wikidata",
+            "object_types": ["relation"]
+        },
+        {
+            "key": "postal_code",
+            "object_types": ["relation"]
+        },
+        {
+            "key": "addr:postcode",
+            "object_types": ["relation"]
+        }
+    ]
+}
