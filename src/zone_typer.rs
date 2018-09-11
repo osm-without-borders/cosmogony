@@ -87,8 +87,9 @@ impl ZoneTyper {
         zone_inclusions: &Vec<ZoneIndex>,
         all_zones: &[Zone],
     ) -> Result<ZoneType, ZoneTyperError> {
-        let country_rules = self.countries_rules
-            .get(&country_code.to_lowercase()) // file postal code are lowercase
+        let country_rules = self
+            .countries_rules
+            .get(country_code)
             .ok_or(ZoneTyperError::InvalidCountry(country_code.to_string()))?;
         Ok(country_rules
             .get_zone_type(zone, zone_inclusions, all_zones)
@@ -96,6 +97,10 @@ impl ZoneTyper {
                 zone.admin_level.clone(),
                 country_code.to_string(),
             ))?.clone())
+    }
+
+    pub fn contains_rule(&self, country_code: &str) -> bool {
+        self.countries_rules.contains_key(country_code)
     }
 }
 
@@ -195,7 +200,7 @@ where
             })
             .ok()?;
 
-        Some((country_code, deserialized_level))
+        Some((country_code.to_uppercase(), deserialized_level))
     };
 
     Ok(fs::read_dir(&yaml_files_folder)
