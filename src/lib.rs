@@ -112,7 +112,7 @@ fn get_country_code<'a>(
     inclusions: &Vec<ZoneIndex>,
 ) -> Option<String> {
     if let &Some(ref c) = country_code {
-        Some(c.clone())
+        Some(c.to_uppercase())
     } else {
         country_finder.find_zone_country(&zone, &inclusions)
     }
@@ -128,8 +128,9 @@ fn type_zones(
     use rayon::prelude::*;
     info!("reading libpostal's rules");
     let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
+
     info!("creating a countrys rtree");
-    let country_finder: CountryFinder = zones.iter().collect();
+    let country_finder: CountryFinder = CountryFinder::init(&zones, &zone_typer);
     if country_code.is_none() && country_finder.is_empty() {
         return Err(failure::err_msg(
             "no country_code has been provided and no country have been found, we won't be able to make a cosmogony",

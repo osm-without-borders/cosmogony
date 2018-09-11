@@ -11,7 +11,7 @@ use zone::{Zone, ZoneIndex, ZoneType};
 
 #[derive(Debug)]
 pub struct ZoneTyper {
-    countries_rules: BTreeMap<String, CountryAdminTypeRules>,
+    pub countries_rules: BTreeMap<String, CountryAdminTypeRules>,
 }
 
 #[derive(Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug)]
@@ -42,7 +42,7 @@ struct RulesOverrides {
 }
 
 #[derive(Deserialize, Debug)]
-struct CountryAdminTypeRules {
+pub struct CountryAdminTypeRules {
     #[serde(rename = "admin_level", default)]
     type_by_level: BTreeMap<String, ZoneType>,
     #[serde(
@@ -87,8 +87,9 @@ impl ZoneTyper {
         zone_inclusions: &Vec<ZoneIndex>,
         all_zones: &[Zone],
     ) -> Result<ZoneType, ZoneTyperError> {
-        let country_rules = self.countries_rules
-            .get(&country_code.to_lowercase()) // file postal code are lowercase
+        let country_rules = self
+            .countries_rules
+            .get(country_code)
             .ok_or(ZoneTyperError::InvalidCountry(country_code.to_string()))?;
         Ok(country_rules
             .get_zone_type(zone, zone_inclusions, all_zones)
@@ -195,7 +196,7 @@ where
             })
             .ok()?;
 
-        Some((country_code, deserialized_level))
+        Some((country_code.to_uppercase(), deserialized_level))
     };
 
     Ok(fs::read_dir(&yaml_files_folder)

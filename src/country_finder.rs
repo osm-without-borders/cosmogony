@@ -2,8 +2,8 @@ extern crate geos;
 
 use std;
 use std::collections::BTreeMap;
-use std::iter::FromIterator;
 use zone::{Zone, ZoneIndex};
+use zone_typer::ZoneTyper;
 
 const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
 
@@ -25,27 +25,28 @@ impl Default for CountryFinder {
     }
 }
 
-impl<'a> FromIterator<&'a Zone> for CountryFinder {
-    fn from_iter<I: IntoIterator<Item = &'a Zone>>(zones: I) -> Self {
+impl CountryFinder {
+    pub fn init(zones: &[Zone], typer: &ZoneTyper) -> Self {
         CountryFinder {
             countries: zones
                 .into_iter()
                 .filter_map(|z| {
-                    z.tags.get(COUNTRY_CODE_TAG).map(|country_code| {
-                        (
-                            z.id.clone(),
-                            Country {
-                                iso: country_code.clone(),
-                                admin_level: z.admin_level.clone(),
-                            },
-                        )
-                    })
+                    z.tags
+                        .get(COUNTRY_CODE_TAG)
+                        .filter(|ccode| typer.countries_rules.contains_key(*ccode))
+                        .map(|country_code| {
+                            (
+                                z.id.clone(),
+                                Country {
+                                    iso: country_code.clone(),
+                                    admin_level: z.admin_level.clone(),
+                                },
+                            )
+                        })
                 }).collect(),
         }
     }
-}
 
-impl CountryFinder {
     pub fn find_zone_country(&self, z: &Zone, inclusion: &Vec<ZoneIndex>) -> Option<String> {
         inclusion
             .iter()
