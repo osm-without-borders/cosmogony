@@ -32,8 +32,9 @@ impl CountryFinder {
                 .into_iter()
                 .filter_map(|z| {
                     z.tags
-                        .get(COUNTRY_CODE_TAG)
-                        .filter(|ccode| typer.countries_rules.contains_key(*ccode))
+                        .get(COUNTRY_CODE_TAG) // iso3166 code, should use capital letters
+                        .map(|country_code| country_code.to_uppercase())
+                        .filter(|country_code| typer.contains_rule(country_code))
                         .map(|country_code| {
                             (
                                 z.id.clone(),

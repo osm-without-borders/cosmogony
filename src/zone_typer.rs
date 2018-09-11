@@ -11,7 +11,7 @@ use zone::{Zone, ZoneIndex, ZoneType};
 
 #[derive(Debug)]
 pub struct ZoneTyper {
-    pub countries_rules: BTreeMap<String, CountryAdminTypeRules>,
+    countries_rules: BTreeMap<String, CountryAdminTypeRules>,
 }
 
 #[derive(Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug)]
@@ -42,7 +42,7 @@ struct RulesOverrides {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct CountryAdminTypeRules {
+struct CountryAdminTypeRules {
     #[serde(rename = "admin_level", default)]
     type_by_level: BTreeMap<String, ZoneType>,
     #[serde(
@@ -97,6 +97,10 @@ impl ZoneTyper {
                 zone.admin_level.clone(),
                 country_code.to_string(),
             ))?.clone())
+    }
+
+    pub fn contains_rule(&self, country_code: &str) -> bool {
+        self.countries_rules.contains_key(country_code)
     }
 }
 
