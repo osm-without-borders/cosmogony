@@ -144,8 +144,8 @@ impl Zone {
         let name = match relation.tags.get("name") {
             Some(val) => val,
             None => {
-                warn!(
-                    "relation/{}: adminstrative region without name, skipped",
+                debug!(
+                    "relation/{}: administrative region without name, skipped",
                     relation.id.0
                 );
                 return None;
