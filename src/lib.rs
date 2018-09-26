@@ -155,7 +155,7 @@ fn type_zones(
         .zip(zones_type.into_iter())
         .for_each(|(z, zone_type)| match zone_type {
             None => {
-                info!("impossible to find a country for {}, skipping", &z.name);
+                info!("impossible to find a country for {} ({}), skipping", z.osm_id, z.name);
                 stats.zone_without_country += 1;
             }
             Some(Ok(t)) => z.zone_type = Some(t),
@@ -164,7 +164,7 @@ fn type_zones(
                 *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
             }
             Some(Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country))) => {
-                info!(
+                debug!(
                     "impossible to find a rule for level {:?} for country {}",
                     lvl, country
                 );
