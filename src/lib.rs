@@ -155,7 +155,10 @@ fn type_zones(
         .zip(zones_type.into_iter())
         .for_each(|(z, zone_type)| match zone_type {
             None => {
-                info!("impossible to find a country for {} ({}), skipping", z.osm_id, z.name);
+                info!(
+                    "impossible to find a country for {} ({}), skipping",
+                    z.osm_id, z.name
+                );
                 stats.zone_without_country += 1;
             }
             Some(Ok(t)) => z.zone_type = Some(t),
