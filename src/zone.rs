@@ -102,7 +102,8 @@ fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, 
             let lang = LANG_NAME_REG.captures(k)?.get(1)?;
 
             Some((lang.as_str().into(), v.clone()))
-        }).collect()
+        })
+        .collect()
 }
 
 impl Zone {
@@ -207,7 +208,19 @@ impl Zone {
                 .and_then(|o| o.node());
 
             result.center = center.map_or(
-                result.boundary.as_ref().and_then(|b| b.centroid()),
+                result.boundary.as_ref().and_then(|b| {
+                    b.centroid().filter(|p| {
+                        /*
+                            On a broken polygon Geo may return Some(NaN,NaN) centroid.
+                            It should NOT be serialized as [null,null] in the JSON output.
+                        */
+                        if p.x().is_nan() || p.y().is_nan() {
+                            warn!("NaN in centroid {:?} for {}", p, result.osm_id);
+                            return false;
+                        }
+                        return true;
+                    })
+                }),
                 |node| Some(Coord::new(node.lon(), node.lat())),
             );
 
@@ -308,7 +321,8 @@ impl Zone {
                     z.international_names.get(lang).unwrap_or(&z.name).clone()
                 });
                 (lang.to_string(), lbl)
-            }).collect();
+            })
+            .collect();
 
         self.international_labels = international_labels;
         self.label = label;
@@ -592,7 +606,8 @@ mod test {
             ("name:es", "bobito"),
             ("name", "bobito"),
             ("name:a_strange_lang_name", "bibi"),
-        ].into_iter()
+        ]
+        .into_iter()
         .map(|(k, v)| (k.into(), v.into()))
         .collect();
 

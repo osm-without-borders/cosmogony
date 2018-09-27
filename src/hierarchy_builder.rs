@@ -74,7 +74,8 @@ pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
                 .filter(|z_idx| z_idx != &z.id)
                 .filter(|z_idx| zones[z_idx.index].contains(z))
                 .collect()
-        }).collect_into_vec(&mut result);
+        })
+        .collect_into_vec(&mut result);
 
     result
 }
@@ -105,7 +106,8 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
                 } else {
                     None
                 }
-            }).min_by_key(|z| z.zone_type);
+            })
+            .min_by_key(|z| z.zone_type);
 
         z.set_parent(parent.map(|z| z.id.clone()));
     }

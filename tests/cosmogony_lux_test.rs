@@ -61,7 +61,8 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         true,
         "./libpostal/resources/boundaries/osm".into(),
         Some("lu".into()),
-    ).expect("invalid cosmogony");
+    )
+    .expect("invalid cosmogony");
     return cosmogony;
 }
 
