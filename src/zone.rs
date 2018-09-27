@@ -207,7 +207,19 @@ impl Zone {
                 .and_then(|o| o.node());
 
             result.center = center.map_or(
-                result.boundary.as_ref().and_then(|b| b.centroid()),
+                result.boundary.as_ref().and_then(|b| {
+                    b.centroid().filter(|p| {
+                        /*
+                            On a broken polygon Geo may return Some(NaN,NaN) centroid.
+                            It should NOT be serialized as [null,null] in the JSON output.
+                        */
+                        if p.x().is_nan() || p.y().is_nan() {
+                            warn!("NaN in centroid {:?} for {}", p, result.osm_id);
+                            return false;
+                        }
+                        return true;
+                    })
+                }),
                 |node| Some(Coord::new(node.lon(), node.lat())),
             );
 
