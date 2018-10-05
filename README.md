@@ -126,6 +126,29 @@ You can check the cosmogony file built with our [Cosmogony Data Dashboard](https
 
 :construction: Ideas and other contributions welcomed in [issue #4](https://github.com/osm-without-borders/cosmogony/issues/4) :construction:
 
+## Contribute
+
+Cosmogony, just like OpenStreetMap, emphasizes local knowledge: even if you can't code, you can help us to make Cosmogony go worldwide :rocket:
+
+If the cosmogony of your country does not look good, here is what you can do to fix it:
+
+### Tell us which administrative zones are relevant and how to extract them from OSM
+
+* Find your country here: https://github.com/osm-without-borders/libpostal/tree/master/resources/boundaries/osm
+* Edit the config file to map the relevant administrative zones with libpostal types and OSM admin_level
+    * the [OSM wiki page](https://wiki.openstreetmap.org/wiki/Tag:boundary%3Dadministrative#10_admin_level_values_for_specific_countries) about admin_level may be useful
+    * [The French config file](https://github.com/osm-without-borders/libpostal/blob/master/resources/boundaries/osm/fr.yaml) is a good example if you need inspiration
+* [Make a Pull Request](http://makeapullrequest.com/) with your changes
+
+### Tell us how many administrative zones are expected
+
+* Find a reliable data source (Wikipedia, [Wikidata](https://github.com/osm-without-borders/cosmogony-data-dashboard/blob/master/wikidata.md), [Eurostat NUTS & LAU](https://ec.europa.eu/eurostat/web/nuts/local-administrative-units), etc)
+* Update the reference file from our [Data Dashboard](http://cosmogony.world/#/data_dashboard) with the number of zones that actually exists in the country: https://github.com/osm-without-borders/cosmogony-data-dashboard/blob/master/reference_stats_values.csv
+    * If you are unsure if the right number of cities is 3314 or 3322, you can use the `expected_min` and `expected_max` columns :wink:
+    * If the number of zones already in OSM does not match the expected number, please mark the test by putting `yes` in the `is_known_failure` column
+* [Make a Pull Request](http://makeapullrequest.com/) with your changes
+
+
 ## See also
 
 - #### [Mapzen borders](https://mapzen.com/data/borders/) project
