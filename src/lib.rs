@@ -1,12 +1,14 @@
 #[macro_use]
 extern crate include_dir;
 
+mod additional_zones;
 pub mod cosmogony;
 mod country_finder;
 pub mod file_format;
 mod hierarchy_builder;
 mod mutable_slice;
 pub mod zone;
+mod zone_tree;
 pub mod zone_typer;
 
 pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
@@ -17,7 +19,8 @@ use crate::mutable_slice::MutableSlice;
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
-use osmpbfreader::{OsmObj, OsmPbfReader};
+use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
+use additional_zones::compute_additional_cities;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
@@ -133,8 +136,7 @@ fn type_zones(
         .map(|z| {
             get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index])
                 .map(|c| zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones))
-        })
-        .collect();
+        }).collect();
 
     zones
         .iter_mut()
@@ -190,6 +192,7 @@ fn create_ontology(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
+    pbf_reader: &mut OsmPbfReader<File>,
 ) -> Result<(), Error> {
     info!("creating ontology for {} zones", zones.len());
     let inclusions = find_inclusions(zones);
@@ -198,7 +201,10 @@ fn create_ontology(
 
     build_hierarchy(zones, inclusions);
 
+    compute_additional_cities(zones, pbf_reader);
+
     zones.iter_mut().for_each(|z| z.compute_names());
+
     compute_labels(zones);
 
     // we remove the useless zones from cosmogony
@@ -226,7 +232,12 @@ pub fn build_cosmogony(
         get_zones_and_stats_without_geom(&mut parsed_pbf)?
     };
 
-    create_ontology(&mut zones, &mut stats, country_code)?;
+    create_ontology(
+        &mut zones,
+        &mut stats,
+        country_code,
+        &mut parsed_pbf,
+    )?;
 
     stats.compute(&zones);
 

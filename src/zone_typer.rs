@@ -169,7 +169,7 @@ impl RulesOverrides {
 fn read_libpostal_yaml_folder() -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
     Ok(LIBPOSTAL_RULES_DIR.files().iter().filter_map(|d| {
         let contents = d.contents_utf8()?;
-let deserialized_level = read_libpostal_yaml(&contents)
+        let deserialized_level = read_libpostal_yaml(&contents)
             .map_err(|e| {
                 warn!(
                     "Levels corresponding to file: {:?} have been skipped due to {}",
@@ -219,8 +219,7 @@ impl From<SerdeRulesOverrides> for RulesOverrides {
                 map.into_iter().map(move |(osm_id, rules)| {
                     (format!("{}:{}", osm_type.to_string(), osm_id), rules)
                 })
-            })
-            .collect();
+            }).collect();
         let i = serde
             .id_rules
             .into_iter()
@@ -228,8 +227,7 @@ impl From<SerdeRulesOverrides> for RulesOverrides {
                 map.into_iter().map(move |(osm_id, rules)| {
                     (format!("{}:{}", osm_type.to_string(), osm_id), rules)
                 })
-            })
-            .collect();
+            }).collect();
         RulesOverrides {
             contained_by: c,
             id_rules: i,
