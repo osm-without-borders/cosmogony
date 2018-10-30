@@ -90,6 +90,8 @@ pub struct Zone {
     pub parent: Option<ZoneIndex>,
     pub wikidata: Option<String>,
     // pub links: Vec<ZoneIndex>
+    #[serde(default)]
+    pub approximative_boundaries: bool,
 }
 
 /// get all the international names from the osm tags
@@ -110,8 +112,7 @@ fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, 
             let lang = LANG_NAME_REG.captures(k)?.get(1)?;
 
             Some((lang.as_str().into(), v.clone()))
-        })
-        .collect()
+        }).collect()
 }
 
 impl Default for Zone {
@@ -133,6 +134,7 @@ impl Default for Zone {
             center_tags: Tags::new(),
             wikidata: None,
             zip_codes: vec![],
+            approximative_boundaries: true,
         }
     }
 }
@@ -156,25 +158,26 @@ impl Zone {
         index: ZoneIndex,
     ) -> Option<Self> {
         // Skip administrative region without name
-        let name = match relation.tags.get("name") {
+        let osm_id_str = match osm_id {
+            OsmId::Node(n) => format!("node:{}", n.0.to_string()),
+            OsmId::Relation(r) => format!("relation:{}", r.0.to_string()),
+            OsmId::Way(r) => format!("way:{}", r.0.to_string()),
+        };
+        let name = match tags.get("name") {
             Some(val) => val,
             None => {
                 debug!(
-                    "relation/{}: administrative region without name, skipped",
-                    relation.id.0
+                    "{}: administrative region without name, skipped",
+                    &osm_id_str
                 );
                 return None;
             }
         };
-        let level = relation
-            .tags
-            .get("admin_level")
-            .and_then(|s| s.parse().ok());
+        let level = tags.get("admin_level").and_then(|s| s.parse().ok());
 
-        let zip_code = relation
-            .tags
+        let zip_code = tags
             .get("addr:postcode")
-            .or_else(|| relation.tags.get("postal_code"))
+            .or_else(|| tags.get("postal_code"))
             .map_or("", |val| &val[..]);
         let zip_codes = zip_code
             .split(';')
@@ -201,9 +204,10 @@ impl Zone {
                 })
         }
 
+        let international_names = get_international_names(&tags, name);
         Some(Self {
             id: index,
-            osm_id: format!("relation:{}", relation.id.0.to_string()), // for the moment we can only read relation
+            osm_id: osm_id_str,
             admin_level: level,
             zone_type: None,
             name: name.to_string(),
@@ -218,6 +222,7 @@ impl Zone {
             tags: tags,
             center_tags: Tags::new(),
             wikidata: wikidata,
+            approximative_boundaries: true,
         })
     }
 
@@ -230,6 +235,7 @@ impl Zone {
         Self::from_osm(relation, objects, index).map(|mut result| {
             result.boundary = build_boundary(relation, objects);
             result.bbox = result.boundary.as_ref().and_then(|b| b.bounding_rect());
+            result.approximative_boundaries = false;
 
             let refs = &relation.refs;
             let center = refs
@@ -357,8 +363,7 @@ impl Zone {
                     z.international_names.get(lang).unwrap_or(&z.name).clone()
                 });
                 (lang.to_string(), lbl)
-            })
-            .collect();
+            }).collect();
 
         self.international_labels = international_labels;
         self.label = label;
@@ -593,6 +598,7 @@ mod test {
             center_tags: Tags::new(),
             wikidata: None,
             zip_codes: zips.iter().map(|s| s.to_string()).collect(),
+            approximative_boundaries: false,
         }
     }
 
@@ -658,8 +664,7 @@ mod test {
             ("name:es", "bobito"),
             ("name", "bobito"),
             ("name:a_strange_lang_name", "bibi"),
-        ]
-        .into_iter()
+        ].into_iter()
         .map(|(k, v)| (k.into(), v.into()))
         .collect();
 
