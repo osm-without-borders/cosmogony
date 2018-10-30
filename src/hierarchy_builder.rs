@@ -1,54 +1,8 @@
 extern crate geo;
 
-use gst::rtree::RTree;
 use mutable_slice::MutableSlice;
-use std::iter::FromIterator;
-use utils::bbox_to_rect;
 use zone::{Zone, ZoneIndex};
-
-pub struct ZonesTree {
-    tree: RTree<ZoneIndex>,
-}
-
-impl Default for ZonesTree {
-    fn default() -> Self {
-        ZonesTree { tree: RTree::new() }
-    }
-}
-
-impl ZonesTree {
-    pub fn insert_zone(&mut self, z: &Zone) {
-        match z.bbox {
-            Some(ref b) => self.tree.insert(bbox_to_rect(b), z.id.clone()),
-            None => warn!("No bbox: Cannot insert zone with osm_id {}", z.osm_id),
-        }
-    }
-
-    pub fn fetch_zone_bbox(&self, z: &Zone) -> Vec<ZoneIndex> {
-        match z.bbox {
-            None => {
-                warn!("No bbox: Cannot fetch zone with osm_id {}", z.osm_id);
-                vec![]
-            }
-            Some(ref bbox) => self
-                .tree
-                .get(&bbox_to_rect(bbox))
-                .into_iter()
-                .map(|(_, z_idx)| z_idx.clone())
-                .collect(),
-        }
-    }
-}
-
-impl<'a> FromIterator<&'a Zone> for ZonesTree {
-    fn from_iter<I: IntoIterator<Item = &'a Zone>>(zones: I) -> Self {
-        let mut ztree = ZonesTree::default();
-        for z in zones {
-            ztree.insert_zone(z);
-        }
-        ztree
-    }
-}
+use zone_tree::ZonesTree;
 
 impl Zone {
     /// a zone can be a child of another zone z if:
@@ -74,8 +28,7 @@ pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
                 .filter(|z_idx| z_idx != &z.id)
                 .filter(|z_idx| zones[z_idx.index].contains(z))
                 .collect()
-        })
-        .collect_into_vec(&mut result);
+        }).collect_into_vec(&mut result);
 
     result
 }
@@ -106,8 +59,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
                 } else {
                     None
                 }
-            })
-            .min_by_key(|z| z.zone_type);
+            }).min_by_key(|z| z.zone_type);
 
         z.set_parent(parent.map(|z| z.id.clone()));
     }

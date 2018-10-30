@@ -17,21 +17,24 @@ extern crate structopt;
 extern crate lazy_static;
 extern crate rayon;
 
+mod additional_zones;
 pub mod cosmogony;
 mod country_finder;
 mod hierarchy_builder;
 mod mutable_slice;
 mod utils;
 pub mod zone;
+mod zone_tree;
 pub mod zone_typer;
 
+use additional_zones::compute_additional_cities;
 pub use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use country_finder::CountryFinder;
 use failure::Error;
 use failure::ResultExt;
 use hierarchy_builder::{build_hierarchy, find_inclusions};
 use mutable_slice::MutableSlice;
-use osmpbfreader::{OsmObj, OsmPbfReader};
+use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -95,8 +98,9 @@ pub fn get_zones_and_stats_without_geom(
             continue;
         }
         if let OsmObj::Relation(ref relation) = obj {
+            let osm_id = OsmId::Relation(relation.id);
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = zone::Zone::from_osm(relation, next_index) {
+            if let Some(zone) = zone::Zone::from_osm(&relation.tags, next_index, osm_id) {
                 zones.push(zone);
             }
         }
@@ -148,8 +152,7 @@ fn type_zones(
         .map(|z| {
             get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index])
                 .map(|c| zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones))
-        })
-        .collect();
+        }).collect();
 
     zones
         .iter_mut()
@@ -206,6 +209,7 @@ fn create_ontology(
     stats: &mut CosmogonyStats,
     libpostal_file_path: PathBuf,
     country_code: Option<String>,
+    pbf_reader: &mut OsmPbfReader<File>,
 ) -> Result<(), Error> {
     info!("creating ontology for {} zones", zones.len());
     let inclusions = find_inclusions(zones);
@@ -213,6 +217,8 @@ fn create_ontology(
     type_zones(zones, stats, libpostal_file_path, country_code, &inclusions)?;
 
     build_hierarchy(zones, inclusions);
+
+    compute_additional_cities(zones, pbf_reader);
 
     compute_labels(zones);
 
@@ -242,7 +248,13 @@ pub fn build_cosmogony(
         get_zones_and_stats_without_geom(&mut parsed_pbf)?
     };
 
-    create_ontology(&mut zones, &mut stats, libpostal_file_path, country_code)?;
+    create_ontology(
+        &mut zones,
+        &mut stats,
+        libpostal_file_path,
+        country_code,
+        &mut parsed_pbf,
+    )?;
 
     stats.compute(&zones);
 
