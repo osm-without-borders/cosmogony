@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate failure;
 extern crate geo;
+extern crate geo_types;
 extern crate gst;
 #[macro_use]
 extern crate log;
@@ -16,6 +17,7 @@ extern crate structopt;
 #[macro_use]
 extern crate lazy_static;
 extern crate rayon;
+extern crate geos;
 
 pub mod cosmogony;
 mod country_finder;

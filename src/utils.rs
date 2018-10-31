@@ -1,17 +1,17 @@
 extern crate geo;
 
-use geo::Bbox;
-use gst::rtree::Rect;
+use geo_types;
+use gst;
 use ordered_float::OrderedFloat;
 
-pub fn bbox_to_rect(bbox: &Bbox<f64>) -> Rect {
+pub fn bbox_to_rect(bbox: &geo_types::Rect<f64>) -> gst::rtree::Rect {
     // rust-geo bbox algorithm returns `Bbox`,
     // while gst RTree uses `Rect` as index.
-    Rect {
-        xmin: OrderedFloat(down(bbox.xmin as f32)),
-        xmax: OrderedFloat(up(bbox.xmax as f32)),
-        ymin: OrderedFloat(down(bbox.ymin as f32)),
-        ymax: OrderedFloat(up(bbox.ymax as f32)),
+    gst::rtree::Rect {
+        xmin: OrderedFloat(down(bbox.min.x as f32)),
+        xmax: OrderedFloat(up(bbox.max.x as f32)),
+        ymin: OrderedFloat(down(bbox.min.y as f32)),
+        ymax: OrderedFloat(up(bbox.max.y as f32)),
     }
 }
 

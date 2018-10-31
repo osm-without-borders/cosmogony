@@ -115,8 +115,8 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
 
 #[cfg(test)]
 mod test {
-    use geo::boundingbox::BoundingBox;
-    use geo::{LineString, MultiPolygon, Point, Polygon};
+    use geo::bounding_rect::BoundingRect;
+    use geo_types::{LineString, MultiPolygon, Point, Polygon, Coordinate};
     use hierarchy_builder::{build_hierarchy, find_inclusions};
     use zone::{Zone, ZoneType};
 
@@ -127,47 +127,51 @@ mod test {
         let mut z = Zone::default();
         z.id.index = idx;
         z.boundary = Some(mp);
-        z.bbox = z.boundary.as_ref().and_then(|b| b.bbox());
+        z.bbox = z.boundary.as_ref().and_then(|b| b.bounding_rect());
         z.zone_type = zone_type;
         z
     }
 
+    fn coords(tuples: Vec<(f64, f64)>) -> Vec<Coordinate<f64>> {
+        tuples.into_iter().map(Coordinate::from).collect()
+    }
+
     #[rustfmt::skip]
     fn create_zones() -> Vec<Zone> {
-        let l0 = LineString(vec![
-            Point::new(0., 0.),     //  +------+
-            Point::new(0., 10.),    //  |      |
-            Point::new(10., 10.),   //  |  z0  |
-            Point::new(10., 0.),    //  |      |
-            Point::new(0., 0.),     //  +------+
-        ]);
+        let l0 = LineString(coords(vec![
+            (0., 0.),     //  +------+
+            (0., 10.),    //  |      |
+            (10., 10.),   //  |  z0  |
+            (10., 0.),    //  |      |
+            (0., 0.),     //  +------+
+        ]));
         let z0 = zone_factory(0, l0, Some(ZoneType::Country));
 
-        let l1 = LineString(vec![
-            Point::new(1., 1.),     //  +------+
-            Point::new(1., 9.),     //  |+----+|
-            Point::new(9., 9.),     //  || z1 ||
-            Point::new(9., 1.),     //  |+----+|
-            Point::new(1., 1.),     //  +------+
-        ]);
+        let l1 = LineString(coords(vec![
+            (1., 1.),     //  +------+
+            (1., 9.),     //  |+----+|
+            (9., 9.),     //  || z1 ||
+            (9., 1.),     //  |+----+|
+            (1., 1.),     //  +------+
+        ]));
         let z1 = zone_factory(1, l1, Some(ZoneType::State));
 
-        let l2 = LineString(vec![
-            Point::new(2., 2.),     //  +------+
-            Point::new(2., 8.),     //  |      |
-            Point::new(8., 8.),     //  |  []<---- z2
-            Point::new(8., 2.),     //  |      |
-            Point::new(2., 2.),     //  +------+
-        ]);
+        let l2 = LineString(coords(vec![
+            (2., 2.),     //  +------+
+            (2., 8.),     //  |      |
+            (8., 8.),     //  |  []<---- z2
+            (8., 2.),     //  |      |
+            (2., 2.),     //  +------+
+        ]));
         let z2 = zone_factory(2, l2, Some(ZoneType::City));
 
-        let l3 = LineString(vec![
-            Point::new(0., 0.),     //  +------+
-            Point::new(0., 5.),     //  |      |
-            Point::new(10., 5.),    //  +------+
-            Point::new(10., 0.),    //  |  z3  |
-            Point::new(0., 0.),     //  +------+
-        ]);
+        let l3 = LineString(coords(vec![
+            (0., 0.),     //  +------+
+            (0., 5.),     //  |      |
+            (10., 5.),    //  +------+
+            (10., 0.),    //  |  z3  |
+            (0., 0.),     //  +------+
+        ]));
         let z3 = zone_factory(3, l3, Some(ZoneType::State));
 
         vec![z0, z1, z2, z3]
