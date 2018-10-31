@@ -1,5 +1,24 @@
 #[macro_use]
 extern crate include_dir;
+extern crate failure;
+extern crate geo;
+extern crate geo_types;
+extern crate gst;
+#[macro_use]
+extern crate log;
+extern crate ordered_float;
+extern crate osm_boundaries_utils;
+extern crate osmpbfreader;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate regex;
+extern crate serde_yaml;
+extern crate structopt;
+#[macro_use]
+extern crate lazy_static;
+extern crate geos;
+extern crate rayon;
 
 mod additional_zones;
 pub mod cosmogony;
@@ -192,7 +211,7 @@ fn create_ontology(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
-    pbf_reader: &mut OsmPbfReader<File>,
+    pbf_path: &str,
 ) -> Result<(), Error> {
     info!("creating ontology for {} zones", zones.len());
     let inclusions = find_inclusions(zones);
@@ -201,7 +220,7 @@ fn create_ontology(
 
     build_hierarchy(zones, inclusions);
 
-    compute_additional_cities(zones, pbf_reader);
+    compute_additional_cities(zones, pbf_path);
 
     zones.iter_mut().for_each(|z| z.compute_names());
 
@@ -236,7 +255,7 @@ pub fn build_cosmogony(
         &mut zones,
         &mut stats,
         country_code,
-        &mut parsed_pbf,
+        &pbf_path,
     )?;
 
     stats.compute(&zones);
