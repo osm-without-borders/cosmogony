@@ -15,6 +15,7 @@ use geos::from_geo::TryInto;
 
 type Coord = Point<f64>;
 
+
 #[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(rename_all = "snake_case")]
 pub enum ZoneType {
