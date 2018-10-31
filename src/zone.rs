@@ -11,6 +11,7 @@ use serde::Serialize;
 use serde_derive::*;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use geos::from_geo::TryInto;
 
 type Coord = Point<f64>;
 

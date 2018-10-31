@@ -1,9 +1,10 @@
-extern crate geos;
 use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
 use zone::{Zone, ZoneIndex, ZoneType};
 use zone_tree::ZonesTree;
+use geos;
+use geo_types::Point;
 
 pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_reader: &mut OsmPbfReader<File>) {
     let place_zones = read_places(pbf_reader);
@@ -66,6 +67,7 @@ fn read_places(pbf_reader: &mut OsmPbfReader<File>) -> Vec<Zone> {
             let next_index = ZoneIndex { index: zones.len() };
             if let Some(mut zone) = Zone::from_osm(&node.tags, next_index, osm_id) {
                 zone.zone_type = Some(ZoneType::City);
+                zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
                 zones.push(zone);
             }
         }
@@ -73,7 +75,9 @@ fn read_places(pbf_reader: &mut OsmPbfReader<File>) -> Vec<Zone> {
     zones
 }
 
-fn compute_voronoi(parent: &ZoneIndex, place: Vec<Zone>, zones: &[Zone]) -> Vec<Zone> {
+fn compute_voronoi(parent: &ZoneIndex, places: Vec<Zone>, zones: &[Zone]) -> Vec<Zone> {
+
+    // let points = places.iter().map(|p| p)
     unimplemented!()
 }
 
