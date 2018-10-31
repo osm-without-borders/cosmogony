@@ -150,7 +150,7 @@ fn main() {
     match cosmogony(args) {
         Err(e) => {
             error!("cosmogony in error! {:?}", e);
-            e.causes().for_each(|c| {
+            e.iter_chain().for_each(|c| {
                 error!("{}", c);
                 if let Some(b) = c.backtrace() {
                     error!("  - {}", b);
