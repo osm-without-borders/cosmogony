@@ -4,6 +4,7 @@ use geo_types::{Coordinate, Point, Rect};
 use geos::GGeom;
 use itertools::Itertools;
 use log::{debug, info, warn};
+use geos::from_geo::TryInto;
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
@@ -11,7 +12,6 @@ use serde::Serialize;
 use serde_derive::*;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use geos::from_geo::TryInto;
 
 type Coord = Point<f64>;
 
@@ -276,6 +276,50 @@ impl Zone {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
                 let m_self: Result<GGeom, _> = mpoly1.try_into();
                 let m_other: Result<GGeom, _> = mpoly2.try_into();
+
+                match (&m_self, &m_other) {
+                    (&Ok(ref m_self), &Ok(ref m_other)) => {
+                        // In GEOS, "covers" is less strict than "contains".
+                        // eg: a polygon does NOT "contain" its boundary, but "covers" it.
+                        m_self.covers(&m_other)
+                        .map_err(|e| info!("impossible to compute geometies coverage for zone {:?}/{:?}: error {}",
+                        &self.osm_id, &other.osm_id, e))
+                        .unwrap_or(false)
+                    }
+                    (&Err(ref e), _) => {
+                        info!(
+                            "impossible to convert to geos for zone {:?}, error {}",
+                            &self.osm_id, e
+                        );
+                        debug!(
+                            "impossible to convert to geos the zone {:?}",
+                            serde_json::to_string(&self)
+                        );
+                        false
+                    }
+                    (_, &Err(ref e)) => {
+                        info!(
+                            "impossible to convert to geos for zone {:?}, error {}",
+                            &other.osm_id, e
+                        );
+                        debug!(
+                            "impossible to convert to geos the zone {:?}",
+                            serde_json::to_string(&other)
+                        );
+                        false
+                    }
+                }
+            }
+            _ => false,
+        }
+    }
+
+    // TODO factorize it with contains
+    pub fn contains_center(&self, other: &Zone) -> bool {
+        match (&self.boundary, &other.center) {
+            (&Some(ref mpoly1), &Some(ref point)) => {
+                let m_self: Result<GGeom, _> = mpoly1.try_into();
+                let m_other: Result<GGeom, _> = point.try_into();
 
                 match (&m_self, &m_other) {
                     (&Ok(ref m_self), &Ok(ref m_other)) => {
