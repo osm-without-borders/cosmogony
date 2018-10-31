@@ -176,7 +176,7 @@ dependencies = [
  "geo 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "geo-types 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "geojson 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "geos 2.0.3 (git+https://github.com/antoine-de/rust-geos.git?rev=a20f6d8)",
+ "geos 3.0.0 (git+https://github.com/antoine-de/rust-geos.git?rev=09aeb1aff841b9a321fa8c205234d03ea8f73cba)",
  "gst 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.7.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -381,8 +381,8 @@ dependencies = [
 
 [[package]]
 name = "geos"
-version = "2.0.3"
-source = "git+https://github.com/antoine-de/rust-geos.git?rev=a20f6d8#a20f6d891bbe09e1b917b2b5b0a3fad8720dfbd2"
+version = "3.0.0"
+source = "git+https://github.com/antoine-de/rust-geos.git?rev=09aeb1aff841b9a321fa8c205234d03ea8f73cba#09aeb1aff841b9a321fa8c205234d03ea8f73cba"
 dependencies = [
  "enum-primitive-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1223,7 +1223,7 @@ dependencies = [
 "checksum geo 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d86629c1eb1a317eb0c73533d0a7d96143cc2ec405653ff38e9b8f3b6a10699a"
 "checksum geo-types 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7260ac8abfc04cc21b914254b69875c2548faf6f791f88ad9ec1a131d4251729"
 "checksum geojson 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fa4fb54bb359e2b2a473704f676c917769faf06f57ddc33ccaadc83d05ea936d"
-"checksum geos 2.0.3 (git+https://github.com/antoine-de/rust-geos.git?rev=a20f6d8)" = "<none>"
+"checksum geos 3.0.0 (git+https://github.com/antoine-de/rust-geos.git?rev=09aeb1aff841b9a321fa8c205234d03ea8f73cba)" = "<none>"
 "checksum glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)" = "8be18de09a56b60ed0edf84bc9df007e30040691af7acd1c41874faac5895bfb"
 "checksum gst 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "89d64d16c4e0ab924799d713bf939dd16a2e9d3e71afe9f2b2977f38a04e0188"
 "checksum humantime 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0484fda3e7007f2a4a0d9c3a703ca38c71c54c55602ce4660c419fd32e188c9e"

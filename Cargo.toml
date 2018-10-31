@@ -33,9 +33,7 @@ failure_derive = "0.1"
 gst = "0.1.3"
 ordered-float = "0.0.2"
 osm_boundaries_utils = { version="0.3", git = "https://github.com/QwantResearch/osm_boundaries_utils_rs.git", rev = "86374bbfc75798dd836c85214f72b35562bae23a" }
-# osm_boundaries_utils = "0.3"
-# geos = "~1.0"
-geos = { version="2.0.3", git = "https://github.com/antoine-de/rust-geos.git", rev = "a20f6d8" }
+geos = { version="3.0", git = "https://github.com/antoine-de/rust-geos.git", rev = "09aeb1aff841b9a321fa8c205234d03ea8f73cba" }
 regex = "0.2"
 lazy_static = "1.0.0"
 flate2 = "1.0"
