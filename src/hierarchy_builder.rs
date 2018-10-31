@@ -141,7 +141,7 @@ mod test {
     use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
     use crate::zone::{Zone, ZoneType};
     use geo::bounding_rect::BoundingRect;
-    use geo_types::{Coordinate, LineString, MultiPolygon, Polygon};
+    use geo_types::{Coordinate, LineString, MultiPolygon, Point, Polygon};
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);
