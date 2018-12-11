@@ -10,8 +10,7 @@ matrix:
     - cargo test
     after_success:
     - |-
-      [ $TRAVIS_BRANCH = master ] &&
-      [ $TRAVIS_PULL_REQUEST = false ] &&
+      [ "$TRAVIS_TAG" = v$(cargo run -- --version | awk '{print $2}') ] &&
       cargo publish --token ${CRATESIO_TOKEN}
 env:
   global:
