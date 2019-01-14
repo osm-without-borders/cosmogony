@@ -93,7 +93,7 @@ pub struct Zone {
 /// to reduce the size of the map
 fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, String> {
     lazy_static! {
-        static ref LANG_NAME_REG: Regex = Regex::new("name:(.+)").unwrap();
+        static ref LANG_NAME_REG: Regex = Regex::new("^name:(.+)").unwrap();
     }
 
     tags.iter()
