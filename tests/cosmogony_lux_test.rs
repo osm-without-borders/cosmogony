@@ -194,6 +194,12 @@ fn test_lux_zone_types() {
         Some(&"Luxemburg, Kanton Luxemburg, Luxemburg".to_string())
     );
 
+    // Read names from center_tags
+    assert_eq!(
+        lux.international_labels.get("br"),
+        Some(&"Luksembourg, Canton Luxembourg, Luksembourg".to_string())
+    );
+
     assert!(!lux.center_tags.is_empty());
     assert_eq!(
         lux.center_tags.get("population"),
@@ -221,5 +227,11 @@ fn test_lux_zone_types() {
     assert_eq!(
         lux.international_labels.get("de"),
         Some(&"Luxemburg".to_string())
+    );
+
+    // Read names from label node
+    assert_eq!(
+        lux.international_labels.get("ak"),
+        Some(&"Laksembɛg".to_string())
     );
 }

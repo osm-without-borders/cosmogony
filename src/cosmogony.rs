@@ -27,7 +27,7 @@ pub struct CosmogonyStats {
 }
 
 impl CosmogonyStats {
-    pub fn compute(&mut self, zones: &Vec<Zone>) {
+    pub fn compute(&mut self, zones: &[Zone]) {
         for zone in zones {
             let type_ = zone
                 .zone_type
@@ -50,11 +50,11 @@ impl fmt::Display for CosmogonyStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (level, count) in &self.level_counts {
             let wd = self.wikidata_counts.get(level).unwrap_or(&0u64);
-            write!(f, "Admin level {}: {} element(s)\n", level, count)?;
-            write!(f, "    {} with wikidata id\n", wd)?;
+            writeln!(f, "Admin level {}: {} element(s)", level, count)?;
+            writeln!(f, "    {} with wikidata id", wd)?;
         }
         for (zone_type, count) in &self.zone_type_counts {
-            write!(f, "{:?}: {} element(s)\n", zone_type, count)?;
+            writeln!(f, "{:?}: {} element(s)", zone_type, count)?;
         }
 
         Ok(())
