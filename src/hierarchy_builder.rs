@@ -116,7 +116,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
 #[cfg(test)]
 mod test {
     use geo::bounding_rect::BoundingRect;
-    use geo_types::{LineString, MultiPolygon, Point, Polygon, Coordinate};
+    use geo_types::{Coordinate, LineString, MultiPolygon, Polygon};
     use hierarchy_builder::{build_hierarchy, find_inclusions};
     use zone::{Zone, ZoneType};
 

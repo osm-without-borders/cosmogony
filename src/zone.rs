@@ -6,18 +6,17 @@ extern crate regex;
 extern crate serde;
 extern crate serde_json;
 
-use geos::GGeom;
 use self::itertools::Itertools;
 use self::serde::Serialize;
 use geo::algorithm::bounding_rect::BoundingRect;
-use geo_types::{Rect, Point, Coordinate};
+use geo_types::{Coordinate, Point, Rect};
+use geos::GGeom;
 use mutable_slice::MutableSlice;
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use geos::from_geo::TryInto;
 
 type Coord = Point<f64>;
 
@@ -251,6 +250,7 @@ impl Zone {
     }
 
     pub fn contains(&self, other: &Zone) -> bool {
+        use geos::from_geo::TryInto;
         match (&self.boundary, &other.boundary) {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
                 let m_self: Result<GGeom, _> = mpoly1.try_into();
@@ -261,6 +261,9 @@ impl Zone {
                         // In GEOS, "covers" is less strict than "contains".
                         // eg: a polygon does NOT "contain" its boundary, but "covers" it.
                         m_self.covers(&m_other)
+                        .map_err(|e| info!("impossible to compute geometies coverage for zone {:?}/{:?}: error {}",
+                        &self.osm_id, &other.osm_id, e))
+                        .unwrap_or(false)
                     }
                     (&Err(ref e), _) => {
                         info!(
