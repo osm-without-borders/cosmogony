@@ -81,6 +81,17 @@ The libpostal types seem nice (and made by brighter people than us):
 - **country_region**: informal subdivision of a country without any political status
 - **country**: sovereign nations and their dependent territories, anything with an [ISO-3166 code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
 
+### Names and Labels
+
+Cosmogony reads OSM tags to determine names and labels for all zones, in all available languages.
+
+In addition to `name:*` tags from boundary objects themselves, other names from [related objects](https://wiki.openstreetmap.org/wiki/Relation:boundary#Relation_members) are used
+as they may provide more languages : 
+ * nodes with role `label` (if present)
+ * nodes with role `admin_center` (if relevant: for cities, or on matching wikidata ID)
+
+> Note that these additional `name:*` values **are included in zone `tags`** in the output to help reusing, even if they are not part of the OSM object tags.
+
 ### Output schema
 
 Below is a brief example of the information contained in the cosmogony output.
@@ -109,7 +120,7 @@ Below is a brief example of the information contained in the cosmogony output.
 		"wikidata":"Q79669"}
 	],
 		"meta":{
-			"osm_filename":"alabama.osh.pbf",
+			"osm_filename":"alabama.osm.pbf",
 			"stats":{"level_counts":{"6":64,"8":272},
 			"zone_type_counts":{"City":272,"StateDistrict":64},
 			"wikidata_counts":{"6":58,"8":202},

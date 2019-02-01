@@ -27,9 +27,9 @@ enum OsmPrimaryObjects {
 impl fmt::Display for OsmPrimaryObjects {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &OsmPrimaryObjects::Node => fmt.write_str("node")?,
-            &OsmPrimaryObjects::Way => fmt.write_str("way")?,
-            &OsmPrimaryObjects::Relation => fmt.write_str("relation")?,
+            OsmPrimaryObjects::Node => fmt.write_str("node")?,
+            OsmPrimaryObjects::Way => fmt.write_str("way")?,
+            OsmPrimaryObjects::Relation => fmt.write_str("relation")?,
         }
         Ok(())
     }
@@ -90,14 +90,12 @@ impl ZoneTyper {
         let country_rules = self
             .countries_rules
             .get(country_code)
-            .ok_or(ZoneTyperError::InvalidCountry(country_code.to_string()))?;
+            .ok_or_else(|| ZoneTyperError::InvalidCountry(country_code.to_string()))?;
         Ok(country_rules
             .get_zone_type(zone, zone_inclusions, all_zones)
-            .ok_or(ZoneTyperError::UnkownLevel(
-                zone.admin_level.clone(),
-                country_code.to_string(),
-            ))?
-            .clone())
+            .ok_or_else(|| {
+                ZoneTyperError::UnkownLevel(zone.admin_level.clone(), country_code.to_string())
+            })?)
     }
 
     pub fn contains_rule(&self, country_code: &str) -> bool {

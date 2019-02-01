@@ -38,7 +38,7 @@ use std::path::{Path, PathBuf};
 
 pub use zone::{Zone, ZoneIndex, ZoneType};
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {
     match *obj {
         OsmObj::Relation(ref rel) => {
@@ -96,7 +96,7 @@ pub fn get_zones_and_stats_without_geom(
         }
         if let OsmObj::Relation(ref relation) = obj {
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = zone::Zone::from_osm(relation, next_index) {
+            if let Some(zone) = zone::Zone::from_osm(relation, &BTreeMap::default(), next_index) {
                 zones.push(zone);
             }
         }
@@ -111,7 +111,7 @@ fn get_country_code<'a>(
     country_code: &'a Option<String>,
     inclusions: &Vec<ZoneIndex>,
 ) -> Option<String> {
-    if let &Some(ref c) = country_code {
+    if let Some(ref c) = *country_code {
         Some(c.to_uppercase())
     } else {
         country_finder.find_zone_country(&zone, &inclusions)
@@ -175,7 +175,7 @@ fn type_zones(
                 *stats
                     .unhandled_admin_level
                     .entry(country)
-                    .or_insert(BTreeMap::new())
+                    .or_insert_with(BTreeMap::new)
                     .entry(lvl.unwrap_or(0))
                     .or_insert(0) += 1;
             }
@@ -214,6 +214,7 @@ fn create_ontology(
 
     build_hierarchy(zones, inclusions);
 
+    zones.iter_mut().for_each(|z| z.compute_names());
     compute_labels(zones);
 
     // we remove the useless zones from cosmogony

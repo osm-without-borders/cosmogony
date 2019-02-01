@@ -140,7 +140,11 @@ impl Zone {
         self.parent = idx;
     }
 
-    pub fn from_osm(relation: &Relation, index: ZoneIndex) -> Option<Self> {
+    pub fn from_osm(
+        relation: &Relation,
+        objects: &BTreeMap<OsmId, OsmObj>,
+        index: ZoneIndex,
+    ) -> Option<Self> {
         // Skip administrative region without name
         let name = match relation.tags.get("name") {
             Some(val) => val,
@@ -169,7 +173,23 @@ impl Zone {
             .sorted();
         let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
 
-        let international_names = get_international_names(&relation.tags, name);
+        let label_node = relation
+            .refs
+            .iter()
+            .find(|r| r.role == "label")
+            .and_then(|r| objects.get(&r.member))
+            .and_then(|o| o.node());
+
+        let mut tags = relation.tags.clone();
+        if let Some(node) = label_node {
+            node.tags
+                .iter()
+                .filter(|(k, _)| k.starts_with("name:"))
+                .for_each(|(k, v)| {
+                    tags.entry(k.to_string()).or_insert(v.to_string());
+                })
+        }
+
         Some(Self {
             id: index,
             osm_id: format!("relation:{}", relation.id.0.to_string()), // for the moment we can only read relation
@@ -178,13 +198,13 @@ impl Zone {
             name: name.to_string(),
             label: "".to_string(),
             international_labels: BTreeMap::default(),
-            international_names: international_names,
+            international_names: BTreeMap::default(),
             zip_codes: zip_codes,
             center: None,
             boundary: None,
             bbox: None,
             parent: None,
-            tags: relation.tags.clone(),
+            tags: tags,
             center_tags: Tags::new(),
             wikidata: wikidata,
         })
@@ -196,7 +216,7 @@ impl Zone {
         index: ZoneIndex,
     ) -> Option<Self> {
         use geo::centroid::Centroid;
-        Self::from_osm(relation, index).map(|mut result| {
+        Self::from_osm(relation, objects, index).map(|mut result| {
             result.boundary = build_boundary(relation, objects);
             result.bbox = result.boundary.as_ref().and_then(|b| b.bbox());
 
@@ -327,6 +347,25 @@ impl Zone {
         self.international_labels = international_labels;
         self.label = label;
     }
+
+    pub fn compute_names(&mut self) {
+        if self.zone_type == Some(ZoneType::City)
+            || self.wikidata.is_some()
+                && self.wikidata == self.center_tags.get("wikidata").map(|s| s.to_string())
+        {
+            let center_names: Vec<_> = self
+                .center_tags
+                .iter()
+                .filter(|(k, _)| k.starts_with("name:"))
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect();
+
+            center_names.into_iter().for_each(|(k, v)| {
+                self.tags.entry(k).or_insert(v);
+            })
+        }
+        self.international_names = get_international_names(&self.tags, &self.name);
+    }
 }
 
 /// format the zone's zip code
@@ -361,7 +400,7 @@ impl<'a> Iterator for HierarchyIterator<'a> {
         match z {
             Some(z) => {
                 self.zone = match &z.parent {
-                    &Some(ref p_idx) => Some(self.all_zones.get(&p_idx)),
+                    Some(ref p_idx) => Some(self.all_zones.get(&p_idx)),
                     _ => None,
                 };
                 Some(z)

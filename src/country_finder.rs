@@ -40,7 +40,7 @@ impl CountryFinder {
                                 z.id.clone(),
                                 Country {
                                     iso: country_code.clone(),
-                                    admin_level: z.admin_level.clone(),
+                                    admin_level: z.admin_level,
                                 },
                             )
                         })
@@ -49,7 +49,7 @@ impl CountryFinder {
         }
     }
 
-    pub fn find_zone_country(&self, z: &Zone, inclusion: &Vec<ZoneIndex>) -> Option<String> {
+    pub fn find_zone_country(&self, z: &Zone, inclusion: &[ZoneIndex]) -> Option<String> {
         inclusion
             .iter()
             .chain(std::iter::once(&z.id)) // we also add the zone to check if it's itself a country
