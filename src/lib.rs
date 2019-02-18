@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate failure;
 extern crate geo;
+extern crate geo_types;
 extern crate gst;
 #[macro_use]
 extern crate log;
@@ -15,6 +16,7 @@ extern crate serde_yaml;
 extern crate structopt;
 #[macro_use]
 extern crate lazy_static;
+extern crate geos;
 extern crate rayon;
 
 pub mod cosmogony;

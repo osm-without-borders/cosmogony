@@ -6,18 +6,17 @@ extern crate regex;
 extern crate serde;
 extern crate serde_json;
 
-use self::geos::GGeom;
 use self::itertools::Itertools;
 use self::serde::Serialize;
-use geo::algorithm::boundingbox::BoundingBox;
-use geo::{Bbox, Point};
+use geo::algorithm::bounding_rect::BoundingRect;
+use geo_types::{Coordinate, Point, Rect};
+use geos::GGeom;
 use mutable_slice::MutableSlice;
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use zone::geos::from_geo::TryInto;
 
 type Coord = Point<f64>;
 
@@ -66,14 +65,14 @@ pub struct Zone {
         rename = "geometry",
         default
     )]
-    pub boundary: Option<geo::MultiPolygon<f64>>,
+    pub boundary: Option<geo_types::MultiPolygon<f64>>,
 
     #[serde(
         serialize_with = "serialize_bbox_as_geojson",
-        deserialize_with = "deserialize_as_bbox",
+        deserialize_with = "deserialize_as_rect",
         default
     )]
-    pub bbox: Option<Bbox<f64>>,
+    pub bbox: Option<Rect<f64>>,
 
     pub tags: Tags,
     #[serde(default = "Tags::new")] //to keep the retrocompatibility with cosmogony2mimir
@@ -218,7 +217,7 @@ impl Zone {
         use geo::centroid::Centroid;
         Self::from_osm(relation, objects, index).map(|mut result| {
             result.boundary = build_boundary(relation, objects);
-            result.bbox = result.boundary.as_ref().and_then(|b| b.bbox());
+            result.bbox = result.boundary.as_ref().and_then(|b| b.bounding_rect());
 
             let center = relation
                 .refs
@@ -251,6 +250,7 @@ impl Zone {
     }
 
     pub fn contains(&self, other: &Zone) -> bool {
+        use geos::from_geo::TryInto;
         match (&self.boundary, &other.boundary) {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
                 let m_self: Result<GGeom, _> = mpoly1.try_into();
@@ -261,6 +261,9 @@ impl Zone {
                         // In GEOS, "covers" is less strict than "contains".
                         // eg: a polygon does NOT "contain" its boundary, but "covers" it.
                         m_self.covers(&m_other)
+                        .map_err(|e| info!("impossible to compute geometies coverage for zone {:?}/{:?}: error {}",
+                        &self.osm_id, &other.osm_id, e))
+                        .unwrap_or(false)
                     }
                     (&Err(ref e), _) => {
                         info!(
@@ -483,7 +486,7 @@ where
 }
 
 fn serialize_bbox_as_geojson<'a, S>(
-    bbox: &'a Option<Bbox<f64>>,
+    bbox: &'a Option<Rect<f64>>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
@@ -495,24 +498,22 @@ where
             // bbox serialized as an array
             // using GeoJSON bounding box format
             // See RFC 7946: https://tools.ietf.org/html/rfc7946#section-5
-            let geojson_bbox: GeojsonBbox = vec![b.xmin, b.ymin, b.xmax, b.ymax];
+            let geojson_bbox: GeojsonBbox = vec![b.min.x, b.min.y, b.max.x, b.max.y];
             geojson_bbox.serialize(serializer)
         }
         None => serializer.serialize_none(),
     }
 }
 
-fn deserialize_as_bbox<'de, D>(d: D) -> Result<Option<Bbox<f64>>, D::Error>
+fn deserialize_as_rect<'de, D>(d: D) -> Result<Option<Rect<f64>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     use self::serde::Deserialize;
     Option::<Vec<f64>>::deserialize(d).map(|option| match option {
-        Some(b) => Some(Bbox {
-            xmin: b[0],
-            ymin: b[1],
-            xmax: b[2],
-            ymax: b[3],
+        Some(b) => Some(Rect {
+            min: Coordinate { x: b[0], y: b[1] },
+            max: Coordinate { x: b[2], y: b[3] },
         }),
         None => None,
     })
