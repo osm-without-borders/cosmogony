@@ -29,6 +29,17 @@ fn test_cmd_with_json_output() {
 }
 
 #[test]
+fn test_cmd_with_json_stream_output() {
+    let output = launch_command_line(vec![
+        "-i",
+        "./tests/data/luxembourg_filtered.osm.pbf",
+        "-o",
+        concat!(env!("OUT_DIR"), "/test_cosmogony.jsonl"),
+    ]);
+    assert!(output.status.success());
+}
+
+#[test]
 fn test_cmd_with_json_gz_output() {
     let output = launch_command_line(vec![
         "-i",

@@ -57,13 +57,17 @@ struct Args {
 enum OutputFormat {
     Json,
     JsonGz,
+    JsonStream,
+    JsonStreamGz,
 }
 
 impl OutputFormat {
     fn all_extensions() -> Vec<(String, OutputFormat)> {
         vec![
             (".json".into(), OutputFormat::Json),
+            (".jsonl".into(), OutputFormat::JsonStream),
             (".json.gz".into(), OutputFormat::JsonGz),
+            (".jsonl.gz".into(), OutputFormat::JsonStreamGz),
         ]
     }
 
@@ -88,6 +92,17 @@ impl OutputFormat {
     }
 }
 
+fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Result<(), Error> {
+    for z in &cosmogony.zones {
+        writer.write(serde_json::to_string(z)?.as_bytes())?;
+        writer.write(b"\n")?;
+    }
+
+    // since we don't dump the metadata in json stream for the moment, we log them
+    info!("metadata: {:?}", &cosmogony.meta);
+    Ok(())
+}
+
 fn serialize_cosmogony(
     cosmogony: &Cosmogony,
     output_file: String,
@@ -103,6 +118,13 @@ fn serialize_cosmogony(
         }
         OutputFormat::Json => {
             serde_json::to_writer(stream, cosmogony)?;
+        }
+        OutputFormat::JsonStream => {
+            to_json_stream(stream, cosmogony)?;
+        }
+        OutputFormat::JsonStreamGz => {
+            let e = GzEncoder::new(stream, Compression::default());
+            to_json_stream(e, cosmogony)?;
         }
     };
     Ok(())
