@@ -29,19 +29,19 @@ mod utils;
 pub mod zone;
 pub mod zone_typer;
 
-pub use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
-use country_finder::CountryFinder;
+pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
+use crate::country_finder::CountryFinder;
 use failure::Error;
 use failure::ResultExt;
-use file_format::OutputFormat;
-use hierarchy_builder::{build_hierarchy, find_inclusions};
-use mutable_slice::MutableSlice;
+use crate::file_format::OutputFormat;
+use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
+use crate::mutable_slice::MutableSlice;
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-pub use zone::{Zone, ZoneIndex, ZoneType};
+pub use crate::zone::{Zone, ZoneIndex, ZoneType};
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {

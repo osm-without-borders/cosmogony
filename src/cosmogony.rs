@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt;
-use zone::Zone;
+use crate::zone::Zone;
 extern crate serde;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

@@ -11,7 +11,7 @@ use self::serde::Serialize;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo_types::{Coordinate, Point, Rect};
 use geos::GGeom;
-use mutable_slice::MutableSlice;
+use crate::mutable_slice::MutableSlice;
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use regex::Regex;

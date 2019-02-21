@@ -1,4 +1,4 @@
-use zone::{Zone, ZoneIndex};
+use crate::zone::{Zone, ZoneIndex};
 
 // This struct is necessary to wrap the `zones` slice
 // and keep a mutable reference to a zone (and set

@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
-use zone::{Zone, ZoneIndex, ZoneType};
+use crate::zone::{Zone, ZoneIndex, ZoneType};
 
 #[derive(Debug)]
 pub struct ZoneTyper {
@@ -267,8 +267,8 @@ where
 mod test {
     use super::CountryAdminTypeRules;
     use std::fs;
-    use zone::{Zone, ZoneIndex, ZoneType};
-    use zone_typer::read_libpostal_yaml;
+    use crate::zone::{Zone, ZoneIndex, ZoneType};
+    use crate::zone_typer::read_libpostal_yaml;
 
     #[test]
     fn test_read_libpostal_yaml_basic() {
