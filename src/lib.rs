@@ -1,24 +1,24 @@
 #[macro_use]
 extern crate failure;
-extern crate geo;
-extern crate geo_types;
-extern crate gst;
+
+use geo_types;
+use gst;
 #[macro_use]
 extern crate log;
-extern crate ordered_float;
-extern crate osm_boundaries_utils;
-extern crate osmpbfreader;
-extern crate serde;
+
+
+
+use serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate regex;
-extern crate serde_yaml;
-extern crate structopt;
+
+use serde_yaml;
+
 #[macro_use]
 extern crate lazy_static;
-extern crate flate2;
-extern crate geos;
-extern crate rayon;
+use flate2;
+
+
 
 pub mod cosmogony;
 mod country_finder;
@@ -300,7 +300,7 @@ pub fn load_cosmogony_from_file(input: &str) -> Result<Cosmogony, Error> {
 /// if the input file is a json, the whole cosmogony is loaded
 pub fn read_zones_from_file(
     input: &str,
-) -> Result<Box<std::iter::Iterator<Item = Result<Zone, Error>>>, Error> {
+) -> Result<Box<dyn std::iter::Iterator<Item = Result<Zone, Error>>>, Error> {
     let format = OutputFormat::from_filename(input)?;
     let f = std::fs::File::open(&input)?;
     let f = std::io::BufReader::new(f);

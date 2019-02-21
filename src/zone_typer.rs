@@ -25,7 +25,7 @@ enum OsmPrimaryObjects {
 }
 
 impl fmt::Display for OsmPrimaryObjects {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OsmPrimaryObjects::Node => fmt.write_str("node")?,
             OsmPrimaryObjects::Way => fmt.write_str("way")?,

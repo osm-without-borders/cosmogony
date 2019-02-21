@@ -1,4 +1,4 @@
-extern crate geos;
+
 
 use std;
 use std::collections::BTreeMap;

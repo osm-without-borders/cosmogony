@@ -1,10 +1,10 @@
-extern crate geo;
-extern crate geojson;
-extern crate geos;
-extern crate itertools;
-extern crate regex;
-extern crate serde;
-extern crate serde_json;
+use geo;
+use geojson;
+use geos;
+use itertools;
+use regex;
+use serde;
+use serde_json;
 
 use self::itertools::Itertools;
 use self::serde::Serialize;
@@ -296,14 +296,14 @@ impl Zone {
     }
 
     /// iter_hierarchy gives an iterator over the whole hierachy including self
-    pub fn iter_hierarchy<'a>(&'a self, all_zones: &'a MutableSlice) -> HierarchyIterator<'a> {
+    pub fn iter_hierarchy<'a>(&'a self, all_zones: &'a MutableSlice<'_>) -> HierarchyIterator<'a> {
         HierarchyIterator {
             zone: Some(&self),
             all_zones: all_zones,
         }
     }
 
-    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice, f: F) -> String
+    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice<'_>, f: F) -> String
     where
         F: Fn(&Zone) -> String,
     {
@@ -328,7 +328,7 @@ impl Zone {
     /// We compute a default label, and a label per language
     /// Note: for the moment we use the same format for every language,
     /// but in the future we might use opencage's configuration for this
-    pub fn compute_labels(&mut self, all_zones: &MutableSlice) {
+    pub fn compute_labels(&mut self, all_zones: &MutableSlice<'_>) {
         let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
@@ -553,7 +553,7 @@ impl<'de> serde::de::Visitor<'de> for ZoneIndexVisitor {
         })
     }
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a zone index")
     }
 }

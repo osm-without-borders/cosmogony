@@ -1,13 +1,13 @@
-extern crate cosmogony;
-extern crate env_logger;
-extern crate failure;
+
+use env_logger;
+
 #[macro_use]
 extern crate log;
-extern crate serde_json;
-extern crate structopt;
+use serde_json;
+use structopt;
 #[macro_use]
 extern crate structopt_derive;
-extern crate flate2;
+
 
 use cosmogony::cosmogony::Cosmogony;
 use cosmogony::{build_cosmogony, file_format::OutputFormat};

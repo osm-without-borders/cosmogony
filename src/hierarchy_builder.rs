@@ -1,4 +1,4 @@
-extern crate geo;
+
 
 use gst::rtree::RTree;
 use crate::mutable_slice::MutableSlice;

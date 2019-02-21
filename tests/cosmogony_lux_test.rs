@@ -1,5 +1,5 @@
-extern crate cosmogony;
-extern crate serde_json;
+use cosmogony;
+use serde_json;
 use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 
 #[macro_use]

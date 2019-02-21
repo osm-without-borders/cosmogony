@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use crate::zone::Zone;
-extern crate serde;
+
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Cosmogony {
@@ -47,7 +47,7 @@ impl CosmogonyStats {
 }
 
 impl fmt::Display for CosmogonyStats {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (level, count) in &self.level_counts {
             let wd = self.wikidata_counts.get(level).unwrap_or(&0u64);
             writeln!(f, "Admin level {}: {} element(s)", level, count)?;

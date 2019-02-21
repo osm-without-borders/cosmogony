@@ -1,4 +1,4 @@
-extern crate geo;
+
 
 use geo_types;
 use gst;
