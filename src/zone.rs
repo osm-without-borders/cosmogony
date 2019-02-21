@@ -105,8 +105,8 @@ fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, 
         .collect()
 }
 
-impl Zone {
-    pub fn default() -> Self {
+impl Default for Zone {
+    fn default() -> Self {
         Zone {
             id: ZoneIndex { index: 0 },
             osm_id: "".into(),
@@ -126,7 +126,9 @@ impl Zone {
             zip_codes: vec![],
         }
     }
+}
 
+impl Zone {
     pub fn is_admin(&self) -> bool {
         match self.zone_type {
             None => false,

@@ -9,8 +9,8 @@ extern crate structopt;
 extern crate structopt_derive;
 extern crate flate2;
 
-use cosmogony::build_cosmogony;
 use cosmogony::cosmogony::Cosmogony;
+use cosmogony::{build_cosmogony, file_format::OutputFormat};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
@@ -29,7 +29,10 @@ struct Args {
         short = "o",
         long = "output",
         default_value = "cosmogony.json",
-        help = "Output file name. Format will be deduced from the file extension. Accepted extensions are '.json' and '.json.gz'"
+        help = r#"Output file name. Format will be deduced from the file extension. 
+Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
+'jsonl' is json stream, each line is a zone as json
+"#
     )]
     output: Option<String>,
     #[structopt(help = "Do not display the stats", long = "no-stats")]
@@ -53,39 +56,15 @@ struct Args {
     libpostal_path: String,
 }
 
-#[derive(PartialEq, Clone)]
-enum OutputFormat {
-    Json,
-    JsonGz,
-}
-
-impl OutputFormat {
-    fn all_extensions() -> Vec<(String, OutputFormat)> {
-        vec![
-            (".json".into(), OutputFormat::Json),
-            (".json.gz".into(), OutputFormat::JsonGz),
-        ]
+fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Result<(), Error> {
+    for z in &cosmogony.zones {
+        serde_json::to_writer(&mut writer, z)?;
+        writer.write(b"\n")?;
     }
 
-    fn from_filename(filename: &str) -> Result<OutputFormat, Error> {
-        let extensions = OutputFormat::all_extensions();
-        extensions
-            .iter()
-            .find(|&&(ref e, _)| filename.ends_with(e))
-            .map(|&(_, ref f)| f.clone())
-            .ok_or_else(|| {
-                let extensions_str = extensions
-                    .into_iter()
-                    .map(|(e, _)| e)
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                failure::err_msg(format!(
-                    "Unable to detect the file format from filename '{}'. \
-                     Accepted extensions are: {}",
-                    filename, extensions_str
-                ))
-            })
-    }
+    // since we don't dump the metadata in json stream for the moment, we log them
+    info!("metadata: {:?}", &cosmogony.meta);
+    Ok(())
 }
 
 fn serialize_cosmogony(
@@ -103,6 +82,13 @@ fn serialize_cosmogony(
         }
         OutputFormat::Json => {
             serde_json::to_writer(stream, cosmogony)?;
+        }
+        OutputFormat::JsonStream => {
+            to_json_stream(stream, cosmogony)?;
+        }
+        OutputFormat::JsonStreamGz => {
+            let e = GzEncoder::new(stream, Compression::default());
+            to_json_stream(e, cosmogony)?;
         }
     };
     Ok(())

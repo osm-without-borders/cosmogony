@@ -19,24 +19,63 @@ fn launch_command_line(args: Vec<&str>) -> Output {
 
 #[test]
 fn test_cmd_with_json_output() {
+    let out_file = concat!(env!("OUT_DIR"), "/test_cosmogony.json");
     let output = launch_command_line(vec![
         "-i",
         "./tests/data/luxembourg_filtered.osm.pbf",
         "-o",
-        concat!(env!("OUT_DIR"), "/test_cosmogony.json"),
+        out_file,
     ]);
     assert!(output.status.success());
+
+    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
+    assert_eq!(cosmo.zones.len(), 195);
+}
+
+#[test]
+fn test_cmd_with_json_stream_output() {
+    let out_file = concat!(env!("OUT_DIR"), "/test_cosmogony.jsonl");
+    let output = launch_command_line(vec![
+        "-i",
+        "./tests/data/luxembourg_filtered.osm.pbf",
+        "-o",
+        out_file,
+    ]);
+    assert!(output.status.success());
+
+    // we try also the streaming zone's reader
+    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
+    assert_eq!(zones.len(), 195);
+}
+
+#[test]
+fn test_cmd_with_json_stream_gz_output() {
+    let out_file = concat!(env!("OUT_DIR"), "/test_cosmogony.jsonl.gz");
+    let output = launch_command_line(vec![
+        "-i",
+        "./tests/data/luxembourg_filtered.osm.pbf",
+        "-o",
+        out_file,
+    ]);
+    assert!(output.status.success());
+
+    // we try also the streaming zone's reader
+    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
+    assert_eq!(zones.len(), 195);
 }
 
 #[test]
 fn test_cmd_with_json_gz_output() {
+    let out_file = concat!(env!("OUT_DIR"), "/test_cosmogony.json.gz");
     let output = launch_command_line(vec![
         "-i",
         "./tests/data/luxembourg_filtered.osm.pbf",
         "-o",
-        concat!(env!("OUT_DIR"), "/test_cosmogony.json.gz"),
+        out_file,
     ]);
     assert!(output.status.success());
+    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
+    assert_eq!(cosmo.zones.len(), 195);
 }
 
 #[test]
