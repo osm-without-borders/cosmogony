@@ -1,10 +1,8 @@
-
-
-use gst::rtree::RTree;
 use crate::mutable_slice::MutableSlice;
-use std::iter::FromIterator;
 use crate::utils::bbox_to_rect;
 use crate::zone::{Zone, ZoneIndex};
+use gst::rtree::RTree;
+use std::iter::FromIterator;
 
 pub struct ZonesTree {
     tree: RTree<ZoneIndex>,
@@ -115,10 +113,10 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
 
 #[cfg(test)]
 mod test {
-    use geo::bounding_rect::BoundingRect;
-    use geo_types::{Coordinate, LineString, MultiPolygon, Polygon};
     use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
     use crate::zone::{Zone, ZoneType};
+    use geo::bounding_rect::BoundingRect;
+    use geo_types::{Coordinate, LineString, MultiPolygon, Polygon};
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);

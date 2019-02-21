@@ -1,20 +1,12 @@
-use geo;
-use geojson;
-use geos;
-use itertools;
-use regex;
-use serde;
-use serde_json;
-
-use self::itertools::Itertools;
-use self::serde::Serialize;
+use crate::mutable_slice::MutableSlice;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo_types::{Coordinate, Point, Rect};
 use geos::GGeom;
-use crate::mutable_slice::MutableSlice;
+use itertools::Itertools;
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
+use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -425,8 +417,8 @@ where
     geojson::Value: From<&'a T>,
     S: serde::Serializer,
 {
-    use self::geojson::{GeoJson, Geometry, Value};
-    use self::serde::Serialize;
+    use geojson::{GeoJson, Geometry, Value};
+    use serde::Serialize;
 
     match *multi_polygon_option {
         Some(ref multi_polygon) => {
@@ -440,9 +432,8 @@ fn deserialize_geom<'de, D>(d: D) -> Result<Option<geo::Geometry<f64>>, D::Error
 where
     D: serde::Deserializer<'de>,
 {
-    use self::geojson;
-    use self::geojson::conversion::TryInto;
-    use self::serde::Deserialize;
+    use geojson::conversion::TryInto;
+    use serde::Deserialize;
 
     Option::<geojson::GeoJson>::deserialize(d).map(|option| {
         option.and_then(|geojson| match geojson {
@@ -494,7 +485,7 @@ fn serialize_bbox_as_geojson<'a, S>(
 where
     S: serde::Serializer,
 {
-    use self::geojson::Bbox as GeojsonBbox;
+    use geojson::Bbox as GeojsonBbox;
     match bbox {
         Some(b) => {
             // bbox serialized as an array
@@ -511,7 +502,7 @@ fn deserialize_as_rect<'de, D>(d: D) -> Result<Option<Rect<f64>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    use self::serde::Deserialize;
+    use serde::Deserialize;
     Option::<Vec<f64>>::deserialize(d).map(|option| match option {
         Some(b) => Some(Rect {
             min: Coordinate { x: b[0], y: b[1] },

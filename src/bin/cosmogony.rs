@@ -1,23 +1,15 @@
-
-use env_logger;
-
 #[macro_use]
 extern crate log;
-use serde_json;
-use structopt;
 #[macro_use]
 extern crate structopt_derive;
-
-
 use cosmogony::cosmogony::Cosmogony;
 use cosmogony::{build_cosmogony, file_format::OutputFormat};
+use failure::Error;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::BufWriter;
 use structopt::StructOpt;
-
-use failure::Error;
 
 #[derive(StructOpt, Debug)]
 struct Args {

@@ -1,13 +1,12 @@
+use crate::zone::{Zone, ZoneIndex, ZoneType};
 use failure::ResultExt;
 use failure::{err_msg, Error};
-use serde;
-use serde_yaml;
+use log::warn;
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug};
 use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
-use crate::zone::{Zone, ZoneIndex, ZoneType};
 
 #[derive(Debug)]
 pub struct ZoneTyper {
@@ -266,9 +265,9 @@ where
 #[cfg(test)]
 mod test {
     use super::CountryAdminTypeRules;
-    use std::fs;
     use crate::zone::{Zone, ZoneIndex, ZoneType};
     use crate::zone_typer::read_libpostal_yaml;
+    use std::fs;
 
     #[test]
     fn test_read_libpostal_yaml_basic() {

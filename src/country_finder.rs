@@ -1,9 +1,6 @@
-
-
-use std;
-use std::collections::BTreeMap;
 use crate::zone::{Zone, ZoneIndex};
 use crate::zone_typer::ZoneTyper;
+use std::collections::BTreeMap;
 
 const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
 

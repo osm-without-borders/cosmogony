@@ -1,24 +1,13 @@
 #[macro_use]
 extern crate failure;
 
-use geo_types;
-use gst;
 #[macro_use]
 extern crate log;
-
-
-
-use serde;
 #[macro_use]
 extern crate serde_derive;
 
-use serde_yaml;
-
 #[macro_use]
 extern crate lazy_static;
-use flate2;
-
-
 
 pub mod cosmogony;
 mod country_finder;
@@ -31,11 +20,11 @@ pub mod zone_typer;
 
 pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use crate::country_finder::CountryFinder;
-use failure::Error;
-use failure::ResultExt;
 use crate::file_format::OutputFormat;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use crate::mutable_slice::MutableSlice;
+use failure::Error;
+use failure::ResultExt;
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
