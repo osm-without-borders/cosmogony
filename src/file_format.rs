@@ -8,27 +8,24 @@ pub enum OutputFormat {
     JsonStreamGz,
 }
 
-impl OutputFormat {
-    fn all_extensions() -> Vec<(String, OutputFormat)> {
-        vec![
-            (".json".into(), OutputFormat::Json),
-            (".jsonl".into(), OutputFormat::JsonStream),
-            (".json.gz".into(), OutputFormat::JsonGz),
-            (".jsonl.gz".into(), OutputFormat::JsonStreamGz),
-        ]
-    }
+static ALL_EXTENTIONS: [(&str, OutputFormat); 4] = [
+    (".json", OutputFormat::Json),
+    (".jsonl", OutputFormat::JsonStream),
+    (".json.gz", OutputFormat::JsonGz),
+    (".jsonl.gz", OutputFormat::JsonStreamGz),
+];
 
+impl OutputFormat {
     pub fn from_filename(filename: &str) -> Result<OutputFormat, Error> {
-        let extensions = OutputFormat::all_extensions();
-        extensions
+        ALL_EXTENTIONS
             .iter()
             .find(|&&(ref e, _)| filename.ends_with(e))
             .map(|&(_, ref f)| f.clone())
             .ok_or_else(|| {
-                let extensions_str = extensions
+                let extensions_str = ALL_EXTENTIONS
                     .into_iter()
-                    .map(|(e, _)| e)
-                    .collect::<Vec<String>>()
+                    .map(|(e, _)| *e)
+                    .collect::<Vec<_>>()
                     .join(", ");
                 failure::err_msg(format!(
                     "Unable to detect the file format from filename '{}'. \
