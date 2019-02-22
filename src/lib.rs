@@ -1,4 +1,6 @@
-use log::{debug, info};
+#[macro_use]
+extern crate include_dir;
+
 pub mod cosmogony;
 mod country_finder;
 pub mod file_format;
@@ -15,10 +17,11 @@ use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use crate::mutable_slice::MutableSlice;
 use failure::Error;
 use failure::ResultExt;
+use log::{debug, info};
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub use crate::zone::{Zone, ZoneIndex, ZoneType};
 
@@ -105,13 +108,12 @@ fn get_country_code<'a>(
 fn type_zones(
     zones: &mut [zone::Zone],
     stats: &mut CosmogonyStats,
-    libpostal_file_path: PathBuf,
     country_code: Option<String>,
     inclusions: &Vec<Vec<ZoneIndex>>,
 ) -> Result<(), Error> {
     use rayon::prelude::*;
     info!("reading libpostal's rules");
-    let zone_typer = zone_typer::ZoneTyper::new(libpostal_file_path)?;
+    let zone_typer = zone_typer::ZoneTyper::new()?;
 
     info!("creating a countrys rtree");
     let country_finder: CountryFinder = CountryFinder::init(&zones, &zone_typer);
@@ -188,13 +190,12 @@ fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
 fn create_ontology(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
-    libpostal_file_path: PathBuf,
     country_code: Option<String>,
 ) -> Result<(), Error> {
     info!("creating ontology for {} zones", zones.len());
     let inclusions = find_inclusions(zones);
 
-    type_zones(zones, stats, libpostal_file_path, country_code, &inclusions)?;
+    type_zones(zones, stats, country_code, &inclusions)?;
 
     build_hierarchy(zones, inclusions);
 
@@ -213,7 +214,6 @@ fn create_ontology(
 pub fn build_cosmogony(
     pbf_path: String,
     with_geom: bool,
-    libpostal_file_path: PathBuf,
     country_code: Option<String>,
 ) -> Result<Cosmogony, Error> {
     let path = Path::new(&pbf_path);
@@ -227,7 +227,7 @@ pub fn build_cosmogony(
         get_zones_and_stats_without_geom(&mut parsed_pbf)?
     };
 
-    create_ontology(&mut zones, &mut stats, libpostal_file_path, country_code)?;
+    create_ontology(&mut zones, &mut stats, country_code)?;
 
     stats.compute(&zones);
 

@@ -91,13 +91,8 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(
-        test_file.into(),
-        true,
-        "./libpostal/resources/boundaries/osm".into(),
-        Some("lu".into()),
-    )
-    .expect("invalid cosmogony");
+    let cosmogony = cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()))
+        .expect("invalid cosmogony");
     return cosmogony;
 }
 
