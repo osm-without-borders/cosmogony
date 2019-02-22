@@ -2,6 +2,7 @@ use crate::mutable_slice::MutableSlice;
 use crate::utils::bbox_to_rect;
 use crate::zone::{Zone, ZoneIndex};
 use gst::rtree::RTree;
+use log::{info, warn};
 use std::iter::FromIterator;
 
 pub struct ZonesTree {
