@@ -6,7 +6,6 @@ use flate2::Compression;
 use std::fs::File;
 use std::io::BufWriter;
 use structopt::StructOpt;
-use structopt_derive::*;
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -23,7 +22,7 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
 'jsonl' is json stream, each line is a zone as json
 "#
     )]
-    output: Option<String>,
+    output: String,
     #[structopt(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
     #[structopt(
@@ -84,11 +83,7 @@ fn serialize_cosmogony(
 }
 
 fn cosmogony(args: Args) -> Result<(), Error> {
-    let format = if let Some(ref output_filename) = args.output {
-        OutputFormat::from_filename(&output_filename)?
-    } else {
-        OutputFormat::Json
-    };
+    let format = OutputFormat::from_filename(&args.output)?;
 
     let cosmogony = build_cosmogony(
         args.input,
@@ -97,9 +92,7 @@ fn cosmogony(args: Args) -> Result<(), Error> {
         args.country_code,
     )?;
 
-    if let Some(output) = args.output {
-        serialize_cosmogony(&cosmogony, output, format)?;
-    }
+    serialize_cosmogony(&cosmogony, args.output, format)?;
 
     if !args.no_stats {
         log::info!(
