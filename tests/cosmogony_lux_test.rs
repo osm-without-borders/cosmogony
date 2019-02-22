@@ -1,10 +1,6 @@
-extern crate cosmogony;
-extern crate serde_json;
-use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
-
 #[macro_use]
 extern crate approx;
-
+use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 use std::collections::BTreeMap;
 use std::process::{Command, Output};
 

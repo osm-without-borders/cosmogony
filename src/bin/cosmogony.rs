@@ -1,23 +1,11 @@
-extern crate cosmogony;
-extern crate env_logger;
-extern crate failure;
-#[macro_use]
-extern crate log;
-extern crate serde_json;
-extern crate structopt;
-#[macro_use]
-extern crate structopt_derive;
-extern crate flate2;
-
 use cosmogony::cosmogony::Cosmogony;
 use cosmogony::{build_cosmogony, file_format::OutputFormat};
+use failure::Error;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::BufWriter;
 use structopt::StructOpt;
-
-use failure::Error;
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -34,7 +22,7 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
 'jsonl' is json stream, each line is a zone as json
 "#
     )]
-    output: Option<String>,
+    output: String,
     #[structopt(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
     #[structopt(
@@ -63,7 +51,7 @@ fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Res
     }
 
     // since we don't dump the metadata in json stream for the moment, we log them
-    info!("metadata: {:?}", &cosmogony.meta);
+    log::info!("metadata: {:?}", &cosmogony.meta);
     Ok(())
 }
 
@@ -72,7 +60,7 @@ fn serialize_cosmogony(
     output_file: String,
     format: OutputFormat,
 ) -> Result<(), Error> {
-    info!("writing the output file {}", output_file);
+    log::info!("writing the output file {}", output_file);
     let file = File::create(output_file)?;
     let stream = BufWriter::new(file);
     match format {
@@ -95,11 +83,7 @@ fn serialize_cosmogony(
 }
 
 fn cosmogony(args: Args) -> Result<(), Error> {
-    let format = if let Some(ref output_filename) = args.output {
-        OutputFormat::from_filename(&output_filename)?
-    } else {
-        OutputFormat::Json
-    };
+    let format = OutputFormat::from_filename(&args.output)?;
 
     let cosmogony = build_cosmogony(
         args.input,
@@ -108,14 +92,13 @@ fn cosmogony(args: Args) -> Result<(), Error> {
         args.country_code,
     )?;
 
-    if let Some(output) = args.output {
-        serialize_cosmogony(&cosmogony, output, format)?;
-    }
+    serialize_cosmogony(&cosmogony, args.output, format)?;
 
     if !args.no_stats {
-        info!(
+        log::info!(
             "Statistics for {}:\n{}",
-            cosmogony.meta.osm_filename, cosmogony.meta.stats
+            cosmogony.meta.osm_filename,
+            cosmogony.meta.stats
         );
     }
     Ok(())
@@ -135,11 +118,11 @@ fn main() {
     let args = Args::from_args();
     match cosmogony(args) {
         Err(e) => {
-            error!("cosmogony in error! {:?}", e);
+            log::error!("cosmogony in error! {:?}", e);
             e.iter_chain().for_each(|c| {
-                error!("{}", c);
+                log::error!("{}", c);
                 if let Some(b) = c.backtrace() {
-                    error!("  - {}", b);
+                    log::error!("  - {}", b);
                 }
             });
 

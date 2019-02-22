@@ -1,7 +1,3 @@
-extern crate geo;
-
-use geo_types;
-use gst;
 use ordered_float::OrderedFloat;
 
 pub fn bbox_to_rect(bbox: &geo_types::Rect<f64>) -> gst::rtree::Rect {

@@ -1,25 +1,4 @@
-#[macro_use]
-extern crate failure;
-extern crate geo;
-extern crate geo_types;
-extern crate gst;
-#[macro_use]
-extern crate log;
-extern crate ordered_float;
-extern crate osm_boundaries_utils;
-extern crate osmpbfreader;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate regex;
-extern crate serde_yaml;
-extern crate structopt;
-#[macro_use]
-extern crate lazy_static;
-extern crate flate2;
-extern crate geos;
-extern crate rayon;
-
+use log::{debug, info};
 pub mod cosmogony;
 mod country_finder;
 pub mod file_format;
@@ -29,19 +8,19 @@ mod utils;
 pub mod zone;
 pub mod zone_typer;
 
-pub use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
-use country_finder::CountryFinder;
+pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
+use crate::country_finder::CountryFinder;
+use crate::file_format::OutputFormat;
+use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
+use crate::mutable_slice::MutableSlice;
 use failure::Error;
 use failure::ResultExt;
-use file_format::OutputFormat;
-use hierarchy_builder::{build_hierarchy, find_inclusions};
-use mutable_slice::MutableSlice;
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-pub use zone::{Zone, ZoneIndex, ZoneType};
+pub use crate::zone::{Zone, ZoneIndex, ZoneType};
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -300,7 +279,7 @@ pub fn load_cosmogony_from_file(input: &str) -> Result<Cosmogony, Error> {
 /// if the input file is a json, the whole cosmogony is loaded
 pub fn read_zones_from_file(
     input: &str,
-) -> Result<Box<std::iter::Iterator<Item = Result<Zone, Error>>>, Error> {
+) -> Result<Box<dyn std::iter::Iterator<Item = Result<Zone, Error>>>, Error> {
     let format = OutputFormat::from_filename(input)?;
     let f = std::fs::File::open(&input)?;
     let f = std::io::BufReader::new(f);

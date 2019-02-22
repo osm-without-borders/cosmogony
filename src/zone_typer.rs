@@ -1,13 +1,14 @@
+use crate::zone::{Zone, ZoneIndex, ZoneType};
+use failure::Fail;
 use failure::ResultExt;
 use failure::{err_msg, Error};
-use serde;
-use serde_yaml;
+use log::warn;
+use serde_derive::*;
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug};
 use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
-use zone::{Zone, ZoneIndex, ZoneType};
 
 #[derive(Debug)]
 pub struct ZoneTyper {
@@ -25,7 +26,7 @@ enum OsmPrimaryObjects {
 }
 
 impl fmt::Display for OsmPrimaryObjects {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OsmPrimaryObjects::Node => fmt.write_str("node")?,
             OsmPrimaryObjects::Way => fmt.write_str("way")?,
@@ -266,9 +267,9 @@ where
 #[cfg(test)]
 mod test {
     use super::CountryAdminTypeRules;
+    use crate::zone::{Zone, ZoneIndex, ZoneType};
+    use crate::zone_typer::read_libpostal_yaml;
     use std::fs;
-    use zone::{Zone, ZoneIndex, ZoneType};
-    use zone_typer::read_libpostal_yaml;
 
     #[test]
     fn test_read_libpostal_yaml_basic() {
@@ -421,7 +422,7 @@ mod test {
             let mut f = fs::File::open(&a_path.path()).unwrap();
             let mut contents = String::new();
             f.read_to_string(&mut contents)
-                .map_err(|e| warn!("impossible to read file {:?} because {}", a_path, e))
+                .map_err(|e| log::warn!("impossible to read file {:?} because {}", a_path, e))
                 .unwrap();
             // there should be no error while reading a file
             read_libpostal_yaml(&contents).unwrap();
