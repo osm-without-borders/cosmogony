@@ -6,7 +6,6 @@ mod country_finder;
 pub mod file_format;
 mod hierarchy_builder;
 mod mutable_slice;
-mod utils;
 pub mod zone;
 pub mod zone_typer;
 

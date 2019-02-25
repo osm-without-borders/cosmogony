@@ -165,7 +165,8 @@ impl Zone {
             .split(';')
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string())
-            .sorted();
+            .sorted()
+            .collect();
         let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
 
         let label_node = relation
