@@ -1,14 +1,18 @@
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use failure::Fail;
-use failure::ResultExt;
 use failure::{err_msg, Error};
 use log::warn;
 use serde_derive::*;
 use std::collections::BTreeMap;
-use std::fmt::{self, Debug};
-use std::fs;
-use std::io::prelude::*;
-use std::path::Path;
+use std::fmt;
+
+use include_dir::Dir;
+
+// :warning:
+// The include_dir macro cannot cannot watch for changes to rebuild,
+// so if you only change the libpostal rules, you need either to clean the repo before building
+// or just touch this file to trigger a reimport
+const LIBPOSTAL_RULES_DIR: Dir = include_dir!("./libpostal/resources/boundaries/osm/");
 
 #[derive(Debug)]
 pub struct ZoneTyper {
@@ -63,18 +67,14 @@ pub enum ZoneTyperError {
 }
 
 impl ZoneTyper {
-    pub fn new<T>(libpostal_files_path: T) -> Result<ZoneTyper, Error>
-    where
-        T: AsRef<Path> + Debug,
-    {
+    pub fn new() -> Result<ZoneTyper, Error> {
         let z = ZoneTyper {
-            countries_rules: read_libpostal_yaml_folder(&libpostal_files_path)?,
+            countries_rules: read_libpostal_yaml_folder()?,
         };
         if z.countries_rules.is_empty() {
             Err(err_msg(format!(
-                "no country rules have been loaded, the directory {:?} \
-                 must contains valid libpostal rules",
-                &libpostal_files_path
+                "no country rules have been loaded, the libpostal directory \
+                 must contains valid libpostal rules"
             )))
         } else {
             Ok(z)
@@ -166,29 +166,19 @@ impl RulesOverrides {
     }
 }
 
-fn read_libpostal_yaml_folder<T>(
-    yaml_files_folder: T,
-) -> Result<BTreeMap<String, CountryAdminTypeRules>, Error>
-where
-    T: AsRef<Path> + Debug,
-{
-    use std::fs::DirEntry;
-
-    let read_libpostal_file = |entry: Result<DirEntry, _>| {
-        let a_path = entry.ok()?;
-        let mut f = fs::File::open(&a_path.path()).ok()?;
-        let mut contents = String::new();
-        f.read_to_string(&mut contents).ok()?;
-        let deserialized_level = read_libpostal_yaml(&contents)
+fn read_libpostal_yaml_folder() -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
+    Ok(LIBPOSTAL_RULES_DIR.files().iter().filter_map(|d| {
+        let contents = d.contents_utf8()?;
+let deserialized_level = read_libpostal_yaml(&contents)
             .map_err(|e| {
                 warn!(
                     "Levels corresponding to file: {:?} have been skipped due to {}",
-                    &a_path.path(),
+                    d.path(),
                     e
                 )
             })
             .ok()?;
-        let country_code = a_path
+        let country_code = d
             .path()
             .file_stem()
             .and_then(|f| f.to_str())
@@ -196,21 +186,13 @@ where
             .ok_or_else(|| {
                 warn!(
                     "Levels corresponding to file: {:?} have been skipped, impossible to deduce country code",
-                    &a_path.path()
+                    d.path()
                 )
             })
             .ok()?;
 
         Some((country_code.to_uppercase(), deserialized_level))
-    };
-
-    Ok(fs::read_dir(&yaml_files_folder)
-        .context(format!(
-            "error while reading libpostal directory {:?}",
-            yaml_files_folder
-        ))?
-        .filter_map(read_libpostal_file)
-        .collect())
+    }).collect())
 }
 
 fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
@@ -269,7 +251,6 @@ mod test {
     use super::CountryAdminTypeRules;
     use crate::zone::{Zone, ZoneIndex, ZoneType};
     use crate::zone_typer::read_libpostal_yaml;
-    use std::fs;
 
     #[test]
     fn test_read_libpostal_yaml_basic() {
@@ -411,22 +392,12 @@ mod test {
     /// test reading all the libpostal files
     #[test]
     fn test_read_all_libpostal_files() {
-        use std::io::Read;
-        let libpostal_dir = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/libpostal/resources/boundaries/osm/"
-        );
+        // there should be no error while reading a file
+        let rules = super::read_libpostal_yaml_folder().unwrap();
 
-        for f in fs::read_dir(&libpostal_dir).unwrap() {
-            let a_path = f.unwrap();
-            let mut f = fs::File::open(&a_path.path()).unwrap();
-            let mut contents = String::new();
-            f.read_to_string(&mut contents)
-                .map_err(|e| log::warn!("impossible to read file {:?} because {}", a_path, e))
-                .unwrap();
-            // there should be no error while reading a file
-            read_libpostal_yaml(&contents).unwrap();
-        }
+        // we should have been able to read all the files
+        // Note: this value can change if libpostal add/remove some rules
+        assert_eq!(rules.len(), 242);
     }
 
     /// helper method to return a yaml with many corner cases

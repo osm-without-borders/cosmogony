@@ -17,7 +17,5 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y libgeos-c1v5 libgeos-dev && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY --from=builder /srv/cosmogony/target/release/cosmogony /usr/bin/cosmogony
-# we also need the libpostal files
-COPY --from=builder /srv/cosmogony/libpostal/resources/boundaries/osm /srv/libpostal/resources/boundaries/osm
 
 ENTRYPOINT ["cosmogony"]
