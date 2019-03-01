@@ -1,28 +1,41 @@
 use crate::mutable_slice::MutableSlice;
-use crate::utils::bbox_to_rect;
 use crate::zone::{Zone, ZoneIndex};
-use gst::rtree::RTree;
+use geo_types::{Point, Rect};
 use log::{info, warn};
+use rstar::{RTree, RTreeObject, AABB};
 use std::iter::FromIterator;
 
-pub struct ZonesTree {
-    tree: RTree<ZoneIndex>,
+#[derive(Debug)]
+struct ZoneIndexAndBbox {
+    index: ZoneIndex,
+    bbox: AABB<Point<f64>>,
 }
 
-impl Default for ZonesTree {
-    fn default() -> Self {
-        ZonesTree { tree: RTree::new() }
+impl ZoneIndexAndBbox {
+    fn new(id: ZoneIndex, bbox: &Rect<f64>) -> Self {
+        ZoneIndexAndBbox {
+            index: id,
+            bbox: envelope(&bbox),
+        }
     }
+}
+
+impl RTreeObject for ZoneIndexAndBbox {
+    type Envelope = AABB<Point<f64>>;
+    fn envelope(&self) -> Self::Envelope {
+        self.bbox
+    }
+}
+
+pub struct ZonesTree {
+    tree: RTree<ZoneIndexAndBbox>,
+}
+
+fn envelope(bbox: &Rect<f64>) -> AABB<Point<f64>> {
+    AABB::from_corners(bbox.min.into(), bbox.max.into())
 }
 
 impl ZonesTree {
-    pub fn insert_zone(&mut self, z: &Zone) {
-        match z.bbox {
-            Some(ref b) => self.tree.insert(bbox_to_rect(b), z.id.clone()),
-            None => warn!("No bbox: Cannot insert zone with osm_id {}", z.osm_id),
-        }
-    }
-
     pub fn fetch_zone_bbox(&self, z: &Zone) -> Vec<ZoneIndex> {
         match z.bbox {
             None => {
@@ -31,9 +44,9 @@ impl ZonesTree {
             }
             Some(ref bbox) => self
                 .tree
-                .get(&bbox_to_rect(bbox))
+                .locate_in_envelope_intersecting(&envelope(bbox))
                 .into_iter()
-                .map(|(_, z_idx)| z_idx.clone())
+                .map(|z_and_bbox| z_and_bbox.index.clone())
                 .collect(),
         }
     }
@@ -41,11 +54,19 @@ impl ZonesTree {
 
 impl<'a> FromIterator<&'a Zone> for ZonesTree {
     fn from_iter<I: IntoIterator<Item = &'a Zone>>(zones: I) -> Self {
-        let mut ztree = ZonesTree::default();
-        for z in zones {
-            ztree.insert_zone(z);
+        let z = zones
+            .into_iter()
+            .filter_map(|z| match z.bbox {
+                Some(ref b) => Some(ZoneIndexAndBbox::new(z.id.clone(), b)),
+                None => {
+                    warn!("No bbox: Cannot insert zone with osm_id {}", z.osm_id);
+                    None
+                }
+            })
+            .collect();
+        ZonesTree {
+            tree: RTree::bulk_load_parallel(z),
         }
-        ztree
     }
 }
 
