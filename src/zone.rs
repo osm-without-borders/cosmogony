@@ -219,7 +219,7 @@ impl Zone {
             let center = relation
                 .refs
                 .iter()
-                .find(|r| r.role == "admin_centre")
+                .find(|r| r.role == "admin_centre" || r.role == "label")
                 .and_then(|r| objects.get(&r.member))
                 .and_then(|o| o.node());
 
