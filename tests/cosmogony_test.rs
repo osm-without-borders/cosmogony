@@ -4,6 +4,9 @@ use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 use std::collections::BTreeMap;
 use std::process::{Command, Output};
 
+use geo_types::Point;
+type Coord = Point<f64>;
+
 fn launch_command_line(args: Vec<&str>) -> Output {
     let cosmogony_bin = concat!(env!("OUT_DIR"), "/../../../cosmogony");
     Command::new(cosmogony_bin)
@@ -263,5 +266,30 @@ fn test_lux_zone_types() {
     assert_eq!(
         lux.international_labels.get("ak"),
         Some(&"Laksembɛg".to_string())
+    );
+}
+
+#[test]
+fn test_center_label() {
+    let ottawa_test_file = concat!(
+        env!("OUT_DIR"),
+        "/../../../../../tests/data/gatineau.osm.pbf"
+    );
+    let cosmogony = cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()))
+        .expect("invalid cosmogony");
+
+    let gati = cosmogony
+        .zones
+        .iter()
+        .find(|z| z.name == "Gatineau" && z.zone_type == Some(ZoneType::City))
+        .unwrap();
+
+    assert_eq!(gati.osm_id, "relation:5356213");
+    assert_eq!(gati.admin_level, Some(8));
+    assert!(gati.center.is_some());
+    let gati_center = gati.center.unwrap();
+    assert_eq!(
+        gati_center,
+        Coord::new(-75.65847883962988, 45.49066555005369)
     );
 }
