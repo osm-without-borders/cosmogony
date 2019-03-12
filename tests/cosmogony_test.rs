@@ -290,6 +290,6 @@ fn test_center_label() {
     let gati_center = gati.center.unwrap();
     assert_eq!(
         gati_center,
-        Coord::new(-75.65847883962988, 45.49066555005369)
+        Coord::new(-75.72326699999999, 45.457240999999996)
     );
 }
