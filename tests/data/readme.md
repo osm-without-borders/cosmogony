@@ -15,3 +15,7 @@ Expected relations:
 * `admin_level = 8`: 104 (and a few incomplete ones. One of them only have the admin center missing out)
 * `admin_level = 9`: 79 (and a few incomplete ones)
 * `admin_level = 10`: 2 (and many incomplete ones)
+
+## gatineau pbf
+
+This PBF contains a single relation that has no "admin_center" role node but a "label" one.

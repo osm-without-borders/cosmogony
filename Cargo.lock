@@ -130,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony"
-version = "0.5.0"
+version = "0.5.2"
 dependencies = [
  "approx 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -140,7 +140,7 @@ dependencies = [
  "geo 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "geo-types 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "geojson 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "geos 4.0.0 (git+https://github.com/antoine-de/rust-geos.git?rev=4298829c9a71b881c991601111e37dac194de460)",
+ "geos 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "include_dir 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -337,7 +337,7 @@ dependencies = [
 [[package]]
 name = "geos"
 version = "4.0.0"
-source = "git+https://github.com/antoine-de/rust-geos.git?rev=4298829c9a71b881c991601111e37dac194de460#4298829c9a71b881c991601111e37dac194de460"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "enum-primitive-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1145,7 +1145,7 @@ dependencies = [
 "checksum geo 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8cfb3011a87e562d59a3e3e2e2595a867780ff7ad618fbb2579f03ea038961a2"
 "checksum geo-types 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "909178c1a808c8d77571b92dc13cf485b827412e2078ded759942bae3563a4d4"
 "checksum geojson 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)" = "05df7a29598b5f57241754bab9d1bfe411b201834d2118659ff6bb483d9e0bdd"
-"checksum geos 4.0.0 (git+https://github.com/antoine-de/rust-geos.git?rev=4298829c9a71b881c991601111e37dac194de460)" = "<none>"
+"checksum geos 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7fddced20455efb29ac7a9081f63ccb8a1a676bf25ac3555ce9195f695aeaa99"
 "checksum glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)" = "8be18de09a56b60ed0edf84bc9df007e30040691af7acd1c41874faac5895bfb"
 "checksum heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
 "checksum humantime 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3ca7e5f2e110db35f93b837c81797f3714500b81d517bf20c431b16d3ca4f114"

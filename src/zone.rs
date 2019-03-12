@@ -216,10 +216,11 @@ impl Zone {
             result.boundary = build_boundary(relation, objects);
             result.bbox = result.boundary.as_ref().and_then(|b| b.bounding_rect());
 
-            let center = relation
-                .refs
+            let refs = &relation.refs;
+            let center = refs
                 .iter()
                 .find(|r| r.role == "admin_centre")
+                .or(refs.iter().find(|r| r.role == "label"))
                 .and_then(|r| objects.get(&r.member))
                 .and_then(|o| o.node());
 
