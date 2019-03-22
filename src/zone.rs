@@ -27,6 +27,21 @@ pub enum ZoneType {
     NonAdministrative,
 }
 
+impl ZoneType {
+    pub fn as_str(&self) -> &'static str {
+        match *self {
+            ZoneType::Suburb => "suburb",
+            ZoneType::CityDistrict => "city_district",
+            ZoneType::City => "city",
+            ZoneType::StateDistrict => "state_district",
+            ZoneType::State => "state",
+            ZoneType::CountryRegion => "country_region",
+            ZoneType::Country => "country",
+            ZoneType::NonAdministrative => "non_administrative",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct ZoneIndex {
     pub index: usize,
