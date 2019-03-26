@@ -1,10 +1,7 @@
 extern crate geo;
 
-use mutable_slice::MutableSlice;
-use zone::{Zone, ZoneIndex};
-use zone_tree::ZonesTree;
-use crate::mutable_slice::MutableSlice;
 use crate::zone::{Zone, ZoneIndex};
+use crate::mutable_slice::MutableSlice;
 use geo_types::{Point, Rect};
 use log::{info, warn};
 use rstar::{RTree, RTreeObject, AABB};

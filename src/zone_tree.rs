@@ -1,7 +1,7 @@
 use gst::rtree::RTree;
 use std::iter::FromIterator;
-use utils::bbox_to_rect;
-use zone::{Zone, ZoneIndex};
+use crate::utils::bbox_to_rect;
+use crate::zone::{Zone, ZoneIndex};
 
 pub struct ZonesTree {
     tree: RTree<ZoneIndex>,

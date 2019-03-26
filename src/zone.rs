@@ -6,7 +6,7 @@ use itertools::Itertools;
 use log::{debug, info, warn};
 use geos::from_geo::TryInto;
 use osm_boundaries_utils::build_boundary;
-use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
+use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags, Node};
 use regex::Regex;
 use serde::Serialize;
 use serde_derive::*;
@@ -154,17 +154,17 @@ impl Zone {
         self.parent = idx;
     }
 
-    pub fn from_osm(
-        relation: &Relation,
-        objects: &BTreeMap<OsmId, OsmObj>,
+    pub fn from_osm_node(
+        node: &Node,
         index: ZoneIndex,
     ) -> Option<Self> {
-        // Skip administrative region without name
+        let osm_id = OsmId::Node(node.id);
         let osm_id_str = match osm_id {
             OsmId::Node(n) => format!("node:{}", n.0.to_string()),
             OsmId::Relation(r) => format!("relation:{}", r.0.to_string()),
             OsmId::Way(r) => format!("way:{}", r.0.to_string()),
         };
+        let tags = &node.tags;
         let name = match tags.get("name") {
             Some(val) => val,
             None => {
@@ -176,10 +176,65 @@ impl Zone {
             }
         };
         let level = tags.get("admin_level").and_then(|s| s.parse().ok());
-
         let zip_code = tags
             .get("addr:postcode")
             .or_else(|| tags.get("postal_code"))
+            .map_or("", |val| &val[..]);
+        let zip_codes = zip_code
+            .split(';')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .sorted()
+            .collect();
+        let wikidata = tags.get("wikidata").map(|s| s.to_string());
+
+        let international_names = get_international_names(&tags, name);
+        Some(Self {
+            id: index,
+            osm_id: osm_id_str,
+            admin_level: level,
+            zone_type: None,
+            name: name.to_string(),
+            boundary: None,
+            bbox: None,
+            parent: None,
+            tags: tags.clone(),
+            center_tags: Tags::new(),
+            wikidata,
+            approximative_boundaries: true,
+            center: None,
+            international_labels: BTreeMap::default(),
+            international_names,
+            label: "".to_string(),
+            zip_codes,
+        })
+    }
+
+    pub fn from_osm(
+        relation: &Relation,
+        objects: &BTreeMap<OsmId, OsmObj>,
+        index: ZoneIndex,
+    ) -> Option<Self> {
+        // Skip administrative region without name
+        let name = match relation.tags.get("name") {
+            Some(val) => val,
+            None => {
+                debug!(
+                    "relation/{}: administrative region without name, skipped",
+                    relation.id.0
+                );
+                return None;
+            }
+        };
+        let level = relation
+            .tags
+            .get("admin_level")
+            .and_then(|s| s.parse().ok());
+
+        let zip_code = relation
+            .tags
+            .get("addr:postcode")
+            .or_else(|| relation.tags.get("postal_code"))
             .map_or("", |val| &val[..]);
         let zip_codes = zip_code
             .split(';')
@@ -206,25 +261,24 @@ impl Zone {
                 })
         }
 
-        let international_names = get_international_names(&tags, name);
         Some(Self {
             id: index,
-            osm_id: osm_id_str,
+            osm_id: format!("relation:{}", relation.id.0.to_string()), // for the moment we can only read relation
             admin_level: level,
             zone_type: None,
             name: name.to_string(),
             label: "".to_string(),
             international_labels: BTreeMap::default(),
             international_names: BTreeMap::default(),
-            zip_codes: zip_codes,
+            zip_codes,
             center: None,
             boundary: None,
             bbox: None,
             parent: None,
-            tags: tags,
+            tags,
             center_tags: Tags::new(),
-            wikidata: wikidata,
-            approximative_boundaries: true,
+            wikidata,
+            approximative_boundaries: false,
         })
     }
 
