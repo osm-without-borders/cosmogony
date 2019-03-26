@@ -29,6 +29,7 @@ mod mutable_slice;
 pub mod zone;
 mod zone_tree;
 pub mod zone_typer;
+pub mod utils;
 
 pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use crate::country_finder::CountryFinder;

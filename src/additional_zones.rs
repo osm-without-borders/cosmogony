@@ -4,8 +4,8 @@ use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
-use zone::{Zone, ZoneIndex, ZoneType};
-use zone_tree::ZonesTree;
+use crate::zone::{Zone, ZoneIndex, ZoneType};
+use crate::zone_tree::ZonesTree;
 
 pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
     let place_zones = read_places(pbf_path);
@@ -84,9 +84,8 @@ fn read_places(pbf_path: &str) -> Vec<Zone> {
             continue;
         }
         if let OsmObj::Node(ref node) = obj {
-            let osm_id = OsmId::Node(node.id);
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(mut zone) = Zone::from_osm(&node.tags, next_index, osm_id) {
+            if let Some(mut zone) = Zone::from_osm_node(&node, next_index) {
                 zone.zone_type = Some(ZoneType::City);
                 zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
                 zone.bbox = zone.center.as_ref().map(|p| Rect {
