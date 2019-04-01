@@ -1,11 +1,13 @@
 use failure::ResultExt;
 use geo_types::{Coordinate, MultiPolygon, Point, Polygon, Rect};
-use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
+use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use crate::zone_tree::ZonesTree;
+use geos::from_geo::TryInto;
+use geos::GGeom;
 
 pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
     let place_zones = read_places(pbf_path);
@@ -17,19 +19,62 @@ pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
 
     let new_cities: Vec<Zone> = {
         let mut candidate_parent_zones: BTreeMap<_, Vec<_>> = BTreeMap::new();
-        for (parent, place) in place_zones
-            .into_iter()
-            .filter_map(|place| {
-                get_parent(&place, &zones, &zones_rtree).map(|parent| {
+        for (parent, place) in place_zones.iter()
+            .filter_map(|mut place| {
+                let original = place.clone();
+                println!("==> looking for {:?}", place.id);
+                while let Some(par) = get_parent(&place, &zones, &zones_rtree) {
+                    if par.id == original.id || place.id == par.id {
+                        break
+                    }
+                    if (par.zone_type != Some(ZoneType::City) &&
+                        par.zone_type != Some(ZoneType::Suburb)) ||
+                       par.boundary.is_none() {
+                        place = &par;
+                        continue
+                    }
                     info!(
                         "on a trouve le parent {:?} / {:?} for {:?}",
-                        &parent.id, &parent.zone_type, place.id
+                        &par.id, &par.zone_type, original.id
                     );
-                    (parent, place)
-                })
-            }).filter(|(parent, _)| {
-                parent.zone_type != Some(ZoneType::City)
-                    && parent.zone_type != Some(ZoneType::Suburb)
+                    return Some((par, original))
+                }
+                info!("no parent, let's continue...");
+                let mut potential: Option<(Zone, usize)> = None;
+                // Didn't find a parent so let's do in another way!
+                for (pos, zone) in zones.iter().enumerate() {
+                    if zone.id == original.id || zone.zone_type == Some(ZoneType::City) ||
+                       zone.zone_type == Some(ZoneType::Suburb) {
+                        continue;
+                    }
+                    if let (Some(ref boundary), Some(ref sub_boundary)) = (&zone.boundary, &original.boundary) {
+                        let boundary = boundary.try_into().expect("failed to convert to geos");
+                        let sub_boundary = sub_boundary.try_into().expect("failed to convert to geos");
+                        if boundary.contains(&sub_boundary).expect("failed to use contains") {
+                            if match potential {
+                                Some((ref p, _)) => {
+                                    if let Some(ref bound) = p.boundary {
+                                        bound.try_into().unwrap().area().unwrap() < boundary.area().unwrap()
+                                    } else {
+                                        false
+                                    }
+                                }
+                                None => {
+                                    true
+                                }
+                            } {
+                                potential = Some((zone.clone(), pos));
+                            }
+                        }
+                    }
+                }
+                if let Some((_, pos)) = potential {
+                    println!("finally found one!");
+                    Some((&zones[pos], original))
+                } else {
+                    println!("still no parent found...");
+                    None
+                }
             }) {
             candidate_parent_zones
                 .entry(&parent.id)
@@ -42,13 +87,22 @@ pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
             candidate_parent_zones.len()
         );
 
+        println!("{:?}", candidate_parent_zones.iter().map(|(x, _)| x).collect::<Vec<_>>());
+
         candidate_parent_zones
             .into_iter() //TODO into_par_iter
-            .map(|(parent, places)| compute_voronoi(parent, places, &zones))
+            .map(|(parent, mut places)| compute_voronoi(parent, &mut places, &zones))
             .flatten()
             // .map_err(|e| error!("error while computing voronoi : {}", e))
             .collect()
     };
+    /*if !new_cities.iter().any(|x| x.zone_type == Some(ZoneType::Country)) {
+        if let Some(x) = place_zones.iter().find(|x| x.zone_type == Some(ZoneType::Country)) {
+            new_cities.push(x.clone());
+        } else {
+            println!("Couldn't find a country...");
+        }
+    }*/
 
     publish_new_cities(zones, new_cities);
 }
@@ -105,24 +159,29 @@ fn read_places(pbf_path: &str) -> Vec<Zone> {
     zones
 }
 
-fn compute_voronoi(parent: &ZoneIndex, mut places: Vec<Zone>, zones: &[Zone]) -> Vec<Zone> {
+fn compute_voronoi(parent: &ZoneIndex, places: &[Zone], zones: &[Zone]) -> Vec<Zone> {
     //TODO remove this collect by changing the compute_voronoi function signature
     let points: Vec<Point<_>> = places.iter().filter_map(|p| p.center).collect();
 
     let voronois = geos::compute_voronoi(&points, 0.).unwrap(); //TODO remove unwrap
 
-    let calc_geom = create_forbidden_geom(&zones[parent.index]);
-    for (idx, voronoi) in voronois.into_iter().enumerate() {
-        let place: &mut Zone = &mut places[idx];
+    let calc_geom = create_forbidden_geom(&zones[parent.index], zones);
+    voronois.into_iter().enumerate().map(|(idx, voronoi)| {
+        let mut place: Zone = places[idx].clone();
 
+        use geo::prelude::Area;
+        let before_area = voronoi.area();
         place.boundary = make_boundary(voronoi, &calc_geom);
+        if calc_geom.is_some() {
+            if let Some(ref b) = place.boundary {
+                println!("Change of size: {} => {} {}", before_area, b.area(), place.name);
+            }
+        }
         //TODO compute the bounding box
         place.parent = Some(parent.clone());
-    }
-    places
-        .into_iter()
-        .filter(|z| z.boundary.is_some())
-        .collect() // TODO remove this collect
+        place
+    }).filter(|z| z.boundary.is_some())
+      .collect() // TODO remove this collect
 
     //TODO if possible zip it
     // for (ref mut place, voronoi) in places.iter_mut().filter(|p| p.center.is_some()).zip(voronois.into_iter()){
@@ -131,17 +190,72 @@ fn compute_voronoi(parent: &ZoneIndex, mut places: Vec<Zone>, zones: &[Zone]) ->
 
 /// Create a multipolygon with the boundary of the parent zone + all the cities with real boundaries from this zone
 /// This will be use to extract this geometry from the
-fn create_forbidden_geom(parent_zone: &Zone) -> Option<MultiPolygon<f64>> {
-    //TODO
-    None
+fn create_forbidden_geom(parent_zone: &Zone, places: &[Zone]) -> Option<GGeom> {
+    if let Some(ref parent) = parent_zone.boundary {
+        println!("HELLLLLLOOOOOOO {:?} {}", parent_zone.zone_type, parent_zone.name);
+        let parent: GGeom = parent.try_into()
+                                  .expect("cannot convert to multipolygon");
+        let places = places.iter()
+                           .filter(|x| x.zone_type == Some(ZoneType::City)/* || x.zone_type == Some(ZoneType::Suburb)*/)
+                           .filter_map(|x| x.boundary.as_ref())
+                           .filter_map(|x| x.try_into().ok())
+                           .filter(|x| !parent.contains(x).expect("failed contains"));
+                           //.filter(|x| { let x = x.intersects(&parent).expect("intersects FAILED... badly"); println!("||||> {:?}", x); x});
+        let mut x = 0;
+        let mut geom: Option<GGeom> = None;
+        for place in places {
+            x += 1;
+            geom = Some(match geom {
+                Some(g) => {
+                    if x == 1 {
+                        println!("union BETWEEN \"{}\"\nand \"{}\"", g.to_wkt(), place.to_wkt());
+                    }
+                    g.union(&place).expect("union failed")
+                },
+                None => place.clone(),
+            });
+        }
+        println!("µµµµµµµµ>> LOOPED OVER {} elems", x);
+        geom.map(|g| g.union(&parent).expect("failed union").intersection(&parent).expect("intersection failed"))
+    } else {
+        None
+    }
 }
 
 fn make_boundary(
     voronoi: Polygon<f64>,
-    geom_to_extract: &Option<MultiPolygon<f64>>,
+    geom_to_extract: &Option<GGeom>,
 ) -> Option<MultiPolygon<f64>> {
-    // TODO extract the geom from the voronoi
-    Some(MultiPolygon(vec![voronoi]))
+    if let Some(forbidden) = geom_to_extract {
+        let voronoi: GGeom = voronoi.try_into().expect("invalid voronoi");
+
+        //println!("====> YEAY!! {}\n||||||> {}", forbidden.to_wkt(), voronoi.to_wkt());
+        if let Some(x) = voronoi.intersection(forbidden).ok().map(|x| {
+            /*MultiPolygon(vec![x.try_into()
+                               .expect("failed to convert")
+                               .into_polygon()
+                               .expect("not a polygon")])*/
+            match x.try_into().expect("t") {
+                geo::Geometry::Polygon(x) => Some(MultiPolygon(vec![x])),
+                y => {
+                    println!("=> {:?}", y);
+                    if let Some(x) = y.into_multi_polygon() {
+                        Some(x)
+                    } else {
+                        println!("!!! not a multipolygon...");
+                        None
+                    }
+                }
+            }
+        }) {
+            x
+        } else {
+            None
+        }
+    } else {
+        println!("No forbidden zone, going for \"normal\"");
+        Some(MultiPolygon(vec![voronoi]))
+    }
 }
 
 fn publish_new_cities(zones: &mut Vec<Zone>, new_cities: Vec<Zone>) {
