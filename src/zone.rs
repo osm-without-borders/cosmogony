@@ -44,7 +44,7 @@ impl ZoneType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct ZoneIndex {
     pub index: usize,
 }
