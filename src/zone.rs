@@ -94,6 +94,8 @@ pub struct Zone {
     // pub links: Vec<ZoneIndex>
     #[serde(default)]
     pub approximative_boundaries: bool,
+    #[serde(default)]
+    pub is_generated: bool,
 }
 
 /// get all the international names from the osm tags
@@ -137,6 +139,7 @@ impl Default for Zone {
             wikidata: None,
             zip_codes: vec![],
             approximative_boundaries: true,
+            is_generated: false,
         }
     }
 }
@@ -207,6 +210,7 @@ impl Zone {
             international_names,
             label: "".to_string(),
             zip_codes,
+            is_generated: false,
         })
     }
 
@@ -279,6 +283,7 @@ impl Zone {
             center_tags: Tags::new(),
             wikidata,
             approximative_boundaries: false,
+            is_generated: false,
         })
     }
 
@@ -699,6 +704,7 @@ mod test {
             wikidata: None,
             zip_codes: zips.iter().map(|s| s.to_string()).collect(),
             approximative_boundaries: false,
+            is_generated: false,
         }
     }
 

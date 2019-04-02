@@ -262,14 +262,14 @@ pub fn build_cosmogony(
     stats.compute(&zones);
 
     let cosmogony = Cosmogony {
-        zones: zones,
+        zones,
         meta: CosmogonyMetadata {
             osm_filename: path
                 .file_name()
                 .and_then(|f| f.to_str())
                 .map(|f| f.to_string())
-                .unwrap_or("invalid file name".into()),
-            stats: stats,
+                .unwrap_or_else(|| "invalid file name".into()),
+            stats,
         },
     };
     Ok(cosmogony)

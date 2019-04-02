@@ -7,6 +7,7 @@ use std::path::Path;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use crate::zone_tree::ZonesTree;
 use geos::from_geo::TryInto;
+use geos::GGeom;
 
 pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
     let place_zones = read_places(pbf_path);
@@ -21,21 +22,11 @@ pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
         for (parent, place) in place_zones.iter()
             .filter_map(|place| {
                 if place.zone_type.is_none() {
-                    println!("No type for {}", place.name);
                     return None
                 }
-                match get_parent(&place, &zones, &zones_rtree) {
-                    Some(p) => {
-                        if place.name == "Séguéla" {
-                            println!("parent found: {} => {} {:?} {:?}", place.name, p.name, p.id, p.zone_type);
-                        }
-                        Some((p, place))
-                    }
-                    None => {
-                        println!("No parent for {} / {:?}", place.name, place.zone_type);
-                        None
-                    }
-                }
+                get_parent(&place, &zones, &zones_rtree).map(|p| (p, place))
+            }).filter(|(p, _)| {
+                p.zone_type.as_ref().map(|x| *x > ZoneType::City).unwrap_or_else(|| false)
             }) {
             candidate_parent_zones
                 .entry(&parent.id)
@@ -48,12 +39,16 @@ pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
             candidate_parent_zones.len()
         );
 
-        println!("{:?}", candidate_parent_zones.iter().map(|(x, _)| x).collect::<Vec<_>>());
+        let towns = zones.iter()
+                         .filter(|x| x.zone_type == Some(ZoneType::City) &&
+                                     x.boundary.is_some() &&
+                                     !x.name.is_empty())
+                         .collect::<Vec<_>>();
 
         candidate_parent_zones
             .into_iter() //TODO into_par_iter
             .filter(|(_, places)| !places.is_empty())
-            .map(|(parent, mut places)| compute_voronoi(parent, &mut places, &zones, &zones_rtree))
+            .map(|(parent, mut places)| compute_voronoi(parent, &mut places, &zones, &towns))
             .flatten()
             .collect()
     };
@@ -74,7 +69,7 @@ fn is_place(obj: &OsmObj) -> bool {
         OsmObj::Node(ref node) => node
             .tags
             .get("place")
-            .map_or(false, |v| v == "city" || v == "town"),
+            .map_or(false, |v| v == "city" || v == "town" || v == "village"),
         _ => false,
     }
 }
@@ -93,6 +88,9 @@ fn read_places(pbf_path: &str) -> Vec<Zone> {
         if let OsmObj::Node(ref node) = obj {
             let next_index = ZoneIndex { index: zones.len() };
             if let Some(mut zone) = Zone::from_osm_node(&node, next_index) {
+                if zone.name.is_empty() {
+                    continue;
+                }
                 zone.zone_type = Some(ZoneType::City);
                 zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
                 zone.bbox = zone.center.as_ref().map(|p| Rect {
@@ -105,6 +103,7 @@ fn read_places(pbf_path: &str) -> Vec<Zone> {
                         y: p.0.y + std::f64::EPSILON,
                     },
                 });
+                zone.is_generated = true;
                 zones.push(zone);
             }
         }
@@ -112,13 +111,66 @@ fn read_places(pbf_path: &str) -> Vec<Zone> {
     zones
 }
 
-fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], _zones_rtree: &ZonesTree) -> Vec<Zone> {
+fn convert_to_geos(geom: GGeom) -> Option<MultiPolygon<f64>> {
+    match geom.try_into().expect("conversion to geo failed") {
+        geo::Geometry::Polygon(x) => Some(MultiPolygon(vec![x])),
+        y => {
+            if let Some(x) = y.into_multi_polygon() {
+                Some(x)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+fn remove_from_existing_towns(zone: &mut Zone, towns: &[&Zone]) {
+    if towns.is_empty() {
+        return;
+    }
+    if let Some(ref mut boundary) = zone.boundary {
+        let mut updates = 0;
+        let mut g_boundary = boundary.try_into().expect("failed to convert to geos");
+        for town in towns {
+            if let Some(ref t_boundary) = town.boundary {
+                let g_t_boundary = t_boundary.try_into().expect("failed to convert to geos");
+                if g_boundary.intersects(&g_t_boundary).unwrap_or_else(|_| false) {
+                    if let Some(b) = g_boundary.difference(&g_t_boundary).ok() {
+                        updates += 1;
+                        g_boundary = b;
+                    }
+                }
+            }
+        }
+        if updates > 0 {
+            if let Some(g) = convert_to_geos(g_boundary) {
+                *boundary = g;
+            }
+        }
+    }
+}
+
+fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: &[&Zone]) -> Vec<Zone> {
     let points: Vec<Point<_>> = places.iter()
-                                      .filter_map(|p| p.center).collect();
+                                      .filter_map(|p| p.center)
+                                      .collect();
     if points.len() == 1 {
         let mut place = places[0].clone();
+        let parent = &zones[parent.index];
 
-        place.boundary = zones[parent.index].boundary.clone();
+        if parent.zone_type == Some(ZoneType::Country) {
+            place.boundary = Some(convert_to_geos(
+                                    place.center.as_ref()
+                                              .map(|x| x.try_into()
+                                                        .expect("failed to convert point"))
+                                              .unwrap()
+                                              .buffer(0.01, 2)
+                                              .expect("Failed to create a buffer"))
+                                  .expect("failed to convert to geo"));
+        } else {
+            place.boundary = parent.boundary.clone();
+        }
+        remove_from_existing_towns(&mut place, towns);
         return vec![place];
     }
     let par = zones[parent.index].boundary.clone().unwrap().try_into().unwrap();
@@ -127,28 +179,12 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], _zones_
     voronois.into_iter().enumerate().map(|(idx, voronoi)| {
         let mut place = places[idx].clone();
 
-        place.boundary = match voronoi.try_into()
-                                      .expect("conversion to geos failed")
-                                      .intersection(&par)
-                                      .expect("intersection failed")
-                                      .try_into()
-                                      .expect("conversion to geo failed") {
-            geo::Geometry::Polygon(x) => Some(MultiPolygon(vec![x])),
-            y => {
-                let s = format!("{:?}", y);
-                if let Some(x) = y.into_multi_polygon() {
-                    Some(x)
-                } else {
-                    println!("!!! not a multipolygon... {}", s);
-                    None
-                }
-            }
-        };
-        if place.name == "Séguéla" {
-            println!("======> {:?}", place.boundary.is_some());
-        } else {
-            println!("=> {}", place.name);
-        }
+        let s = voronoi.try_into()
+                       .expect("conversion to geos failed")
+                       .intersection(&par)
+                       .expect("intersection failed");
+        place.boundary = convert_to_geos(s);
+        remove_from_existing_towns(&mut place, towns);
         place
     }).collect()
 }
