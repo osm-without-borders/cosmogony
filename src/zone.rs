@@ -93,8 +93,6 @@ pub struct Zone {
     pub wikidata: Option<String>,
     // pub links: Vec<ZoneIndex>
     #[serde(default)]
-    pub approximative_boundaries: bool,
-    #[serde(default)]
     pub is_generated: bool,
 }
 
@@ -138,8 +136,7 @@ impl Default for Zone {
             center_tags: Tags::new(),
             wikidata: None,
             zip_codes: vec![],
-            approximative_boundaries: true,
-            is_generated: false,
+            is_generated: true,
         }
     }
 }
@@ -204,13 +201,12 @@ impl Zone {
             tags: tags.clone(),
             center_tags: Tags::new(),
             wikidata,
-            approximative_boundaries: true,
             center: None,
             international_labels: BTreeMap::default(),
             international_names,
             label: "".to_string(),
             zip_codes,
-            is_generated: false,
+            is_generated: true,
         })
     }
 
@@ -282,7 +278,6 @@ impl Zone {
             tags,
             center_tags: Tags::new(),
             wikidata,
-            approximative_boundaries: false,
             is_generated: false,
         })
     }
@@ -296,7 +291,7 @@ impl Zone {
         Self::from_osm(relation, objects, index).map(|mut result| {
             result.boundary = build_boundary(relation, objects);
             result.bbox = result.boundary.as_ref().and_then(|b| b.bounding_rect());
-            result.approximative_boundaries = false;
+            result.is_generated = false;
 
             let refs = &relation.refs;
             let center = refs
@@ -703,7 +698,6 @@ mod test {
             center_tags: Tags::new(),
             wikidata: None,
             zip_codes: zips.iter().map(|s| s.to_string()).collect(),
-            approximative_boundaries: false,
             is_generated: false,
         }
     }
