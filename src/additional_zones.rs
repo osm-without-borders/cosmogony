@@ -8,6 +8,7 @@ use crate::zone::{Zone, ZoneIndex, ZoneType};
 use crate::zone_tree::ZonesTree;
 use geos::from_geo::TryInto;
 use geos::GGeom;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
     let place_zones = read_places(pbf_path);
@@ -48,6 +49,8 @@ pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
         candidate_parent_zones
             .into_iter() //TODO into_par_iter
             .filter(|(_, places)| !places.is_empty())
+            .collect::<Vec<_>>()
+            .into_par_iter()
             .map(|(parent, mut places)| compute_voronoi(parent, &mut places, &zones, &towns))
             .flatten()
             .collect()
