@@ -10,12 +10,10 @@ extern crate ordered_float;
 extern crate osm_boundaries_utils;
 extern crate osmpbfreader;
 extern crate serde;
-#[macro_use]
 extern crate serde_derive;
 extern crate regex;
 extern crate serde_yaml;
 extern crate structopt;
-#[macro_use]
 extern crate lazy_static;
 extern crate geos;
 extern crate rayon;
@@ -39,7 +37,7 @@ use crate::mutable_slice::MutableSlice;
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
-use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
+use osmpbfreader::{OsmObj, OsmPbfReader};
 use additional_zones::compute_additional_cities;
 use std::collections::BTreeMap;
 use std::fs::File;
