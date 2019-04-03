@@ -1,4 +1,3 @@
-use failure::ResultExt;
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
@@ -9,6 +8,23 @@ use crate::zone_tree::ZonesTree;
 use geos::from_geo::TryInto;
 use geos::GGeom;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
+struct ZoneWithGeos<'a> {
+    zone: &'a Zone,
+    geos: GGeom,
+}
+
+unsafe impl<'a> Send for ZoneWithGeos<'a> {}
+unsafe impl<'a> Sync for ZoneWithGeos<'a> {}
+
+impl<'a> ZoneWithGeos<'a> {
+    fn new(zone: &'a Zone) -> ZoneWithGeos<'a> {
+        ZoneWithGeos {
+            zone,
+            geos: zone.boundary.as_ref().unwrap().try_into().expect("failed to convert to geos"),
+        }
+    }
+}
 
 pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
     let place_zones = read_places(pbf_path);
@@ -44,10 +60,11 @@ pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
                          .filter(|x| x.zone_type == Some(ZoneType::City) &&
                                      x.boundary.is_some() &&
                                      !x.name.is_empty())
+                         .map(|x| ZoneWithGeos::new(x))
                          .collect::<Vec<_>>();
 
         candidate_parent_zones
-            .into_iter() //TODO into_par_iter
+            .into_iter()
             .filter(|(_, places)| !places.is_empty())
             .collect::<Vec<_>>()
             .into_par_iter()
@@ -79,7 +96,7 @@ fn is_place(obj: &OsmObj) -> bool {
 
 fn read_places(pbf_path: &str) -> Vec<Zone> {
     let path = Path::new(&pbf_path);
-    let file = File::open(&path).context("no pbf file").unwrap(); //TODO remove unwrap
+    let file = File::open(&path).expect("no pbf file");
 
     let mut parsed_pbf = OsmPbfReader::new(file);
     let mut zones = vec![];
@@ -127,7 +144,7 @@ fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
     }
 }
 
-fn extrude_existing_town(zone: &mut Zone, towns: &[&Zone]) {
+fn extrude_existing_town(zone: &mut Zone, towns: &[ZoneWithGeos]) {
     if towns.is_empty() {
         return;
     }
@@ -135,13 +152,10 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&Zone]) {
         let mut updates = 0;
         let mut g_boundary = boundary.try_into().expect("failed to convert to geos");
         for town in towns {
-            if let Some(ref t_boundary) = town.boundary {
-                let g_t_boundary = t_boundary.try_into().expect("failed to convert to geos");
-                if g_boundary.intersects(&g_t_boundary).unwrap_or_else(|_| false) {
-                    if let Ok(b) = g_boundary.difference(&g_t_boundary) {
-                        updates += 1;
-                        g_boundary = b;
-                    }
+            if g_boundary.intersects(&town.geos).unwrap_or_else(|_| false) {
+                if let Ok(b) = g_boundary.difference(&town.geos) {
+                    updates += 1;
+                    g_boundary = b;
                 }
             }
         }
@@ -153,7 +167,7 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&Zone]) {
     }
 }
 
-fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: &[&Zone]) -> Vec<Zone> {
+fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: &[ZoneWithGeos]) -> Vec<Zone> {
     let points: Vec<Point<_>> = places.iter()
                                       .filter_map(|p| p.center)
                                       .collect();
@@ -166,11 +180,11 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
             // so we generated a (way) smaller shape.
             place.boundary = Some(convert_to_geo(
                                     place.center.as_ref()
-                                              .map(|x| x.try_into()
-                                                        .expect("failed to convert point"))
-                                              .unwrap()
-                                              .buffer(0.01, 2)
-                                              .expect("Failed to create a buffer"))
+                                                .map(|x| x.try_into()
+                                                          .expect("failed to convert point"))
+                                                .unwrap()
+                                                .buffer(0.01, 2)
+                                                .expect("Failed to create a buffer"))
                                   .expect("failed to convert to geo"));
         } else {
             place.boundary = parent.boundary.clone();
