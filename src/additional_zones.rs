@@ -111,7 +111,7 @@ fn read_places(pbf_path: &str) -> Vec<Zone> {
     zones
 }
 
-fn convert_to_geos(geom: GGeom) -> Option<MultiPolygon<f64>> {
+fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
     match geom.try_into().expect("conversion to geo failed") {
         geo::Geometry::Polygon(x) => Some(MultiPolygon(vec![x])),
         y => {
@@ -124,7 +124,7 @@ fn convert_to_geos(geom: GGeom) -> Option<MultiPolygon<f64>> {
     }
 }
 
-fn remove_from_existing_towns(zone: &mut Zone, towns: &[&Zone]) {
+fn extrude_existing_town(zone: &mut Zone, towns: &[&Zone]) {
     if towns.is_empty() {
         return;
     }
@@ -135,7 +135,7 @@ fn remove_from_existing_towns(zone: &mut Zone, towns: &[&Zone]) {
             if let Some(ref t_boundary) = town.boundary {
                 let g_t_boundary = t_boundary.try_into().expect("failed to convert to geos");
                 if g_boundary.intersects(&g_t_boundary).unwrap_or_else(|_| false) {
-                    if let Some(b) = g_boundary.difference(&g_t_boundary).ok() {
+                    if let Ok(b) = g_boundary.difference(&g_t_boundary) {
                         updates += 1;
                         g_boundary = b;
                     }
@@ -143,7 +143,7 @@ fn remove_from_existing_towns(zone: &mut Zone, towns: &[&Zone]) {
             }
         }
         if updates > 0 {
-            if let Some(g) = convert_to_geos(g_boundary) {
+            if let Some(g) = convert_to_geo(g_boundary) {
                 *boundary = g;
             }
         }
@@ -159,7 +159,9 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
         let parent = &zones[parent.index];
 
         if parent.zone_type == Some(ZoneType::Country) {
-            place.boundary = Some(convert_to_geos(
+            // If the parent is the country, we don't want to have a city with the size of a country
+            // so we generated a (way) smaller shape.
+            place.boundary = Some(convert_to_geo(
                                     place.center.as_ref()
                                               .map(|x| x.try_into()
                                                         .expect("failed to convert point"))
@@ -170,10 +172,10 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
         } else {
             place.boundary = parent.boundary.clone();
         }
-        remove_from_existing_towns(&mut place, towns);
+        extrude_existing_town(&mut place, towns);
         return vec![place];
     }
-    let par = zones[parent.index].boundary.clone().unwrap().try_into().unwrap();
+    let par = zones[parent.index].boundary.as_ref().unwrap().try_into().unwrap();
     let voronois = geos::compute_voronoi(&points, Some(&par), 0.).unwrap();
 
     voronois.into_iter().enumerate().map(|(idx, voronoi)| {
@@ -183,8 +185,8 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
                        .expect("conversion to geos failed")
                        .intersection(&par)
                        .expect("intersection failed");
-        place.boundary = convert_to_geos(s);
-        remove_from_existing_towns(&mut place, towns);
+        place.boundary = convert_to_geo(s);
+        extrude_existing_town(&mut place, towns);
         place
     }).collect()
 }
