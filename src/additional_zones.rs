@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
-use crate::zone_tree::ZonesTree;
+use crate::hierarchy_builder::ZonesTree;
 use geos::from_geo::TryInto;
 use geos::GGeom;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -26,13 +26,12 @@ impl<'a> ZoneWithGeos<'a> {
     }
 }
 
-pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str) {
+pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str, zones_rtree: ZonesTree) {
     let place_zones = read_places(pbf_path);
     info!(
         "there are {} places, we'll try to make boundaries for them",
         place_zones.len()
     );
-    let zones_rtree: ZonesTree = zones.iter().filter(|z| z.is_admin()).collect();
 
     let new_cities: Vec<Zone> = {
         let mut candidate_parent_zones: BTreeMap<_, Vec<_>> = BTreeMap::new();

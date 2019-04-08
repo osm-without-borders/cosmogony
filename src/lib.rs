@@ -3,7 +3,6 @@ extern crate include_dir;
 extern crate failure;
 extern crate geo;
 extern crate geo_types;
-extern crate gst;
 #[macro_use]
 extern crate log;
 extern crate ordered_float;
@@ -25,9 +24,7 @@ pub mod file_format;
 mod hierarchy_builder;
 mod mutable_slice;
 pub mod zone;
-mod zone_tree;
 pub mod zone_typer;
-pub mod utils;
 
 pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use crate::country_finder::CountryFinder;
@@ -213,13 +210,13 @@ fn create_ontology(
     pbf_path: &str,
 ) -> Result<(), Error> {
     info!("creating ontology for {} zones", zones.len());
-    let inclusions = find_inclusions(zones);
+    let (inclusions, ztree) = find_inclusions(zones);
 
     type_zones(zones, stats, country_code, &inclusions)?;
 
     build_hierarchy(zones, inclusions);
 
-    compute_additional_cities(zones, pbf_path);
+    compute_additional_cities(zones, pbf_path, ztree);
 
     zones.iter_mut().for_each(|z| z.compute_names());
 
