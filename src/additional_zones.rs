@@ -11,7 +11,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 struct ZoneWithGeos<'a> {
     zone: &'a Zone,
-    geos: GGeom,
+    geos: GGeom<'a>,
 }
 
 unsafe impl<'a> Send for ZoneWithGeos<'a> {}
