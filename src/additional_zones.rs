@@ -143,10 +143,7 @@ fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
     }
 }
 
-fn extrude_existing_town(zone: &mut Zone, towns: &[ZoneWithGeos]) {
-    if towns.is_empty() {
-        return;
-    }
+fn extrude_existing_town<'a, 'b: 'a, T: IntoIterator<Item = &'a ZoneWithGeos<'b>>>(zone: &mut Zone, towns: T) {
     if let Some(ref mut boundary) = zone.boundary {
         let mut updates = 0;
         let mut g_boundary = boundary.try_into().expect("failed to convert to geos");
@@ -188,7 +185,8 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
         } else {
             place.boundary = parent.boundary.clone();
         }
-        extrude_existing_town(&mut place, towns);
+        let parent = place.parent;
+        extrude_existing_town(&mut place, towns.iter().filter(|t| t.zone.parent == parent));
         return vec![place];
     }
     let par = zones[parent.index].boundary.as_ref().unwrap().try_into().unwrap();
@@ -196,13 +194,14 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
 
     voronois.into_iter().enumerate().map(|(idx, voronoi)| {
         let mut place = places[idx].clone();
+        let parent = place.parent;
 
         let s = voronoi.try_into()
                        .expect("conversion to geos failed")
                        .intersection(&par)
                        .expect("intersection failed");
         place.boundary = convert_to_geo(s);
-        extrude_existing_town(&mut place, towns);
+        extrude_existing_town(&mut place, towns.iter().filter(|t| t.zone.parent == parent));
         place
     }).collect()
 }
