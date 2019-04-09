@@ -8,6 +8,7 @@ use crate::hierarchy_builder::ZonesTree;
 use geos::from_geo::TryInto;
 use geos::GGeom;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use std::collections::HashMap;
 
 struct ZoneWithGeos<'a> {
     zone: &'a Zone,
@@ -33,41 +34,49 @@ pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str, zones_rt
         place_zones.len()
     );
 
+    let mut m = HashMap::new();
+    let mut candidate_parent_zones: BTreeMap<_, Vec<_>> = BTreeMap::new();
+    for (parent, place) in place_zones.iter()
+        .filter_map(|place| {
+            if place.zone_type.is_none() {
+                return None
+            }
+            get_parent(&place, &zones, &zones_rtree).map(|p| (p, place))
+        }).filter(|(p, _)| {
+            p.zone_type.as_ref().map(|x| *x > ZoneType::City).unwrap_or_else(|| false)
+        }) {
+        candidate_parent_zones
+            .entry(&parent.id)
+            .or_default()
+            .push(place);
+    }
+
+    info!(
+        "We'll compute voronois partitions for {} parent zones",
+        candidate_parent_zones.len()
+    );
+
+    let mut current_length = 0;
     let new_cities: Vec<Zone> = {
-        let mut candidate_parent_zones: BTreeMap<_, Vec<_>> = BTreeMap::new();
-        for (parent, place) in place_zones.iter()
-            .filter_map(|place| {
-                if place.zone_type.is_none() {
-                    return None
-                }
-                get_parent(&place, &zones, &zones_rtree).map(|p| (p, place))
-            }).filter(|(p, _)| {
-                p.zone_type.as_ref().map(|x| *x > ZoneType::City).unwrap_or_else(|| false)
-            }) {
-            candidate_parent_zones
-                .entry(&parent.id)
-                .or_default()
-                .push(place);
-        }
-
-        info!(
-            "We'll compute voronois partitions for {} parent zones",
-            candidate_parent_zones.len()
-        );
-
         let towns = zones.iter()
-                         .filter(|x| x.zone_type == Some(ZoneType::City) &&
-                                     x.boundary.is_some() &&
-                                     !x.name.is_empty())
-                         .map(|x| ZoneWithGeos::new(x))
-                         .collect::<Vec<_>>();
+                 .enumerate()
+                 .filter(|(_, x)| x.zone_type == Some(ZoneType::City) &&
+                                  x.boundary.is_some() &&
+                                  !x.name.is_empty())
+                 .map(|(pos, x)| {
+                     m.insert(pos, current_length);
+                     current_length += 1;
+                     ZoneWithGeos::new(x)
+                 })
+                 .collect::<Vec<_>>();
 
         candidate_parent_zones
             .into_iter()
             .filter(|(_, places)| !places.is_empty())
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|(parent, mut places)| compute_voronoi(parent, &mut places, &zones, &towns))
+            .map(|(parent, mut places)| compute_voronoi(parent, &mut places, &zones, &towns,
+                                                        &zones_rtree, &m))
             .flatten()
             .collect()
     };
@@ -143,7 +152,7 @@ fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
     }
 }
 
-fn extrude_existing_town<'a, 'b: 'a, T: IntoIterator<Item = &'a ZoneWithGeos<'b>>>(zone: &mut Zone, towns: T) {
+fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) {
     if let Some(ref mut boundary) = zone.boundary {
         let mut updates = 0;
         let mut g_boundary = boundary.try_into().expect("failed to convert to geos");
@@ -163,7 +172,18 @@ fn extrude_existing_town<'a, 'b: 'a, T: IntoIterator<Item = &'a ZoneWithGeos<'b>
     }
 }
 
-fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: &[ZoneWithGeos]) -> Vec<Zone> {
+fn get_parent_neighbors<'a, 'b>(parent: &Zone, towns: &'b [ZoneWithGeos<'a>], zones_rtree: &ZonesTree,
+                            m: &HashMap<usize, usize>) -> Vec<&'b ZoneWithGeos<'a>> {
+    zones_rtree
+        .fetch_zone_bbox(&parent)
+        .into_iter()
+        .map(|z_idx| &towns[m[&z_idx.index]])
+        .collect()
+}
+
+fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
+                       towns: &'b [ZoneWithGeos<'a>], zones_rtree: &ZonesTree,
+                       m: &HashMap<usize, usize>) -> Vec<Zone> {
     let points: Vec<Point<_>> = places.iter()
                                       .filter_map(|p| p.center)
                                       .collect();
@@ -185,8 +205,13 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
         } else {
             place.boundary = parent.boundary.clone();
         }
-        let parent = place.parent;
-        extrude_existing_town(&mut place, towns.iter().filter(|t| t.zone.parent == parent));
+        let towns = if let Some(ref parent) = place.parent {
+            // TODO: check if parent.index really corresponds to this array's positions.
+            get_parent_neighbors(&zones[parent.index], towns, zones_rtree, m)
+        } else {
+            vec![]
+        };
+        extrude_existing_town(&mut place, &towns);
         return vec![place];
     }
     let par = zones[parent.index].boundary.as_ref().unwrap().try_into().unwrap();
@@ -194,14 +219,19 @@ fn compute_voronoi(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone], towns: 
 
     voronois.into_iter().enumerate().map(|(idx, voronoi)| {
         let mut place = places[idx].clone();
-        let parent = place.parent;
 
         let s = voronoi.try_into()
                        .expect("conversion to geos failed")
                        .intersection(&par)
                        .expect("intersection failed");
         place.boundary = convert_to_geo(s);
-        extrude_existing_town(&mut place, towns.iter().filter(|t| t.zone.parent == parent));
+        let towns = if let Some(ref parent) = place.parent {
+            // TODO: check if parent.index really corresponds to this array's positions;
+            get_parent_neighbors(&zones[parent.index], towns, zones_rtree, m)
+        } else {
+            vec![]
+        };
+        extrude_existing_town(&mut place, &towns);
         place
     }).collect()
 }
