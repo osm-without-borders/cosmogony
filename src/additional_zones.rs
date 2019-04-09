@@ -182,11 +182,25 @@ fn get_parent_neighbors<'a, 'b>(parent: &Zone, towns: &'b [ZoneWithGeos<'a>], zo
 }
 
 fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
-                       towns: &'b [ZoneWithGeos<'a>], zones_rtree: &ZonesTree,
-                       m: &HashMap<usize, usize>) -> Vec<Zone> {
-    let points: Vec<Point<_>> = places.iter()
-                                      .filter_map(|p| p.center)
-                                      .collect();
+                           towns: &'b [ZoneWithGeos<'a>], zones_rtree: &ZonesTree,
+                           m: &HashMap<usize, usize>) -> Vec<Zone> {
+    let points: Vec<(usize, Point<_>)> = places.iter()
+                                               .enumerate()
+                                               .filter_map(|(idx, p)| {
+                                                   if let Some(c) = p.center {
+                                                      Some((idx, c))
+                                                   } else {
+                                                       None
+                                                   }
+                                               })
+                                               .collect();
+    let geos_points: Vec<(usize, GGeom<'_>)> = points.iter()
+                                                     .map(|(pos, x)| {
+                                                         (*pos,
+                                                          x.try_into()
+                                                           .expect("failed conversion to geos"))
+                                                      })
+                                                     .collect();
     if points.len() == 1 {
         let mut place = places[0].clone();
         let parent = &zones[parent.index];
@@ -206,7 +220,6 @@ fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
             place.boundary = parent.boundary.clone();
         }
         let towns = if let Some(ref parent) = place.parent {
-            // TODO: check if parent.index really corresponds to this array's positions.
             get_parent_neighbors(&zones[parent.index], towns, zones_rtree, m)
         } else {
             vec![]
@@ -215,24 +228,33 @@ fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
         return vec![place];
     }
     let par = zones[parent.index].boundary.as_ref().unwrap().try_into().unwrap();
-    let voronois = geos::compute_voronoi(&points, Some(&par), 0.).unwrap();
+    let voronois = geos::compute_voronoi(&points.iter().map(|(_, p)| *p).collect::<Vec<_>>(),
+                                         Some(&par), 0.).unwrap();
 
-    voronois.into_iter().enumerate().map(|(idx, voronoi)| {
-        let mut place = places[idx].clone();
+    voronois.into_iter().filter_map(|voronoi| {
+        let s = voronoi.try_into().expect("conversion to geos failed");
+        // Since GEOS doesn't return voronoi geometries in the same order as the given points...
+        let mut place = if let Some(idx) = geos_points.iter()
+                                                      .find(|(_, x)| {
+                                                          s.contains(x).unwrap_or_else(|_| false)
+                                                      })
+                                                      .map(|(pos, _)| *pos) {
+            places[idx].clone()
+        } else {
+            println!("town not found...");
+            return None;
+        };
+        let s = s.intersection(&par).expect("intersection failed");
 
-        let s = voronoi.try_into()
-                       .expect("conversion to geos failed")
-                       .intersection(&par)
-                       .expect("intersection failed");
         place.boundary = convert_to_geo(s);
         let towns = if let Some(ref parent) = place.parent {
-            // TODO: check if parent.index really corresponds to this array's positions;
+            // TODO: check if parent.index really corresponds to this array's positions.
             get_parent_neighbors(&zones[parent.index], towns, zones_rtree, m)
         } else {
             vec![]
         };
         extrude_existing_town(&mut place, &towns);
-        place
+        Some(place)
     }).collect()
 }
 
