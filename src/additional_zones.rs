@@ -90,7 +90,7 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
         .fetch_zone_bbox(&place)
         .into_iter()
         .map(|z_idx| &zones[z_idx.index])
-        .filter(|z| z.contains_center(place))
+        .filter(|z| z.contains_center(place) && z.zone_type.is_some())
         .min_by_key(|z| z.zone_type)
 }
 
@@ -154,7 +154,10 @@ fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
     }
 }
 
-fn extrude_existing_town(zone: &mut Zone, towns: &[ZoneWithGeos<'_>]) {
+fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) {
+    if towns.is_empty() {
+        return;
+    }
     if let Some(ref mut boundary) = zone.boundary {
         let mut updates = 0;
         let mut g_boundary = boundary.try_into().expect("failed to convert to geos");
@@ -203,11 +206,13 @@ fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
                                                          (*pos,
                                                           x.try_into()
                                                            .expect("failed conversion to geos"))
-                                                      })
+                                                     })
                                                      .collect();
+    let parent = &zones[parent.index];
+    let par = parent.boundary.as_ref().unwrap().try_into().unwrap();
+
     if points.len() == 1 {
         let mut place = places[0].clone();
-        let parent = &zones[parent.index];
 
         if parent.zone_type == Some(ZoneType::Country) {
             // If the parent is the country, we don't want to have a city with the size of a country
@@ -223,14 +228,16 @@ fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
         } else {
             place.boundary = parent.boundary.clone();
         }
-        //let towns = get_parent_neighbors(&place, towns, zones, zones_rtree, m);
-        extrude_existing_town(&mut place, towns);
+        let towns = get_parent_neighbors(&place, towns, zones, zones_rtree, m);
+        extrude_existing_town(&mut place, &towns);
         return vec![place];
     }
-    let par = zones[parent.index].boundary.as_ref().unwrap().try_into().unwrap();
     let voronois = geos::compute_voronoi(&points.iter().map(|(_, p)| *p).collect::<Vec<_>>(),
                                          Some(&par), 0.).unwrap();
 
+    // TODO: It "could" be better to instead compute the bbox for every new town and then call
+    //       this function instead. To be checked...
+    let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, m);
     voronois.into_iter().filter_map(|voronoi| {
         let s = voronoi.try_into().expect("conversion to geos failed");
         // Since GEOS doesn't return voronoi geometries in the same order as the given points...
@@ -242,9 +249,6 @@ fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
                                    .map(|(pos, _)| *pos)
                                    .collect::<Vec<_>>();
             if !x.is_empty() {
-                if x.len() > 1 {
-                    println!("|||||> {:?}", x);
-                }
                 places[x[0]].clone()
             } else {
                 println!("town not found...");
@@ -254,8 +258,7 @@ fn compute_voronoi<'a, 'b>(parent: &ZoneIndex, places: &[&Zone], zones: &[Zone],
         let s = s.intersection(&par).expect("intersection failed");
 
         place.boundary = convert_to_geo(s);
-        //let towns = get_parent_neighbors(&place, towns, zones, zones_rtree, m);
-        extrude_existing_town(&mut place, towns);
+        extrude_existing_town(&mut place, &towns);
         Some(place)
     }).collect()
 }
