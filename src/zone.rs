@@ -6,7 +6,7 @@ use geos::GGeom;
 use itertools::Itertools;
 use log::{debug, info, warn};
 use osm_boundaries_utils::build_boundary;
-use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags, Node};
+use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use serde::Serialize;
 use serde_derive::*;
@@ -14,7 +14,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 type Coord = Point<f64>;
-
 
 #[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(rename_all = "snake_case")]
@@ -114,7 +113,8 @@ fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, 
             let lang = LANG_NAME_REG.captures(k)?.get(1)?;
 
             Some((lang.as_str().into(), v.clone()))
-        }).collect()
+        })
+        .collect()
 }
 
 impl Default for Zone {
@@ -154,10 +154,7 @@ impl Zone {
         self.parent = idx;
     }
 
-    pub fn from_osm_node(
-        node: &Node,
-        index: ZoneIndex,
-    ) -> Option<Self> {
+    pub fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Self> {
         let osm_id = OsmId::Node(node.id);
         let osm_id_str = match osm_id {
             OsmId::Node(n) => format!("node:{}", n.0.to_string()),
@@ -427,7 +424,8 @@ impl Zone {
                     z.international_names.get(lang).unwrap_or(&z.name).clone()
                 });
                 (lang.to_string(), lbl)
-            }).collect();
+            })
+            .collect();
 
         self.international_labels = international_labels;
         self.label = label;
@@ -727,7 +725,8 @@ mod test {
             ("name:es", "bobito"),
             ("name", "bobito"),
             ("name:a_strange_lang_name", "bibi"),
-        ].into_iter()
+        ]
+        .into_iter()
         .map(|(k, v)| (k.into(), v.into()))
         .collect();
 

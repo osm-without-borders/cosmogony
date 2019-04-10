@@ -219,7 +219,8 @@ impl From<SerdeRulesOverrides> for RulesOverrides {
                 map.into_iter().map(move |(osm_id, rules)| {
                     (format!("{}:{}", osm_type.to_string(), osm_id), rules)
                 })
-            }).collect();
+            })
+            .collect();
         let i = serde
             .id_rules
             .into_iter()
@@ -227,7 +228,8 @@ impl From<SerdeRulesOverrides> for RulesOverrides {
                 map.into_iter().map(move |(osm_id, rules)| {
                     (format!("{}:{}", osm_type.to_string(), osm_id), rules)
                 })
-            }).collect();
+            })
+            .collect();
         RulesOverrides {
             contained_by: c,
             id_rules: i,

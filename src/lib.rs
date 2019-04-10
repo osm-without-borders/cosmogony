@@ -5,17 +5,17 @@ extern crate geo;
 extern crate geo_types;
 #[macro_use]
 extern crate log;
+extern crate geos;
+extern crate lazy_static;
 extern crate ordered_float;
 extern crate osm_boundaries_utils;
 extern crate osmpbfreader;
+extern crate rayon;
+extern crate regex;
 extern crate serde;
 extern crate serde_derive;
-extern crate regex;
 extern crate serde_yaml;
 extern crate structopt;
-extern crate lazy_static;
-extern crate geos;
-extern crate rayon;
 
 mod additional_zones;
 pub mod cosmogony;
@@ -31,11 +31,11 @@ use crate::country_finder::CountryFinder;
 use crate::file_format::OutputFormat;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use crate::mutable_slice::MutableSlice;
+use additional_zones::compute_additional_cities;
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
 use osmpbfreader::{OsmObj, OsmPbfReader};
-use additional_zones::compute_additional_cities;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
@@ -151,7 +151,8 @@ fn type_zones(
         .map(|z| {
             get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index])
                 .map(|c| zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones))
-        }).collect();
+        })
+        .collect();
 
     zones
         .iter_mut()
@@ -247,12 +248,7 @@ pub fn build_cosmogony(
         get_zones_and_stats_without_geom(&mut parsed_pbf)?
     };
 
-    create_ontology(
-        &mut zones,
-        &mut stats,
-        country_code,
-        &pbf_path,
-    )?;
+    create_ontology(&mut zones, &mut stats, country_code, &pbf_path)?;
 
     stats.compute(&zones);
 

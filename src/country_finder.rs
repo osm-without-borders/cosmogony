@@ -41,7 +41,8 @@ impl CountryFinder {
                                 },
                             )
                         })
-                }).collect(),
+                })
+                .collect(),
         }
     }
 
