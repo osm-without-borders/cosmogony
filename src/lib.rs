@@ -204,7 +204,7 @@ fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
     info!("{} zones cleaned", (nb_zones - zones.len()));
 }
 
-fn create_ontology(
+pub fn create_ontology(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
     country_code: Option<String>,

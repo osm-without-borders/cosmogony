@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate approx;
-use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
+use cosmogony::{get_zones_and_stats, create_ontology, Cosmogony, Zone, ZoneIndex, ZoneType};
 use std::collections::BTreeMap;
 use std::process::{Command, Output};
+use std::fs::File;
+use std::path::Path;
+use osmpbfreader::OsmPbfReader;
 
 use geo_types::Point;
 type Coord = Point<f64>;
@@ -292,4 +295,24 @@ fn test_center_label() {
         gati_center,
         Coord::new(-75.72326699999999, 45.457240999999996)
     );
+}
+
+#[test]
+fn test_voronoi() {
+    let ivory_test_file = concat!(
+        env!("OUT_DIR"),
+        "/../../../../../tests/data/ivory-coast.pbf"
+    );
+    let path = Path::new(&ivory_test_file);
+    let file = File::open(&path).expect("no pbf file");
+
+    let mut parsed_pbf = OsmPbfReader::new(file);
+
+    let (mut zones, mut stats) = get_zones_and_stats(&mut parsed_pbf)
+                                     .expect("get_zones_and_stats failed");
+
+    assert!(zones.len() == 118);
+    create_ontology(&mut zones, &mut stats, None, &ivory_test_file)
+        .expect("create_ontology failed");
+    assert!(zones.len() == 4450);
 }
