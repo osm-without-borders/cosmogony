@@ -35,6 +35,11 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
         long = "country-code"
     )]
     country_code: Option<String>,
+    #[structopt(
+        help = "Prevent voronoi geometries computation and generation",
+        long = "disable-voronoi"
+    )]
+    disable_voronoi: bool,
 }
 
 fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Result<(), Error> {
@@ -78,7 +83,12 @@ fn serialize_cosmogony(
 fn cosmogony(args: Args) -> Result<(), Error> {
     let format = OutputFormat::from_filename(&args.output)?;
 
-    let cosmogony = build_cosmogony(args.input, !args.disable_geom, args.country_code)?;
+    let cosmogony = build_cosmogony(
+        args.input,
+        !args.disable_geom,
+        args.country_code,
+        args.disable_voronoi,
+    )?;
 
     serialize_cosmogony(&cosmogony, args.output, format)?;
 

@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate approx;
-use cosmogony::{get_zones_and_stats, create_ontology, Cosmogony, Zone, ZoneIndex, ZoneType};
+use cosmogony::{create_ontology, get_zones_and_stats, Cosmogony, Zone, ZoneIndex, ZoneType};
+use osmpbfreader::OsmPbfReader;
 use std::collections::BTreeMap;
-use std::process::{Command, Output};
 use std::fs::File;
 use std::path::Path;
-use osmpbfreader::OsmPbfReader;
+use std::process::{Command, Output};
 
 use geo_types::Point;
 type Coord = Point<f64>;
@@ -308,11 +308,11 @@ fn test_voronoi() {
 
     let mut parsed_pbf = OsmPbfReader::new(file);
 
-    let (mut zones, mut stats) = get_zones_and_stats(&mut parsed_pbf)
-                                     .expect("get_zones_and_stats failed");
+    let (mut zones, mut stats) =
+        get_zones_and_stats(&mut parsed_pbf).expect("get_zones_and_stats failed");
 
     assert!(zones.len() == 118);
-    create_ontology(&mut zones, &mut stats, None, &ivory_test_file)
+    create_ontology(&mut zones, &mut stats, None, &ivory_test_file, false)
         .expect("create_ontology failed");
     assert!(zones.len() == 4450);
 }
