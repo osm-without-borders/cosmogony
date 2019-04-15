@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
+#[allow(dead_code)]
 struct ZoneWithGeos<'a> {
     zone: &'a Zone,
     geos: GGeom<'a>,
@@ -291,11 +292,13 @@ fn compute_voronoi<'a, 'b>(
                     Some(place)
                 }
                 Err(e) => {
-                    println!("intersection failure: {} ({})",
-                             e,
-                             s.get_context_handle()
-                              .get_last_error()
-                              .unwrap_or_else(|| "Unknown GEOS error".to_owned()));
+                    println!(
+                        "intersection failure: {} ({})",
+                        e,
+                        s.get_context_handle()
+                            .get_last_error()
+                            .unwrap_or_else(|| "Unknown GEOS error".to_owned())
+                    );
                     None
                 }
             }

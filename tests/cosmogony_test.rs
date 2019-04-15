@@ -97,7 +97,7 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()))
+    let cosmogony = cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()), true)
         .expect("invalid cosmogony");
     return cosmogony;
 }
@@ -278,8 +278,9 @@ fn test_center_label() {
         env!("OUT_DIR"),
         "/../../../../../tests/data/gatineau.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()))
-        .expect("invalid cosmogony");
+    let cosmogony =
+        cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()), true)
+            .expect("invalid cosmogony");
 
     let gati = cosmogony
         .zones
