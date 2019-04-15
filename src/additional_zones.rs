@@ -2,7 +2,7 @@ use crate::hierarchy_builder::ZonesTree;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
-use geos::GGeom;
+use geos::{ContextInteractions, GGeom};
 use osmpbfreader::{OsmObj, OsmPbfReader};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::collections::BTreeMap;
@@ -284,11 +284,21 @@ fn compute_voronoi<'a, 'b>(
                     return None;
                 }
             };
-            let s = s.intersection(&par).expect("intersection failed");
-
-            place.boundary = convert_to_geo(s);
-            extrude_existing_town(&mut place, &towns);
-            Some(place)
+            match s.intersection(&par) {
+                Ok(s) => {
+                    place.boundary = convert_to_geo(s);
+                    extrude_existing_town(&mut place, &towns);
+                    Some(place)
+                }
+                Err(e) => {
+                    println!("intersection failure: {} ({})",
+                             e,
+                             s.get_context_handle()
+                              .get_last_error()
+                              .unwrap_or_else(|| "Unknown GEOS error".to_owned()));
+                    None
+                }
+            }
         })
         .collect()
 }
