@@ -29,7 +29,7 @@ impl<'a> ZoneWithGeos<'a> {
                     Err(e) => {
                         println!(
                             "ZoneWithGeos::new failed to convert to geos zone {}: {}",
-                            zone.id.index, e
+                            zone.osm_id, e
                         );
                         return None;
                     }
@@ -193,7 +193,7 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) {
             Err(e) => {
                 println!(
                     "extrude_existing_town: failed to convert to geos for zone {}: {}",
-                    zone.id.index, e
+                    zone.osm_id, e
                 );
                 return;
             }
@@ -256,7 +256,7 @@ fn compute_voronoi<'a, 'b>(
                 Err(e) => {
                     println!(
                         "Failed to convert point's center with id {}: {}",
-                        places[*pos].id.index, e
+                        places[*pos].osm_id, e
                     );
                     return None;
                 }
@@ -277,7 +277,7 @@ fn compute_voronoi<'a, 'b>(
         Err(e) => {
             println!(
                 "Failed to convert parent with index {}: {}",
-                parent_index, e
+                parent.osm_id, e
             );
             return Vec::new();
         }
@@ -294,7 +294,7 @@ fn compute_voronoi<'a, 'b>(
                     match match points[0].1.try_into() {
                         Ok(x) => x,
                         Err(e) => {
-                            println!("failed to convert point with id {}: {}", place.id.index, e);
+                            println!("failed to convert point with id {}: {}", place.osm_id, e);
                             return Vec::new();
                         }
                     }
@@ -303,8 +303,8 @@ fn compute_voronoi<'a, 'b>(
                         Ok(x) => x,
                         Err(e) => {
                             println!(
-                                "Failed to create a buffer from point wiwth id {}: {}",
-                                place.id.index, e
+                                "Failed to create a buffer from point with id {}: {}",
+                                place.osm_id, e
                             );
                             return Vec::new();
                         }
@@ -330,7 +330,7 @@ fn compute_voronoi<'a, 'b>(
         Err(e) => {
             println!(
                 "Failed to compute voronoi for parent {}: {}",
-                parent_index, e
+                parent.osm_id, e
             );
             return Vec::new();
         }
@@ -347,7 +347,7 @@ fn compute_voronoi<'a, 'b>(
                 Err(e) => {
                     println!(
                         "conversion of voronoi shape to geos failed for parent {}: {}",
-                        parent_index, e
+                        parent.osm_id, e
                     );
                     return None;
                 }
@@ -362,7 +362,7 @@ fn compute_voronoi<'a, 'b>(
                 if !x.is_empty() {
                     places[x[0]].clone()
                 } else {
-                    println!("town not found for parent {}...", parent_index);
+                    println!("town not found for parent {}...", parent.osm_id);
                     return None;
                 }
             };
