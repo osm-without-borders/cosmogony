@@ -325,14 +325,42 @@ fn compute_voronoi<'a, 'b>(
         &points.iter().map(|(_, p)| *p).collect::<Vec<_>>(),
         Some(&par),
         0.,
+        false,
     ) {
         Ok(v) => v,
         Err(e) => {
-            println!(
-                "Failed to compute voronoi for parent {}: {}",
-                parent.osm_id, e
-            );
-            return Vec::new();
+            /*println!("Potential duplicates found...");
+            let mut unique_points = HashMap::with_capacity(points.len());
+            for (idx, point) in points.iter() {
+                if let Ok(p) = point.try_into() {
+                    if let Some(old) = unique_points.insert(p.to_wkt(), *idx) {
+                        println!("|||> duplicate found with id: {}", places[old].osm_id);
+                    }
+                } else {
+                    println!("==> Invalid point found with id: {}", places[*idx].osm_id);
+                }
+            }
+            if unique_points.len() != points.len() {
+                match geos::compute_voronoi(
+                    &unique_points.values().map(|idx| places[*idx].center.unwrap()).collect::<Vec<_>>(),
+                    Some(&par),
+                    0.,
+                    false,
+                ) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        println!("Failed to compute voronoi without duplicates for parent {}: {}",
+                                 parent.osm_id, e);
+                        return Vec::new();
+                    }
+                }
+            } else {*/
+                println!(
+                    "Failed to compute voronoi for parent {}: {}",
+                    parent.osm_id, e
+                );
+                return Vec::new();
+            //}
         }
     };
 
@@ -342,6 +370,7 @@ fn compute_voronoi<'a, 'b>(
     voronois
         .into_iter()
         .filter_map(|voronoi| {
+            // FIXME: useless conversion
             let s = match voronoi.try_into() {
                 Ok(s) => s,
                 Err(e) => {
