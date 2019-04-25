@@ -229,6 +229,14 @@ fn get_parent_neighbors<'a, 'b>(
         .collect()
 }
 
+macro_rules! mdbg {
+    ($x:expr) => {
+        if ::std::env::var("DEBUG").is_ok() {
+            println!("{}", $x);
+        }
+    }
+}
+
 fn compute_voronoi<'a, 'b>(
     parent: &ZoneIndex,
     places: &[&Zone],
@@ -237,6 +245,7 @@ fn compute_voronoi<'a, 'b>(
     zones_rtree: &ZonesTree,
     m: &HashMap<usize, usize>,
 ) -> Vec<Zone> {
+    mdbg!("1");
     let points: Vec<(usize, Point<_>)> = places
         .iter()
         .enumerate()
@@ -248,6 +257,7 @@ fn compute_voronoi<'a, 'b>(
             }
         })
         .collect();
+    mdbg!("2");
     let geos_points: Vec<(usize, GGeom<'_>)> = points
         .iter()
         .filter_map(|(pos, x)| {
@@ -264,6 +274,7 @@ fn compute_voronoi<'a, 'b>(
             Some((*pos, x))
         })
         .collect();
+    mdbg!("3");
     let parent_index = parent.index;
     let parent = &zones[parent_index];
     let par = match match parent.boundary {
@@ -282,6 +293,7 @@ fn compute_voronoi<'a, 'b>(
             return Vec::new();
         }
     };
+    mdbg!("4");
 
     if points.len() == 1 {
         let mut place = places[0].clone();
@@ -289,6 +301,7 @@ fn compute_voronoi<'a, 'b>(
         if parent.zone_type == Some(ZoneType::Country) {
             // If the parent is the country, we don't want to have a city with the size of a country
             // so we generated a (way) smaller shape.
+            mdbg!("5");
             place.boundary = Some(
                 match convert_to_geo(
                     match match points[0].1.try_into() {
@@ -315,12 +328,17 @@ fn compute_voronoi<'a, 'b>(
                 },
             );
         } else {
+            mdbg!("6");
             place.boundary = parent.boundary.clone();
         }
+        mdbg!("7");
         let towns = get_parent_neighbors(&place, towns, zones, zones_rtree, m);
+        mdbg!("8");
         extrude_existing_town(&mut place, &towns);
+        mdbg!("9");
         return vec![place];
     }
+    mdbg!("10");
     let voronois = match geos::compute_voronoi(
         &points.iter().map(|(_, p)| *p).collect::<Vec<_>>(),
         Some(&par),
@@ -364,9 +382,11 @@ fn compute_voronoi<'a, 'b>(
         }
     };
 
+    mdbg!("11");
     // TODO: It "could" be better to instead compute the bbox for every new town and then call
     //       this function instead. To be checked...
     let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, m);
+    mdbg!("12");
     voronois
         .into_iter()
         .filter_map(|voronoi| {
@@ -381,6 +401,7 @@ fn compute_voronoi<'a, 'b>(
                     return None;
                 }
             };
+            mdbg!("13");
             // Since GEOS doesn't return voronoi geometries in the same order as the given points...
             let mut place = {
                 let x = geos_points
@@ -395,10 +416,14 @@ fn compute_voronoi<'a, 'b>(
                     return None;
                 }
             };
+            mdbg!("14");
             match s.intersection(&par) {
                 Ok(s) => {
+                    mdbg!("15");
                     place.boundary = convert_to_geo(s);
+                    mdbg!("16");
                     extrude_existing_town(&mut place, &towns);
+                    mdbg!("17");
                     Some(place)
                 }
                 Err(e) => {

@@ -43,3 +43,7 @@ rstar = "0.2"
 
 [dev-dependencies]
 approx = "0.3"
+
+[profile.release]
+debug = true
+lto = false
