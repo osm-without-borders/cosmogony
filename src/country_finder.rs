@@ -2,7 +2,7 @@ use crate::zone::{Zone, ZoneIndex};
 use crate::zone_typer::ZoneTyper;
 use std::collections::BTreeMap;
 
-const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
+pub const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";
 
 // to reduce the memory footprint we only store some of the countries information
 pub struct Country {

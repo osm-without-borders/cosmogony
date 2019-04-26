@@ -3,12 +3,11 @@ use crate::zone::{Zone, ZoneIndex, ZoneType};
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
 use geos::{ContextInteractions, GGeom};
-use osmpbfreader::{OsmObj, OsmPbfReader};
+use osmpbfreader::{OsmObj};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use crate::rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::fs::File;
-use std::path::Path;
 
 #[allow(dead_code)]
 struct ZoneWithGeos<'a> {
@@ -45,8 +44,8 @@ fn is_city(zone: &Zone) -> bool {
     zone.zone_type == Some(ZoneType::City) && zone.boundary.is_some() && !zone.name.is_empty()
 }
 
-pub fn compute_additional_cities(zones: &mut Vec<Zone>, pbf_path: &str, zones_rtree: ZonesTree) {
-    let place_zones = read_places(pbf_path);
+pub fn compute_additional_cities(zones: &mut Vec<Zone>, parsed_pbf: &[OsmObj], zones_rtree: ZonesTree) {
+    let place_zones = read_places(parsed_pbf);
     info!(
         "there are {} places, we'll try to make boundaries for them",
         place_zones.len()
@@ -116,7 +115,7 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
         .min_by_key(|z| z.zone_type)
 }
 
-fn is_place(obj: &OsmObj) -> bool {
+pub fn is_place(obj: &OsmObj) -> bool {
     match *obj {
         OsmObj::Node(ref node) => node
             .tags
@@ -126,22 +125,16 @@ fn is_place(obj: &OsmObj) -> bool {
     }
 }
 
-fn read_places(pbf_path: &str) -> Vec<Zone> {
-    let path = Path::new(&pbf_path);
-    let file = File::open(&path).expect("no pbf file");
-
-    let mut parsed_pbf = OsmPbfReader::new(file);
-    let mut zones = vec![];
-
-    for obj in parsed_pbf.par_iter().map(Result::unwrap) {
+fn read_places(parsed_pbf: &[OsmObj]) -> Vec<Zone> {
+    parsed_pbf.par_iter().enumerate().filter_map(|(index, obj)| {
         if !is_place(&obj) {
-            continue;
+            return None;
         }
         if let OsmObj::Node(ref node) = obj {
-            let next_index = ZoneIndex { index: zones.len() };
+            let next_index = ZoneIndex { index };
             if let Some(mut zone) = Zone::from_osm_node(&node, next_index) {
                 if zone.name.is_empty() {
-                    continue;
+                    return None;
                 }
                 zone.zone_type = Some(ZoneType::City);
                 zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
@@ -156,11 +149,11 @@ fn read_places(pbf_path: &str) -> Vec<Zone> {
                     },
                 });
                 zone.is_generated = true;
-                zones.push(zone);
+                return Some(zone);
             }
         }
-    }
-    zones
+        None
+    }).collect()
 }
 
 fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
@@ -231,9 +224,9 @@ fn get_parent_neighbors<'a, 'b>(
 
 macro_rules! mdbg {
     ($x:expr) => {
-        if ::std::env::var("DEBUG").is_ok() {
-            println!("{}", $x);
-        }
+        // if ::std::env::var("DEBUG").is_ok() {
+        //     println!("{}", $x);
+        // }
     }
 }
 
