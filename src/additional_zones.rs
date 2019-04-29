@@ -1,11 +1,12 @@
+use crate::is_place;
 use crate::hierarchy_builder::ZonesTree;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
 use geos::{ContextInteractions, GGeom};
-use osmpbfreader::{OsmObj};
+use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use crate::rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
+//use crate::rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
@@ -44,7 +45,11 @@ fn is_city(zone: &Zone) -> bool {
     zone.zone_type == Some(ZoneType::City) && zone.boundary.is_some() && !zone.name.is_empty()
 }
 
-pub fn compute_additional_cities(zones: &mut Vec<Zone>, parsed_pbf: &[OsmObj], zones_rtree: ZonesTree) {
+pub fn compute_additional_cities(
+    zones: &mut Vec<Zone>,
+    parsed_pbf: &BTreeMap<OsmId, OsmObj>,
+    zones_rtree: ZonesTree,
+) {
     let place_zones = read_places(parsed_pbf);
     info!(
         "there are {} places, we'll try to make boundaries for them",
@@ -115,18 +120,8 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
         .min_by_key(|z| z.zone_type)
 }
 
-pub fn is_place(obj: &OsmObj) -> bool {
-    match *obj {
-        OsmObj::Node(ref node) => node
-            .tags
-            .get("place")
-            .map_or(false, |v| v == "city" || v == "town" || v == "village"),
-        _ => false,
-    }
-}
-
-fn read_places(parsed_pbf: &[OsmObj]) -> Vec<Zone> {
-    parsed_pbf.par_iter().enumerate().filter_map(|(index, obj)| {
+fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
+    parsed_pbf.values().enumerate().filter_map(|(index, obj)| {
         if !is_place(&obj) {
             return None;
         }

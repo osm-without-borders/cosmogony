@@ -209,7 +209,7 @@ impl Zone {
 
     pub fn from_osm(
         relation: &Relation,
-        objects: &BTreeMap<OsmId, &OsmObj>,
+        objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
     ) -> Option<Self> {
         // Skip administrative region without name
@@ -281,7 +281,7 @@ impl Zone {
 
     pub fn from_osm_with_geom(
         relation: &Relation,
-        objects: &BTreeMap<OsmId, &OsmObj>,
+        objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
     ) -> Option<Self> {
         use geo::centroid::Centroid;
