@@ -136,7 +136,7 @@ dependencies = [
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "ordered-float 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "osm_boundaries_utils 0.5.0",
+ "osm_boundaries_utils 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "osmpbfreader 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -581,7 +581,8 @@ dependencies = [
 
 [[package]]
 name = "osm_boundaries_utils"
-version = "0.5.0"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "geo 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "geo-types 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1149,6 +1150,7 @@ dependencies = [
 "checksum num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "0b3a5d7cc97d6d30d8b9bc8fa19bf45349ffe46241e8816f50f62f6d6aaabee1"
 "checksum num_cpus 1.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1a23f0ed30a54abaa0c7e83b1d2d87ada7c3c23078d1d87815af3e3b6385fbba"
 "checksum ordered-float 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e312d9bf410688e9c292d9e7da4567143c0ad18df8fceb6ce99156f40cef2"
+"checksum osm_boundaries_utils 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0d7a853c0ba2bfd08b1612e3842f5704d5e92538e925dd9c26c02b51c37289eb"
 "checksum osmpbfreader 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1f294f513f55f4f09b881e9d727d4e2232b3841eb9a23cedc226590a8ae71a11"
 "checksum par-map 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "2f05b290991702bb8140cf70915b82b0ae1ec7fe478db97305af990048040095"
 "checksum pdqselect 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4ec91767ecc0a0bbe558ce8c9da33c068066c57ecc8bb8477ef8c1ad3ef77c27"

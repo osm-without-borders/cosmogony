@@ -85,7 +85,7 @@ pub fn compute_additional_cities(
     );
 
     let mut current_length = 0;
-    let new_cities: Vec<Zone> = {
+    let new_cities: Vec<Vec<Zone>> = {
         let towns = zones
             .iter()
             .enumerate()
@@ -105,10 +105,11 @@ pub fn compute_additional_cities(
             .map(|(parent, mut places)| {
                 compute_voronoi(parent, &mut places, &zones, &towns, &zones_rtree, &m)
             })
-            .flatten()
             .collect()
     };
-    publish_new_cities(zones, new_cities);
+    for cities in new_cities.into_iter() {
+        publish_new_cities(zones, cities);
+    }
 }
 
 fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> Option<&'a Zone> {
