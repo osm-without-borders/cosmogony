@@ -6,7 +6,6 @@ use geos::from_geo::TryInto;
 use geos::{ContextInteractions, GGeom};
 use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-//use crate::rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
@@ -56,7 +55,7 @@ pub fn compute_additional_cities(
         place_zones.len()
     );
 
-    let mut m = HashMap::new();
+    let mut z_idx_to_place_idx = HashMap::new();
     let mut candidate_parent_zones: BTreeMap<_, Vec<_>> = BTreeMap::new();
     for (parent, place) in place_zones
         .iter()
@@ -66,10 +65,15 @@ pub fn compute_additional_cities(
             }
             get_parent(&place, &zones, &zones_rtree).map(|p| (p, place))
         })
-        .filter(|(p, _)| {
+        .filter(|(p, place)| {
             p.zone_type
                 .as_ref()
-                .map(|x| *x > ZoneType::City)
+                .map(|x| {
+                    if *x == ZoneType::Country {
+                      info!("Ignoring place with id {} and country {} as parent", place.osm_id, p.osm_id);
+                    }
+                    *x > ZoneType::City && *x < ZoneType::Country
+                })
                 .unwrap_or_else(|| false)
         })
     {
@@ -86,12 +90,12 @@ pub fn compute_additional_cities(
 
     let mut current_length = 0;
     let new_cities: Vec<Vec<Zone>> = {
-        let towns = zones
+        let relation_cities_with_geos = zones
             .iter()
             .enumerate()
             .filter(|(_, x)| is_city(x))
             .filter_map(|(pos, x)| {
-                m.insert(pos, current_length);
+                z_idx_to_place_idx.insert(pos, current_length);
                 current_length += 1;
                 ZoneWithGeos::new(x)
             })
@@ -103,7 +107,8 @@ pub fn compute_additional_cities(
             .collect::<Vec<_>>()
             .into_par_iter()
             .map(|(parent, mut places)| {
-                compute_voronoi(parent, &mut places, &zones, &towns, &zones_rtree, &m)
+                compute_voronoi(parent, &mut places, &zones, &relation_cities_with_geos,
+                                &zones_rtree, &z_idx_to_place_idx)
             })
             .collect()
     };
@@ -212,13 +217,13 @@ fn get_parent_neighbors<'a, 'b>(
     towns: &'b [ZoneWithGeos<'a>],
     zones: &[Zone],
     zones_rtree: &ZonesTree,
-    m: &HashMap<usize, usize>,
+    z_idx_to_place_idx: &HashMap<usize, usize>,
 ) -> Vec<&'b ZoneWithGeos<'a>> {
     zones_rtree
         .fetch_zone_bbox(&parent)
         .into_iter()
         .filter(|z_idx| is_city(&zones[z_idx.index]))
-        .map(|z_idx| &towns[m[&z_idx.index]])
+        .map(|z_idx| &towns[z_idx_to_place_idx[&z_idx.index]])
         .collect()
 }
 
@@ -228,7 +233,7 @@ fn compute_voronoi<'a, 'b>(
     zones: &[Zone],
     towns: &'b [ZoneWithGeos<'a>],
     zones_rtree: &ZonesTree,
-    m: &HashMap<usize, usize>,
+    z_idx_to_place_idx: &HashMap<usize, usize>,
 ) -> Vec<Zone> {
     let points: Vec<(usize, Point<_>)> = places
         .iter()
@@ -279,38 +284,8 @@ fn compute_voronoi<'a, 'b>(
     if points.len() == 1 {
         let mut place = places[0].clone();
 
-        if parent.zone_type == Some(ZoneType::Country) {
-            // If the parent is the country, we don't want to have a city with the size of a country
-            // so we generated a (way) smaller shape.
-            place.boundary = Some(
-                match convert_to_geo(
-                    match match points[0].1.try_into() {
-                        Ok(x) => x,
-                        Err(e) => {
-                            println!("failed to convert point with id {}: {}", place.osm_id, e);
-                            return Vec::new();
-                        }
-                    }
-                    .buffer(0.01, 2)
-                    {
-                        Ok(x) => x,
-                        Err(e) => {
-                            println!(
-                                "Failed to create a buffer from point with id {}: {}",
-                                place.osm_id, e
-                            );
-                            return Vec::new();
-                        }
-                    },
-                ) {
-                    Some(s) => s,
-                    None => return Vec::new(),
-                },
-            );
-        } else {
-            place.boundary = parent.boundary.clone();
-        }
-        let towns = get_parent_neighbors(&place, towns, zones, zones_rtree, m);
+        place.boundary = parent.boundary.clone();
+        let towns = get_parent_neighbors(&place, towns, zones, zones_rtree, z_idx_to_place_idx);
         extrude_existing_town(&mut place, &towns);
         return vec![place];
     }
@@ -332,44 +307,17 @@ fn compute_voronoi<'a, 'b>(
     ) {
         Ok(v) => v,
         Err(e) => {
-            /*println!("Potential duplicates found...");
-            let mut unique_points = HashMap::with_capacity(points.len());
-            for (idx, point) in points.iter() {
-                if let Ok(p) = point.try_into() {
-                    if let Some(old) = unique_points.insert(p.to_wkt(), *idx) {
-                        println!("|||> duplicate found with id: {}", places[old].osm_id);
-                    }
-                } else {
-                    println!("==> Invalid point found with id: {}", places[*idx].osm_id);
-                }
-            }
-            if unique_points.len() != points.len() {
-                match geos::compute_voronoi(
-                    &unique_points.values().map(|idx| places[*idx].center.unwrap()).collect::<Vec<_>>(),
-                    Some(&par),
-                    0.,
-                    false,
-                ) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        println!("Failed to compute voronoi without duplicates for parent {}: {}",
-                                 parent.osm_id, e);
-                        return Vec::new();
-                    }
-                }
-            } else {*/
             println!(
                 "Failed to compute voronoi for parent {}: {}",
                 parent.osm_id, e
             );
             return Vec::new();
-            //}
         }
     };
 
     // TODO: It "could" be better to instead compute the bbox for every new town and then call
     //       this function instead. To be checked...
-    let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, m);
+    let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, z_idx_to_place_idx);
     voronois
         .into_iter()
         .filter_map(|voronoi| {

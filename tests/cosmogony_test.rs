@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate approx;
-use cosmogony::{create_ontology, get_zones_and_stats, Cosmogony, Zone, ZoneIndex, ZoneType};
+use cosmogony::{
+    create_ontology, is_admin, is_place, get_zones_and_stats, Cosmogony, Zone, ZoneIndex, ZoneType,
+};
 use osmpbfreader::OsmPbfReader;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -307,13 +309,15 @@ fn test_voronoi() {
     let path = Path::new(&ivory_test_file);
     let file = File::open(&path).expect("no pbf file");
 
-    let mut parsed_pbf = OsmPbfReader::new(file);
+    let parsed_pbf = OsmPbfReader::new(file)
+        .get_objs_and_deps(|o| is_admin(o) || is_place(o))
+        .expect("invalid osm file");
 
     let (mut zones, mut stats) =
-        get_zones_and_stats(&mut parsed_pbf).expect("get_zones_and_stats failed");
+        get_zones_and_stats(&parsed_pbf).expect("get_zones_and_stats failed");
 
-    assert!(zones.len() == 118);
-    create_ontology(&mut zones, &mut stats, None, &ivory_test_file, false)
+    assert_eq!(zones.len(), 118);
+    create_ontology(&mut zones, &mut stats, None, false, &parsed_pbf)
         .expect("create_ontology failed");
-    assert!(zones.len() == 4450);
+    assert_eq!(zones.len(), 4449);
 }
