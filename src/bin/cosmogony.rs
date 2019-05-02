@@ -106,7 +106,7 @@ fn init_logger() {
     let mut builder = env_logger::Builder::new();
     builder.filter(None, log::LevelFilter::Info);
     if let Ok(s) = std::env::var("RUST_LOG") {
-        builder.parse(&s);
+        builder.parse_filters(&s);
     }
     builder.init();
 }
