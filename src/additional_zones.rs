@@ -1,5 +1,5 @@
-use crate::is_place;
 use crate::hierarchy_builder::ZonesTree;
+use crate::is_place;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
@@ -122,34 +122,38 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
 }
 
 fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
-    parsed_pbf.values().enumerate().filter_map(|(index, obj)| {
-        if !is_place(&obj) {
-            return None;
-        }
-        if let OsmObj::Node(ref node) = obj {
-            let next_index = ZoneIndex { index };
-            if let Some(mut zone) = Zone::from_osm_node(&node, next_index) {
-                if zone.name.is_empty() {
-                    return None;
-                }
-                zone.zone_type = Some(ZoneType::City);
-                zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
-                zone.bbox = zone.center.as_ref().map(|p| Rect {
-                    min: Coordinate {
-                        x: p.0.x - std::f64::EPSILON,
-                        y: p.0.y - std::f64::EPSILON,
-                    },
-                    max: Coordinate {
-                        x: p.0.x + std::f64::EPSILON,
-                        y: p.0.y + std::f64::EPSILON,
-                    },
-                });
-                zone.is_generated = true;
-                return Some(zone);
+    parsed_pbf
+        .values()
+        .enumerate()
+        .filter_map(|(index, obj)| {
+            if !is_place(&obj) {
+                return None;
             }
-        }
-        None
-    }).collect()
+            if let OsmObj::Node(ref node) = obj {
+                let next_index = ZoneIndex { index };
+                if let Some(mut zone) = Zone::from_osm_node(&node, next_index) {
+                    if zone.name.is_empty() {
+                        return None;
+                    }
+                    zone.zone_type = Some(ZoneType::City);
+                    zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
+                    zone.bbox = zone.center.as_ref().map(|p| Rect {
+                        min: Coordinate {
+                            x: p.0.x - std::f64::EPSILON,
+                            y: p.0.y - std::f64::EPSILON,
+                        },
+                        max: Coordinate {
+                            x: p.0.x + std::f64::EPSILON,
+                            y: p.0.y + std::f64::EPSILON,
+                        },
+                    });
+                    zone.is_generated = true;
+                    return Some(zone);
+                }
+            }
+            None
+        })
+        .collect()
 }
 
 fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
@@ -311,7 +315,10 @@ fn compute_voronoi<'a, 'b>(
         return vec![place];
     }
     if parent.zone_type == Some(ZoneType::Country) {
-        println!("Parent {} is a country, ignoring all zones inside it:", parent.osm_id);
+        println!(
+            "Parent {} is a country, ignoring all zones inside it:",
+            parent.osm_id
+        );
         for point in &points {
             println!(" => ignoring {}", places[point.0].osm_id);
         }
@@ -351,11 +358,11 @@ fn compute_voronoi<'a, 'b>(
                     }
                 }
             } else {*/
-                println!(
-                    "Failed to compute voronoi for parent {}: {}",
-                    parent.osm_id, e
-                );
-                return Vec::new();
+            println!(
+                "Failed to compute voronoi for parent {}: {}",
+                parent.osm_id, e
+            );
+            return Vec::new();
             //}
         }
     };

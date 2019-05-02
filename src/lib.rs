@@ -32,7 +32,7 @@ use crate::country_finder::CountryFinder;
 use crate::file_format::OutputFormat;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use crate::mutable_slice::MutableSlice;
-use additional_zones::{compute_additional_cities};
+use additional_zones::compute_additional_cities;
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
@@ -75,7 +75,7 @@ pub fn get_zones_and_stats(
 
     for obj in pbf.values() {
         if !is_admin(obj) {
-            continue
+            continue;
         }
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
@@ -100,7 +100,7 @@ pub fn get_zones_and_stats_without_geom(
 
     for obj in pbf.values() {
         if !is_admin(&obj) {
-            continue
+            continue;
         }
         if let OsmObj::Relation(ref relation) = obj {
             let next_index = ZoneIndex { index: zones.len() };
@@ -251,8 +251,8 @@ pub fn build_cosmogony(
     let file = File::open(&path).context("no pbf file")?;
 
     let parsed_pbf = OsmPbfReader::new(file)
-                                  .get_objs_and_deps(|o| is_admin(o) || is_place(o))
-                                  .context("invalid osm file")?;
+        .get_objs_and_deps(|o| is_admin(o) || is_place(o))
+        .context("invalid osm file")?;
     info!("reading pbf done.");
 
     let (mut zones, mut stats) = if with_geom {
