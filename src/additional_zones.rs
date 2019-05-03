@@ -70,7 +70,10 @@ pub fn compute_additional_cities(
                 .as_ref()
                 .map(|x| {
                     if *x == ZoneType::Country {
-                      info!("Ignoring place with id {} and country {} as parent", place.osm_id, p.osm_id);
+                        info!(
+                            "Ignoring place with id {} and country {} as parent",
+                            place.osm_id, p.osm_id
+                        );
                     }
                     *x > ZoneType::City && *x < ZoneType::Country
                 })
@@ -107,8 +110,14 @@ pub fn compute_additional_cities(
             .collect::<Vec<_>>()
             .into_par_iter()
             .map(|(parent, mut places)| {
-                compute_voronoi(parent, &mut places, &zones, &relation_cities_with_geos,
-                                &zones_rtree, &z_idx_to_place_idx)
+                compute_voronoi(
+                    parent,
+                    &mut places,
+                    &zones,
+                    &relation_cities_with_geos,
+                    &zones_rtree,
+                    &z_idx_to_place_idx,
+                )
             })
             .collect()
     };
