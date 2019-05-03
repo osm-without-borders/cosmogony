@@ -2,7 +2,7 @@ use crate::mutable_slice::MutableSlice;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::Contains;
 use geo_types::{Coordinate, Point, Rect};
-use geos::GGeom;
+use geos::Geometry;
 use itertools::Itertools;
 use log::{debug, info, warn};
 use osm_boundaries_utils::build_boundary;
@@ -325,8 +325,8 @@ impl Zone {
         use geos::from_geo::TryInto;
         match (&self.boundary, &other.boundary) {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
-                let m_self: Result<GGeom, _> = mpoly1.try_into();
-                let m_other: Result<GGeom, _> = mpoly2.try_into();
+                let m_self: Result<Geometry, _> = mpoly1.try_into();
+                let m_other: Result<Geometry, _> = mpoly2.try_into();
 
                 match (&m_self, &m_other) {
                     (&Ok(ref m_self), &Ok(ref m_other)) => {

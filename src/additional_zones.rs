@@ -3,7 +3,7 @@ use crate::is_place;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
-use geos::{ContextInteractions, GGeom};
+use geos::{ContextInteractions, Geometry};
 use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::collections::BTreeMap;
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 #[allow(dead_code)]
 struct ZoneWithGeos<'a> {
     zone: &'a Zone,
-    geos: GGeom<'a>,
+    geos: Geometry<'a>,
 }
 
 unsafe impl<'a> Send for ZoneWithGeos<'a> {}
@@ -170,7 +170,7 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
         .collect()
 }
 
-fn convert_to_geo(geom: GGeom) -> Option<MultiPolygon<f64>> {
+fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     match match geom.try_into() {
         Ok(c) => c,
         Err(e) => {
@@ -255,7 +255,7 @@ fn compute_voronoi<'a, 'b>(
             }
         })
         .collect();
-    let geos_points: Vec<(usize, GGeom<'_>)> = points
+    let geos_points: Vec<(usize, Geometry<'_>)> = points
         .iter()
         .filter_map(|(pos, x)| {
             let x = match x.try_into() {
@@ -308,12 +308,19 @@ fn compute_voronoi<'a, 'b>(
         }
         return Vec::new();
     }
-    let voronois = match geos::compute_voronoi(
-        &points.iter().map(|(_, p)| *p).collect::<Vec<_>>(),
-        Some(&par),
-        0.,
-        false,
+    let points_geom = match Geometry::create_geometry_collection(
+        points
+            .iter()
+            .filter_map(|(_, p)| p.try_into().ok())
+            .collect::<Vec<_>>(),
     ) {
+        Ok(p) => p,
+        Err(e) => {
+            println!("Geometry::create_geometry_collection failed: {:?}", e);
+            return Vec::new();
+        }
+    };
+    let voronois = match points_geom.voronoi(Some(&par), 0., false) {
         Ok(v) => v,
         Err(e) => {
             println!(
@@ -323,29 +330,34 @@ fn compute_voronoi<'a, 'b>(
             return Vec::new();
         }
     };
+    let mut voronoi_polygons = Vec::with_capacity(points.len());
+    let len = match voronois.get_num_geometries() {
+        Ok(x) => x,
+        Err(e) => {
+            println!("get_num_geometries failed: {:?}", e);
+            return Vec::new();
+        }
+    };
+    for idx in 0..len {
+        match voronois.get_geometry_n(idx) {
+            Ok(x) => voronoi_polygons.push(x),
+            Err(e) => {
+                println!("get_geometry_n failed: {:?}", e);
+            }
+        }
+    }
 
     // TODO: It "could" be better to instead compute the bbox for every new town and then call
     //       this function instead. To be checked...
     let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, z_idx_to_place_idx);
-    voronois
+    voronoi_polygons
         .into_iter()
         .filter_map(|voronoi| {
-            // FIXME: useless conversion
-            let s = match voronoi.try_into() {
-                Ok(s) => s,
-                Err(e) => {
-                    println!(
-                        "conversion of voronoi shape to geos failed for parent {}: {}",
-                        parent.osm_id, e
-                    );
-                    return None;
-                }
-            };
             // Since GEOS doesn't return voronoi geometries in the same order as the given points...
             let mut place = {
                 let x = geos_points
                     .iter()
-                    .filter(|(_, x)| s.contains(x).unwrap_or_else(|_| false))
+                    .filter(|(_, x)| voronoi.contains(x).unwrap_or_else(|_| false))
                     .map(|(pos, _)| *pos)
                     .collect::<Vec<_>>();
                 if !x.is_empty() {
@@ -355,7 +367,7 @@ fn compute_voronoi<'a, 'b>(
                     return None;
                 }
             };
-            match s.intersection(&par) {
+            match voronoi.intersection(&par) {
                 Ok(s) => {
                     place.boundary = convert_to_geo(s);
                     extrude_existing_town(&mut place, &towns);
@@ -365,7 +377,8 @@ fn compute_voronoi<'a, 'b>(
                     println!(
                         "intersection failure: {} ({})",
                         e,
-                        s.get_context_handle()
+                        voronoi
+                            .get_context_handle()
                             .get_last_error()
                             .unwrap_or_else(|| "Unknown GEOS error".to_owned())
                     );
