@@ -1,5 +1,6 @@
 use crate::hierarchy_builder::ZonesTree;
 use crate::is_place;
+use crate::geo::prelude::BoundingRect;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
@@ -294,7 +295,11 @@ fn compute_voronoi<'a, 'b>(
         let mut place = places[0].clone();
 
         place.boundary = parent.boundary.clone();
-        let towns = get_parent_neighbors(&place, towns, zones, zones_rtree, z_idx_to_place_idx);
+        place.parent = Some(parent.id);
+        if let Some(ref boundary) = place.boundary {
+            place.bbox = boundary.bounding_rect();
+        }
+        let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, z_idx_to_place_idx);
         extrude_existing_town(&mut place, &towns);
         return vec![place];
     }
@@ -369,7 +374,11 @@ fn compute_voronoi<'a, 'b>(
             };
             match voronoi.intersection(&par) {
                 Ok(s) => {
+                    place.parent = Some(parent.id);
                     place.boundary = convert_to_geo(s);
+                    if let Some(ref boundary) = place.boundary {
+                        place.bbox = boundary.bounding_rect();
+                    }
                     extrude_existing_town(&mut place, &towns);
                     Some(place)
                 }
