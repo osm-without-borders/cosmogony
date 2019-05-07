@@ -99,8 +99,9 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()), true)
-        .expect("invalid cosmogony");
+    let cosmogony =
+        cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()), true, &[])
+            .expect("invalid cosmogony");
     return cosmogony;
 }
 
@@ -281,7 +282,7 @@ fn test_center_label() {
         "/../../../../../tests/data/gatineau.osm.pbf"
     );
     let cosmogony =
-        cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()), true)
+        cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()), true, &[])
             .expect("invalid cosmogony");
 
     let gati = cosmogony
@@ -317,7 +318,7 @@ fn test_voronoi() {
         get_zones_and_stats(&parsed_pbf).expect("get_zones_and_stats failed");
 
     assert_eq!(zones.len(), 118);
-    create_ontology(&mut zones, &mut stats, None, false, &parsed_pbf)
+    create_ontology(&mut zones, &mut stats, None, false, &parsed_pbf, &[])
         .expect("create_ontology failed");
     assert_eq!(zones.len(), 4449);
 }

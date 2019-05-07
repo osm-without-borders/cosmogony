@@ -191,12 +191,12 @@ fn type_zones(
     Ok(())
 }
 
-fn compute_labels(zones: &mut [Zone]) {
+fn compute_labels(zones: &mut [Zone], filter_langs: &[String]) {
     info!("computing all zones's label");
     let nb_zones = zones.len();
     for i in 0..nb_zones {
         let (mslice, z) = MutableSlice::init(zones, i);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, filter_langs);
     }
 }
 
@@ -214,6 +214,7 @@ pub fn create_ontology(
     country_code: Option<String>,
     disable_voronoi: bool,
     parsed_pbf: &BTreeMap<OsmId, OsmObj>,
+    filter_langs: &[String],
 ) -> Result<(), Error> {
     info!("creating ontology for {} zones", zones.len());
     let (inclusions, ztree) = find_inclusions(zones);
@@ -228,7 +229,7 @@ pub fn create_ontology(
 
     zones.iter_mut().for_each(|z| z.compute_names());
 
-    compute_labels(zones);
+    compute_labels(zones, filter_langs);
 
     // We remove the useless zones from cosmogony.
     //
@@ -245,6 +246,7 @@ pub fn build_cosmogony(
     with_geom: bool,
     country_code: Option<String>,
     disable_voronoi: bool,
+    filter_langs: &[String],
 ) -> Result<Cosmogony, Error> {
     let path = Path::new(&pbf_path);
     info!("Reading pbf with geometries...");
@@ -267,6 +269,7 @@ pub fn build_cosmogony(
         country_code,
         disable_voronoi,
         &parsed_pbf,
+        filter_langs,
     )?;
 
     stats.compute(&zones);

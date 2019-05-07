@@ -406,16 +406,20 @@ impl Zone {
     /// We compute a default label, and a label per language
     /// Note: for the moment we use the same format for every language,
     /// but in the future we might use opencage's configuration for this
-    pub fn compute_labels(&mut self, all_zones: &MutableSlice<'_>) {
+    pub fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]) {
         let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
-        let all_lang: BTreeSet<String> = self
+        let it = self
             .iter_hierarchy(all_zones)
             .map(|z| z.international_names.keys())
             .flat_map(|i| i)
-            .map(|n| n.as_str().into())
-            .collect();
+            .map(|n| n.as_str().into());
+        let all_lang: BTreeSet<String> = if !filter_langs.is_empty() {
+            it.filter(|n| filter_langs.iter().any(|x| x == n)).collect()
+        } else {
+            it.collect()
+        };
 
         let international_labels = all_lang
             .iter()
@@ -668,7 +672,7 @@ mod test {
         let mut zones = vec![make_zone("toto", 0)];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "toto");
     }
 
@@ -681,7 +685,7 @@ mod test {
         ];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "bob (75020-75022), bob sur mer, bobette's land");
     }
 
@@ -698,7 +702,7 @@ mod test {
         ];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "bob (75020), bob sur mer, bobette's land");
     }
 
@@ -713,7 +717,7 @@ mod test {
         ];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "bob (75020), bob sur mer, bob");
     }
 

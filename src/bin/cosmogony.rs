@@ -40,6 +40,8 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
         long = "disable-voronoi"
     )]
     disable_voronoi: bool,
+    #[structopt(help = "Only generates labels for given langs", long = "filter-langs")]
+    filter_langs: Vec<String>,
 }
 
 fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Result<(), Error> {
@@ -88,6 +90,7 @@ fn cosmogony(args: Args) -> Result<(), Error> {
         !args.disable_geom,
         args.country_code,
         args.disable_voronoi,
+        &args.filter_langs,
     )?;
 
     serialize_cosmogony(&cosmogony, args.output, format)?;

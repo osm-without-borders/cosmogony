@@ -1,6 +1,6 @@
+use crate::geo::prelude::BoundingRect;
 use crate::hierarchy_builder::ZonesTree;
 use crate::is_place;
-use crate::geo::prelude::BoundingRect;
 use crate::zone::{Zone, ZoneIndex, ZoneType};
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
