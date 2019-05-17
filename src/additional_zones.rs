@@ -190,9 +190,9 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     }
 }
 
-fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) {
+fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) -> bool {
     if towns.is_empty() {
-        return;
+        return true;
     }
     if let Some(ref mut boundary) = zone.boundary {
         let mut updates = 0;
@@ -203,23 +203,37 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) {
                     "extrude_existing_town: failed to convert to geos for zone {}: {}",
                     zone.osm_id, e
                 );
-                return;
+                return false;
             }
         };
         for town in towns {
             if g_boundary.intersects(&town.geos).unwrap_or_else(|_| false) {
-                if let Ok(b) = g_boundary.difference(&town.geos) {
-                    updates += 1;
-                    g_boundary = b;
+                match g_boundary.difference(&town.geos) {
+                    Ok(b) => {
+                        updates += 1;
+                        g_boundary = b;
+                    }
+                    Err(e) => {
+                        println!("extrude_existing_town: difference failed for {}: {:?}",
+                                 zone.osm_id, e);
+                    }
                 }
             }
         }
         if updates > 0 {
-            if let Some(g) = convert_to_geo(g_boundary) {
-                *boundary = g;
+            match convert_to_geo(g_boundary) {
+                Some(g) => {
+                    *boundary = g;
+                }
+                None => {
+                    println!("extrude_existing_town: failed to convert back to geo for {}...",
+                             zone.osm_id);
+                    return false;
+                }
             }
         }
     }
+    true
 }
 
 fn get_parent_neighbors<'a, 'b>(
@@ -300,8 +314,10 @@ fn compute_voronoi<'a, 'b>(
             place.bbox = boundary.bounding_rect();
         }
         let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, z_idx_to_place_idx);
-        extrude_existing_town(&mut place, &towns);
-        return vec![place];
+        if extrude_existing_town(&mut place, &towns) {
+            return vec![place];
+        }
+        return Vec::new();
     }
     if parent.zone_type == Some(ZoneType::Country) {
         println!(
