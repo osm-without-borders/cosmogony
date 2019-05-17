@@ -214,8 +214,10 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) -> bool {
                         g_boundary = b;
                     }
                     Err(e) => {
-                        println!("extrude_existing_town: difference failed for {}: {:?}",
-                                 zone.osm_id, e);
+                        println!(
+                            "extrude_existing_town: difference failed for {}: {:?}",
+                            zone.osm_id, e
+                        );
                     }
                 }
             }
@@ -226,8 +228,10 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) -> bool {
                     *boundary = g;
                 }
                 None => {
-                    println!("extrude_existing_town: failed to convert back to geo for {}...",
-                             zone.osm_id);
+                    println!(
+                        "extrude_existing_town: failed to convert back to geo for {}...",
+                        zone.osm_id
+                    );
                     return false;
                 }
             }
