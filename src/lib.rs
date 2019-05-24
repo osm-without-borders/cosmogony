@@ -26,7 +26,6 @@ mod mutable_slice;
 pub mod zone;
 pub mod zone_typer;
 
-//use crate::rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use crate::country_finder::CountryFinder;
 use crate::file_format::OutputFormat;
