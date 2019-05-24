@@ -365,7 +365,6 @@ impl Zone {
         }
     }
 
-    // TODO factorize it with contains
     pub fn contains_center(&self, other: &Zone) -> bool {
         match (&self.boundary, &other.center) {
             (&Some(ref mpoly1), &Some(ref point)) => mpoly1.contains(point),
