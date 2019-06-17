@@ -169,7 +169,7 @@ impl RulesOverrides {
 fn read_libpostal_yaml_folder() -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
     Ok(LIBPOSTAL_RULES_DIR.files().iter().filter_map(|d| {
         let contents = d.contents_utf8()?;
-let deserialized_level = read_libpostal_yaml(&contents)
+        let deserialized_level = read_libpostal_yaml(&contents)
             .map_err(|e| {
                 warn!(
                     "Levels corresponding to file: {:?} have been skipped due to {}",

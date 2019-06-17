@@ -1,6 +1,23 @@
 #[macro_use]
 extern crate include_dir;
+extern crate failure;
+extern crate geo;
+extern crate geo_types;
+#[macro_use]
+extern crate log;
+extern crate geos;
+extern crate lazy_static;
+extern crate ordered_float;
+extern crate osm_boundaries_utils;
+extern crate osmpbfreader;
+extern crate rayon;
+extern crate regex;
+extern crate serde;
+extern crate serde_derive;
+extern crate serde_yaml;
+extern crate structopt;
 
+mod additional_zones;
 pub mod cosmogony;
 mod country_finder;
 pub mod file_format;
@@ -14,10 +31,11 @@ use crate::country_finder::CountryFinder;
 use crate::file_format::OutputFormat;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use crate::mutable_slice::MutableSlice;
+use additional_zones::compute_additional_cities;
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
-use osmpbfreader::{OsmObj, OsmPbfReader};
+use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
@@ -38,25 +56,29 @@ pub fn is_admin(obj: &OsmObj) -> bool {
     }
 }
 
+pub fn is_place(obj: &OsmObj) -> bool {
+    match *obj {
+        OsmObj::Node(ref node) => node
+            .tags
+            .get("place")
+            .map_or(false, |v| v == "city" || v == "town" || v == "village"),
+        _ => false,
+    }
+}
+
 pub fn get_zones_and_stats(
-    pbf: &mut OsmPbfReader<File>,
+    pbf: &BTreeMap<OsmId, OsmObj>,
 ) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
-    info!("Reading pbf with geometries...");
-    let objects = pbf
-        .get_objs_and_deps(|o| is_admin(o))
-        .context("invalid osm file")?;
-    info!("reading pbf done.");
-
-    let mut zones = vec![];
     let stats = CosmogonyStats::default();
+    let mut zones = Vec::with_capacity(1000);
 
-    for obj in objects.values() {
+    for obj in pbf.values() {
         if !is_admin(obj) {
             continue;
         }
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = zone::Zone::from_osm_with_geom(relation, &objects, next_index) {
+            if let Some(zone) = zone::Zone::from_osm_with_geom(relation, pbf, next_index) {
                 // Ignore zone without boundary polygon for the moment
                 if zone.boundary.is_some() {
                     zones.push(zone);
@@ -69,14 +91,13 @@ pub fn get_zones_and_stats(
 }
 
 pub fn get_zones_and_stats_without_geom(
-    pbf: &mut OsmPbfReader<File>,
+    pbf: &BTreeMap<OsmId, OsmObj>,
 ) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
     info!("Reading pbf without geometries...");
-
-    let mut zones = vec![];
+    let mut zones = Vec::with_capacity(1000);
     let stats = CosmogonyStats::default();
 
-    for obj in pbf.par_iter().map(Result::unwrap) {
+    for obj in pbf.values() {
         if !is_admin(&obj) {
             continue;
         }
@@ -114,7 +135,7 @@ fn type_zones(
     info!("reading libpostal's rules");
     let zone_typer = zone_typer::ZoneTyper::new()?;
 
-    info!("creating a countrys rtree");
+    info!("creating a countries rtree");
     let country_finder: CountryFinder = CountryFinder::init(&zones, &zone_typer);
     if country_code.is_none() && country_finder.is_empty() {
         return Err(failure::err_msg(
@@ -169,12 +190,12 @@ fn type_zones(
     Ok(())
 }
 
-fn compute_labels(zones: &mut [Zone]) {
+fn compute_labels(zones: &mut [Zone], filter_langs: &[String]) {
     info!("computing all zones's label");
     let nb_zones = zones.len();
     for i in 0..nb_zones {
         let (mslice, z) = MutableSlice::init(zones, i);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, filter_langs);
     }
 }
 
@@ -186,25 +207,34 @@ fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
     info!("{} zones cleaned", (nb_zones - zones.len()));
 }
 
-fn create_ontology(
+pub fn create_ontology(
     zones: &mut Vec<zone::Zone>,
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
+    disable_voronoi: bool,
+    parsed_pbf: &BTreeMap<OsmId, OsmObj>,
+    filter_langs: &[String],
 ) -> Result<(), Error> {
     info!("creating ontology for {} zones", zones.len());
-    let inclusions = find_inclusions(zones);
+    let (inclusions, ztree) = find_inclusions(zones);
 
     type_zones(zones, stats, country_code, &inclusions)?;
 
     build_hierarchy(zones, inclusions);
 
-    zones.iter_mut().for_each(|z| z.compute_names());
-    compute_labels(zones);
+    if !disable_voronoi {
+        compute_additional_cities(zones, parsed_pbf, ztree);
+    }
 
-    // we remove the useless zones from cosmogony
-    // WARNING: this invalidate the different indexes  (we can no longer lookup a Zone by it's id in the zones's vector)
-    // this should be removed later on (and switch to a map by osm_id ?) as it's not elegant,
-    // but for the moment it'll do
+    zones.iter_mut().for_each(|z| z.compute_names());
+
+    compute_labels(zones, filter_langs);
+
+    // We remove the useless zones from cosmogony.
+    //
+    // WARNING: this invalidates the different indexes  (we can no longer lookup a Zone by it's id
+    // in the zones's vector) this should be removed later on (and switch to a map by osm_id ?) as
+    // it's not elegant, but for the moment it'll do.
     clean_untagged_zones(zones);
 
     Ok(())
@@ -214,31 +244,44 @@ pub fn build_cosmogony(
     pbf_path: String,
     with_geom: bool,
     country_code: Option<String>,
+    disable_voronoi: bool,
+    filter_langs: &[String],
 ) -> Result<Cosmogony, Error> {
     let path = Path::new(&pbf_path);
+    info!("Reading pbf with geometries...");
     let file = File::open(&path).context("no pbf file")?;
 
-    let mut parsed_pbf = OsmPbfReader::new(file);
+    let parsed_pbf = OsmPbfReader::new(file)
+        .get_objs_and_deps(|o| is_admin(o) || is_place(o))
+        .context("invalid osm file")?;
+    info!("reading pbf done.");
 
     let (mut zones, mut stats) = if with_geom {
-        get_zones_and_stats(&mut parsed_pbf)?
+        get_zones_and_stats(&parsed_pbf)?
     } else {
-        get_zones_and_stats_without_geom(&mut parsed_pbf)?
+        get_zones_and_stats_without_geom(&parsed_pbf)?
     };
 
-    create_ontology(&mut zones, &mut stats, country_code)?;
+    create_ontology(
+        &mut zones,
+        &mut stats,
+        country_code,
+        disable_voronoi,
+        &parsed_pbf,
+        filter_langs,
+    )?;
 
     stats.compute(&zones);
 
     let cosmogony = Cosmogony {
-        zones: zones,
+        zones,
         meta: CosmogonyMetadata {
             osm_filename: path
                 .file_name()
                 .and_then(|f| f.to_str())
                 .map(|f| f.to_string())
-                .unwrap_or("invalid file name".into()),
-            stats: stats,
+                .unwrap_or_else(|| "invalid file name".into()),
+            stats,
         },
     };
     Ok(cosmogony)

@@ -1,11 +1,12 @@
 use crate::mutable_slice::MutableSlice;
 use geo::algorithm::bounding_rect::BoundingRect;
+use geo::prelude::Contains;
 use geo_types::{Coordinate, Point, Rect};
-use geos::GGeom;
+use geos::Geometry;
 use itertools::Itertools;
 use log::{debug, info, warn};
 use osm_boundaries_utils::build_boundary;
-use osmpbfreader::objects::{OsmId, OsmObj, Relation, Tags};
+use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use serde::Serialize;
 use serde_derive::*;
@@ -42,7 +43,7 @@ impl ZoneType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct ZoneIndex {
     pub index: usize,
 }
@@ -90,6 +91,8 @@ pub struct Zone {
     pub parent: Option<ZoneIndex>,
     pub wikidata: Option<String>,
     // pub links: Vec<ZoneIndex>
+    #[serde(default)]
+    pub is_generated: bool,
 }
 
 /// get all the international names from the osm tags
@@ -133,6 +136,7 @@ impl Default for Zone {
             center_tags: Tags::new(),
             wikidata: None,
             zip_codes: vec![],
+            is_generated: true,
         }
     }
 }
@@ -148,6 +152,59 @@ impl Zone {
 
     pub fn set_parent(&mut self, idx: Option<ZoneIndex>) {
         self.parent = idx;
+    }
+
+    pub fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Self> {
+        let osm_id = OsmId::Node(node.id);
+        let osm_id_str = match osm_id {
+            OsmId::Node(n) => format!("node:{}", n.0.to_string()),
+            OsmId::Relation(r) => format!("relation:{}", r.0.to_string()),
+            OsmId::Way(r) => format!("way:{}", r.0.to_string()),
+        };
+        let tags = &node.tags;
+        let name = match tags.get("name") {
+            Some(val) => val,
+            None => {
+                debug!(
+                    "{}: administrative region without name, skipped",
+                    &osm_id_str
+                );
+                return None;
+            }
+        };
+        let level = tags.get("admin_level").and_then(|s| s.parse().ok());
+        let zip_code = tags
+            .get("addr:postcode")
+            .or_else(|| tags.get("postal_code"))
+            .map_or("", |val| &val[..]);
+        let zip_codes = zip_code
+            .split(';')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .sorted()
+            .collect();
+        let wikidata = tags.get("wikidata").map(|s| s.to_string());
+
+        let international_names = get_international_names(&tags, name);
+        Some(Self {
+            id: index,
+            osm_id: osm_id_str,
+            admin_level: level,
+            zone_type: None,
+            name: name.to_string(),
+            boundary: None,
+            bbox: None,
+            parent: None,
+            tags: tags.clone(),
+            center_tags: Tags::new(),
+            wikidata,
+            center: None,
+            international_labels: BTreeMap::default(),
+            international_names,
+            label: "".to_string(),
+            zip_codes,
+            is_generated: true,
+        })
     }
 
     pub fn from_osm(
@@ -210,14 +267,15 @@ impl Zone {
             label: "".to_string(),
             international_labels: BTreeMap::default(),
             international_names: BTreeMap::default(),
-            zip_codes: zip_codes,
+            zip_codes,
             center: None,
             boundary: None,
             bbox: None,
             parent: None,
-            tags: tags,
+            tags,
             center_tags: Tags::new(),
-            wikidata: wikidata,
+            wikidata,
+            is_generated: false,
         })
     }
 
@@ -230,6 +288,7 @@ impl Zone {
         Self::from_osm(relation, objects, index).map(|mut result| {
             result.boundary = build_boundary(relation, objects);
             result.bbox = result.boundary.as_ref().and_then(|b| b.bounding_rect());
+            result.is_generated = false;
 
             let refs = &relation.refs;
             let center = refs
@@ -266,15 +325,15 @@ impl Zone {
         use geos::from_geo::TryInto;
         match (&self.boundary, &other.boundary) {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
-                let m_self: Result<GGeom, _> = mpoly1.try_into();
-                let m_other: Result<GGeom, _> = mpoly2.try_into();
+                let m_self: Result<Geometry, _> = mpoly1.try_into();
+                let m_other: Result<Geometry, _> = mpoly2.try_into();
 
                 match (&m_self, &m_other) {
                     (&Ok(ref m_self), &Ok(ref m_other)) => {
                         // In GEOS, "covers" is less strict than "contains".
                         // eg: a polygon does NOT "contain" its boundary, but "covers" it.
                         m_self.covers(&m_other)
-                        .map_err(|e| info!("impossible to compute geometies coverage for zone {:?}/{:?}: error {}",
+                        .map_err(|e| info!("impossible to compute geometries coverage for zone {:?}/{:?}: error {}",
                         &self.osm_id, &other.osm_id, e))
                         .unwrap_or(false)
                     }
@@ -302,6 +361,13 @@ impl Zone {
                     }
                 }
             }
+            _ => false,
+        }
+    }
+
+    pub fn contains_center(&self, other: &Zone) -> bool {
+        match (&self.boundary, &other.center) {
+            (&Some(ref mpoly1), &Some(ref point)) => mpoly1.contains(point),
             _ => false,
         }
     }
@@ -339,16 +405,20 @@ impl Zone {
     /// We compute a default label, and a label per language
     /// Note: for the moment we use the same format for every language,
     /// but in the future we might use opencage's configuration for this
-    pub fn compute_labels(&mut self, all_zones: &MutableSlice<'_>) {
+    pub fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]) {
         let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
-        let all_lang: BTreeSet<String> = self
+        let it = self
             .iter_hierarchy(all_zones)
             .map(|z| z.international_names.keys())
             .flat_map(|i| i)
-            .map(|n| n.as_str().into())
-            .collect();
+            .map(|n| n.as_str().into());
+        let all_lang: BTreeSet<String> = if !filter_langs.is_empty() {
+            it.filter(|n| filter_langs.iter().any(|x| x == n)).collect()
+        } else {
+            it.collect()
+        };
 
         let international_labels = all_lang
             .iter()
@@ -437,7 +507,6 @@ where
     S: serde::Serializer,
 {
     use geojson::{GeoJson, Geometry, Value};
-    use serde::Serialize;
 
     match *multi_polygon_option {
         Some(ref multi_polygon) => {
@@ -593,6 +662,7 @@ mod test {
             center_tags: Tags::new(),
             wikidata: None,
             zip_codes: zips.iter().map(|s| s.to_string()).collect(),
+            is_generated: false,
         }
     }
 
@@ -601,7 +671,7 @@ mod test {
         let mut zones = vec![make_zone("toto", 0)];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "toto");
     }
 
@@ -614,7 +684,7 @@ mod test {
         ];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "bob (75020-75022), bob sur mer, bobette's land");
     }
 
@@ -631,7 +701,7 @@ mod test {
         ];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "bob (75020), bob sur mer, bobette's land");
     }
 
@@ -646,7 +716,7 @@ mod test {
         ];
 
         let (mslice, z) = MutableSlice::init(&mut zones, 0);
-        z.compute_labels(&mslice);
+        z.compute_labels(&mslice, &[]);
         assert_eq!(z.label, "bob (75020), bob sur mer, bob");
     }
 

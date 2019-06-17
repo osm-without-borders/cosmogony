@@ -1,3 +1,5 @@
+extern crate geo;
+
 use crate::mutable_slice::MutableSlice;
 use crate::zone::{Zone, ZoneIndex};
 use geo_types::{Point, Rect};
@@ -79,7 +81,7 @@ impl Zone {
     }
 }
 
-pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
+pub fn find_inclusions(zones: &[Zone]) -> (Vec<Vec<ZoneIndex>>, ZonesTree) {
     use rayon::prelude::*;
     info!("finding all the inclusions");
     let ztree: ZonesTree = zones.iter().collect();
@@ -97,7 +99,7 @@ pub fn find_inclusions(zones: &[Zone]) -> Vec<Vec<ZoneIndex>> {
         })
         .collect_into_vec(&mut result);
 
-    result
+    (result, ztree)
 }
 
 /// Build the cosmogony hierarchy for all the zones
@@ -211,7 +213,7 @@ mod test {
         let mut zones = create_zones();
 
         let inclusions = find_inclusions(&zones);
-        build_hierarchy(&mut zones, inclusions);
+        build_hierarchy(&mut zones, inclusions.0);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -228,7 +230,7 @@ mod test {
         zones[1].zone_type = Some(ZoneType::NonAdministrative);
 
         let inclusions = find_inclusions(&zones);
-        build_hierarchy(&mut zones, inclusions);
+        build_hierarchy(&mut zones, inclusions.0);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -245,7 +247,7 @@ mod test {
         zones[2].zone_type = Some(ZoneType::State);
 
         let inclusions = find_inclusions(&zones);
-        build_hierarchy(&mut zones, inclusions);
+        build_hierarchy(&mut zones, inclusions.0);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -263,7 +265,7 @@ mod test {
         zones[2].zone_type = Some(ZoneType::CountryRegion);
 
         let inclusions = find_inclusions(&zones);
-        build_hierarchy(&mut zones, inclusions);
+        build_hierarchy(&mut zones, inclusions.0);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0
@@ -281,7 +283,7 @@ mod test {
         zones[1].zone_type = None;
 
         let inclusions = find_inclusions(&zones);
-        build_hierarchy(&mut zones, inclusions);
+        build_hierarchy(&mut zones, inclusions.0);
 
         assert_parent(&zones, 0, None); // z0 has no parent
         assert_parent(&zones, 1, Some(0)); // z1 parent is z0

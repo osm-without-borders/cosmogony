@@ -1,7 +1,12 @@
 #[macro_use]
 extern crate approx;
-use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
+use cosmogony::{
+    create_ontology, get_zones_and_stats, is_admin, is_place, Cosmogony, Zone, ZoneIndex, ZoneType,
+};
+use osmpbfreader::OsmPbfReader;
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::path::Path;
 use std::process::{Command, Output};
 
 use geo_types::Point;
@@ -94,8 +99,9 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()))
-        .expect("invalid cosmogony");
+    let cosmogony =
+        cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()), true, &[])
+            .expect("invalid cosmogony");
     return cosmogony;
 }
 
@@ -275,8 +281,9 @@ fn test_center_label() {
         env!("OUT_DIR"),
         "/../../../../../tests/data/gatineau.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()))
-        .expect("invalid cosmogony");
+    let cosmogony =
+        cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()), true, &[])
+            .expect("invalid cosmogony");
 
     let gati = cosmogony
         .zones
@@ -292,4 +299,26 @@ fn test_center_label() {
         gati_center,
         Coord::new(-75.72326699999999, 45.457240999999996)
     );
+}
+
+#[test]
+fn test_voronoi() {
+    let ivory_test_file = concat!(
+        env!("OUT_DIR"),
+        "/../../../../../tests/data/ivory-coast.pbf"
+    );
+    let path = Path::new(&ivory_test_file);
+    let file = File::open(&path).expect("no pbf file");
+
+    let parsed_pbf = OsmPbfReader::new(file)
+        .get_objs_and_deps(|o| is_admin(o) || is_place(o))
+        .expect("invalid osm file");
+
+    let (mut zones, mut stats) =
+        get_zones_and_stats(&parsed_pbf).expect("get_zones_and_stats failed");
+
+    assert_eq!(zones.len(), 118);
+    create_ontology(&mut zones, &mut stats, None, false, &parsed_pbf, &[])
+        .expect("create_ontology failed");
+    assert_eq!(zones.len(), 4449);
 }

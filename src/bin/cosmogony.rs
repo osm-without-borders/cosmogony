@@ -35,6 +35,13 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
         long = "country-code"
     )]
     country_code: Option<String>,
+    #[structopt(
+        help = "Prevent voronoi geometries computation and generation",
+        long = "disable-voronoi"
+    )]
+    disable_voronoi: bool,
+    #[structopt(help = "Only generates labels for given langs", long = "filter-langs")]
+    filter_langs: Vec<String>,
 }
 
 fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Result<(), Error> {
@@ -78,7 +85,13 @@ fn serialize_cosmogony(
 fn cosmogony(args: Args) -> Result<(), Error> {
     let format = OutputFormat::from_filename(&args.output)?;
 
-    let cosmogony = build_cosmogony(args.input, !args.disable_geom, args.country_code)?;
+    let cosmogony = build_cosmogony(
+        args.input,
+        !args.disable_geom,
+        args.country_code,
+        args.disable_voronoi,
+        &args.filter_langs,
+    )?;
 
     serialize_cosmogony(&cosmogony, args.output, format)?;
 
@@ -96,7 +109,7 @@ fn init_logger() {
     let mut builder = env_logger::Builder::new();
     builder.filter(None, log::LevelFilter::Info);
     if let Ok(s) = std::env::var("RUST_LOG") {
-        builder.parse(&s);
+        builder.parse_filters(&s);
     }
     builder.init();
 }
