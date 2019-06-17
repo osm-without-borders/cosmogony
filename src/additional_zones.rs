@@ -190,6 +190,8 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     }
 }
 
+// Extrude all common parts between `zone` and the given `towns`. If an error occurs during the
+// process, it'll return `false`.
 fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) -> bool {
     if towns.is_empty() {
         return true;
@@ -318,6 +320,7 @@ fn compute_voronoi<'a, 'b>(
             place.bbox = boundary.bounding_rect();
         }
         let towns = get_parent_neighbors(&parent, towns, zones, zones_rtree, z_idx_to_place_idx);
+        // If an error occurs, we can't just use the parent area so instead, we return nothing.
         if extrude_existing_town(&mut place, &towns) {
             return vec![place];
         }
