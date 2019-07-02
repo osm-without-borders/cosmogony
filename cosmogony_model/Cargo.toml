@@ -1,5 +1,5 @@
 [package]
-name = "cosmogony"
+name = "cosmogony_model"
 version = "0.6.0"
 authors = ["Adrien Matissart <a.matissart@qwantresearch.com>", "Antoine Desbordes <antoine.desbordes@gmail.com>"]
 license = "Apache-2.0"
@@ -11,36 +11,17 @@ description = "Provides geographical zones with a structured hierarchy"
 readme = "README.md"
 edition = "2018"
 
-
 [badges]
 travis-ci = { repository = "osm-without-borders/cosmogony" }
 
 [dependencies]
-cosmogony_model = { path = "cosmogony_model" }
 log = "0.4"
 env_logger = "0.6"
 geo = "0.12"
 geo-types = { version = "0.4", features = ["rstar"] }
-structopt = "0.2"
-structopt-derive = "0.1"
-osmpbfreader = "0.13"
-lazy_static = "1"
 serde = {version = "1", features = ["rc"]}
 serde_derive = "1"
-serde_json = "1"
-serde_yaml = "0.8"
-itertools = "0.8"
 geojson = "0.15"
 failure = "0.1"
 failure_derive = "0.1"
-osm_boundaries_utils = "0.4"
-geos = { version = "5.0", features= ["geo"] }
-regex = "1"
-ordered-float = "0.0.2"
-flate2 = "1.0"
-rayon = "1.0"
-include_dir = "0.2"
-rstar = "0.2"
-
-[dev-dependencies]
-approx = "0.3"
+osmpbfreader = "0.13"

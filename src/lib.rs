@@ -6,7 +6,6 @@ extern crate geo_types;
 #[macro_use]
 extern crate log;
 extern crate geos;
-extern crate lazy_static;
 extern crate ordered_float;
 extern crate osm_boundaries_utils;
 extern crate osmpbfreader;
@@ -18,20 +17,18 @@ extern crate serde_yaml;
 extern crate structopt;
 
 mod additional_zones;
-pub mod cosmogony;
 mod country_finder;
 pub mod file_format;
 mod hierarchy_builder;
-mod mutable_slice;
-pub mod zone;
+mod zone_ext;
 pub mod zone_typer;
 
-pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use crate::country_finder::CountryFinder;
 use crate::file_format::OutputFormat;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
-use crate::mutable_slice::MutableSlice;
 use additional_zones::compute_additional_cities;
+use cosmogony_model::mutable_slice::MutableSlice;
+use cosmogony_model::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
@@ -40,7 +37,9 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
 
-pub use crate::zone::{Zone, ZoneIndex, ZoneType};
+use cosmogony_model::{Zone, ZoneIndex};
+
+use crate::zone_ext::ZoneExt;
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -68,7 +67,7 @@ pub fn is_place(obj: &OsmObj) -> bool {
 
 pub fn get_zones_and_stats(
     pbf: &BTreeMap<OsmId, OsmObj>,
-) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
+) -> Result<(Vec<Zone>, CosmogonyStats), Error> {
     let stats = CosmogonyStats::default();
     let mut zones = Vec::with_capacity(1000);
 
@@ -78,7 +77,7 @@ pub fn get_zones_and_stats(
         }
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = zone::Zone::from_osm_with_geom(relation, pbf, next_index) {
+            if let Some(zone) = Zone::from_osm_with_geom(relation, pbf, next_index) {
                 // Ignore zone without boundary polygon for the moment
                 if zone.boundary.is_some() {
                     zones.push(zone);
@@ -92,7 +91,7 @@ pub fn get_zones_and_stats(
 
 pub fn get_zones_and_stats_without_geom(
     pbf: &BTreeMap<OsmId, OsmObj>,
-) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
+) -> Result<(Vec<Zone>, CosmogonyStats), Error> {
     info!("Reading pbf without geometries...");
     let mut zones = Vec::with_capacity(1000);
     let stats = CosmogonyStats::default();
@@ -103,7 +102,7 @@ pub fn get_zones_and_stats_without_geom(
         }
         if let OsmObj::Relation(ref relation) = obj {
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = zone::Zone::from_osm(relation, &BTreeMap::default(), next_index) {
+            if let Some(zone) = Zone::from_osm(relation, &BTreeMap::default(), next_index) {
                 zones.push(zone);
             }
         }
@@ -114,7 +113,7 @@ pub fn get_zones_and_stats_without_geom(
 
 fn get_country_code<'a>(
     country_finder: &'a CountryFinder,
-    zone: &zone::Zone,
+    zone: &Zone,
     country_code: &'a Option<String>,
     inclusions: &Vec<ZoneIndex>,
 ) -> Option<String> {
@@ -126,7 +125,7 @@ fn get_country_code<'a>(
 }
 
 fn type_zones(
-    zones: &mut [zone::Zone],
+    zones: &mut [Zone],
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
     inclusions: &Vec<Vec<ZoneIndex>>,
@@ -200,7 +199,7 @@ fn compute_labels(zones: &mut [Zone], filter_langs: &[String]) {
 }
 
 // we don't want to keep zone's without zone_type (but the zone_type could be ZoneType::NonAdministrative)
-fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
+fn clean_untagged_zones(zones: &mut Vec<Zone>) {
     info!("cleaning untagged zones");
     let nb_zones = zones.len();
     zones.retain(|z| z.zone_type.is_some());
@@ -208,7 +207,7 @@ fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
 }
 
 pub fn create_ontology(
-    zones: &mut Vec<zone::Zone>,
+    zones: &mut Vec<Zone>,
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
     disable_voronoi: bool,

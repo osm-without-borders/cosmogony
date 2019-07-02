@@ -1,7 +1,7 @@
-use crate::geo::prelude::BoundingRect;
 use crate::hierarchy_builder::ZonesTree;
 use crate::is_place;
-use crate::zone::{Zone, ZoneIndex, ZoneType};
+use cosmogony_model::{Zone, ZoneIndex, ZoneType};
+use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;
 use geos::{ContextInteractions, Geometry};
@@ -9,6 +9,8 @@ use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+
+use crate::zone_ext::ZoneExt;
 
 #[allow(dead_code)]
 struct ZoneWithGeos<'a> {

@@ -1,160 +1,47 @@
-use crate::mutable_slice::MutableSlice;
+// extends Zones to add some capabilities
+// The Zone's capabilities have been split in order to hide some functions specific to cosmogony
+// and that we do not want to expose in the model
+
+use cosmogony_model::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType};
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::Contains;
-use geo_types::{Coordinate, Point, Rect};
 use geos::Geometry;
 use itertools::Itertools;
-use log::{debug, info, warn};
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
-use serde::Serialize;
-use serde_derive::*;
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt;
 
-type Coord = Point<f64>;
+pub trait ZoneExt {
+    fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Zone>;
+    fn from_osm(
+        relation: &Relation,
+        objects: &BTreeMap<OsmId, OsmObj>,
+        index: ZoneIndex,
+    ) -> Option<Zone>;
 
-#[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-#[serde(rename_all = "snake_case")]
-pub enum ZoneType {
-    Suburb,
-    CityDistrict,
-    City,
-    StateDistrict,
-    State,
-    CountryRegion,
-    Country,
-    NonAdministrative,
+    fn from_osm_with_geom(
+        relation: &Relation,
+        objects: &BTreeMap<OsmId, OsmObj>,
+        index: ZoneIndex,
+    ) -> Option<Zone>;
+    fn contains(&self, other: &Zone) -> bool;
+    fn contains_center(&self, other: &Zone) -> bool;
+    //todo move this method
+    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice<'_>, f: F) -> String
+    where
+        F: Fn(&Zone) -> String;
+    fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]);
+    fn compute_names(&mut self);
+
+    /// a zone can be a child of another zone z if:
+    /// z is an admin (we don't want to have non administrative zones as parent)
+    /// z's type is larger (so a State cannot have a City as parent)
+    fn can_be_child_of(&self, z: &Zone) -> bool;
 }
 
-impl ZoneType {
-    pub fn as_str(&self) -> &'static str {
-        match *self {
-            ZoneType::Suburb => "suburb",
-            ZoneType::CityDistrict => "city_district",
-            ZoneType::City => "city",
-            ZoneType::StateDistrict => "state_district",
-            ZoneType::State => "state",
-            ZoneType::CountryRegion => "country_region",
-            ZoneType::Country => "country",
-            ZoneType::NonAdministrative => "non_administrative",
-        }
-    }
-}
-
-#[derive(Copy, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
-pub struct ZoneIndex {
-    pub index: usize,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Zone {
-    pub id: ZoneIndex,
-    pub osm_id: String,
-    pub admin_level: Option<u32>,
-    pub zone_type: Option<ZoneType>,
-    pub name: String,
-    #[serde(default)]
-    pub label: String,
-    #[serde(default)]
-    pub international_labels: BTreeMap<String, String>,
-    // we do not serialize the internal_names,
-    // it's only used temporary to build the international_labels
-    #[serde(skip)]
-    international_names: BTreeMap<String, String>,
-    pub zip_codes: Vec<String>,
-    #[serde(
-        serialize_with = "serialize_as_geojson",
-        deserialize_with = "deserialize_as_coord"
-    )]
-    pub center: Option<Coord>,
-    #[serde(
-        serialize_with = "serialize_as_geojson",
-        deserialize_with = "deserialize_as_multipolygon",
-        rename = "geometry",
-        default
-    )]
-    pub boundary: Option<geo_types::MultiPolygon<f64>>,
-
-    #[serde(
-        serialize_with = "serialize_bbox_as_geojson",
-        deserialize_with = "deserialize_as_rect",
-        default
-    )]
-    pub bbox: Option<Rect<f64>>,
-
-    pub tags: Tags,
-    #[serde(default = "Tags::new")] //to keep the retrocompatibility with cosmogony2mimir
-    pub center_tags: Tags,
-
-    pub parent: Option<ZoneIndex>,
-    pub wikidata: Option<String>,
-    // pub links: Vec<ZoneIndex>
-    #[serde(default)]
-    pub is_generated: bool,
-}
-
-/// get all the international names from the osm tags
-///
-/// the names in osm are in a tag names `name:<lang>`,
-/// eg `name:fr`, `name:de`, ...
-///
-/// we don't add the international names that are equivalent to the default name
-/// to reduce the size of the map
-fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, String> {
-    lazy_static::lazy_static! {
-        static ref LANG_NAME_REG: Regex = Regex::new("^name:(.+)").unwrap();
-    }
-
-    tags.iter()
-        .filter(|&(_, v)| v != default_name)
-        .filter_map(|(k, v)| {
-            let lang = LANG_NAME_REG.captures(k)?.get(1)?;
-
-            Some((lang.as_str().into(), v.clone()))
-        })
-        .collect()
-}
-
-impl Default for Zone {
-    fn default() -> Self {
-        Zone {
-            id: ZoneIndex { index: 0 },
-            osm_id: "".into(),
-            admin_level: None,
-            zone_type: None,
-            name: "".into(),
-            label: "".into(),
-            international_labels: BTreeMap::default(),
-            international_names: BTreeMap::default(),
-            center: None,
-            boundary: None,
-            bbox: None,
-            parent: None,
-            tags: Tags::new(),
-            center_tags: Tags::new(),
-            wikidata: None,
-            zip_codes: vec![],
-            is_generated: true,
-        }
-    }
-}
-
-impl Zone {
-    pub fn is_admin(&self) -> bool {
-        match self.zone_type {
-            None => false,
-            Some(ZoneType::NonAdministrative) => false,
-            _ => true,
-        }
-    }
-
-    pub fn set_parent(&mut self, idx: Option<ZoneIndex>) {
-        self.parent = idx;
-    }
-
-    pub fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Self> {
+impl ZoneExt for Zone {
+    fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Self> {
         let osm_id = OsmId::Node(node.id);
         let osm_id_str = match osm_id {
             OsmId::Node(n) => format!("node:{}", n.0.to_string()),
@@ -207,7 +94,7 @@ impl Zone {
         })
     }
 
-    pub fn from_osm(
+    fn from_osm(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
@@ -279,7 +166,7 @@ impl Zone {
         })
     }
 
-    pub fn from_osm_with_geom(
+    fn from_osm_with_geom(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
@@ -321,7 +208,7 @@ impl Zone {
         })
     }
 
-    pub fn contains(&self, other: &Zone) -> bool {
+    fn contains(&self, other: &Zone) -> bool {
         use geos::from_geo::TryInto;
         match (&self.boundary, &other.boundary) {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
@@ -365,18 +252,10 @@ impl Zone {
         }
     }
 
-    pub fn contains_center(&self, other: &Zone) -> bool {
+    fn contains_center(&self, other: &Zone) -> bool {
         match (&self.boundary, &other.center) {
             (&Some(ref mpoly1), &Some(ref point)) => mpoly1.contains(point),
             _ => false,
-        }
-    }
-
-    /// iter_hierarchy gives an iterator over the whole hierachy including self
-    pub fn iter_hierarchy<'a>(&'a self, all_zones: &'a MutableSlice<'_>) -> HierarchyIterator<'a> {
-        HierarchyIterator {
-            zone: Some(&self),
-            all_zones: all_zones,
         }
     }
 
@@ -405,7 +284,7 @@ impl Zone {
     /// We compute a default label, and a label per language
     /// Note: for the moment we use the same format for every language,
     /// but in the future we might use opencage's configuration for this
-    pub fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]) {
+    fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]) {
         let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
@@ -434,7 +313,7 @@ impl Zone {
         self.label = label;
     }
 
-    pub fn compute_names(&mut self) {
+    fn compute_names(&mut self) {
         if self.zone_type == Some(ZoneType::City)
             || self.wikidata.is_some()
                 && self.wikidata == self.center_tags.get("wikidata").map(|s| s.to_string())
@@ -451,6 +330,13 @@ impl Zone {
             })
         }
         self.international_names = get_international_names(&self.tags, &self.name);
+    }
+
+    /// a zone can be a child of another zone z if:
+    /// z is an admin (we don't want to have non administrative zones as parent)
+    /// z's type is larger (so a State cannot have a City as parent)
+    fn can_be_child_of(&self, z: &Zone) -> bool {
+        z.is_admin() && (!self.is_admin() || self.zone_type < z.zone_type)
     }
 }
 
@@ -474,172 +360,32 @@ fn format_zip_code(zip_codes: &[String]) -> String {
     }
 }
 
-pub struct HierarchyIterator<'a> {
-    zone: Option<&'a Zone>,
-    all_zones: &'a MutableSlice<'a>,
-}
-
-impl<'a> Iterator for HierarchyIterator<'a> {
-    type Item = &'a Zone;
-    fn next(&mut self) -> Option<&'a Zone> {
-        let z = self.zone;
-        match z {
-            Some(z) => {
-                self.zone = match &z.parent {
-                    Some(ref p_idx) => Some(self.all_zones.get(&p_idx)),
-                    _ => None,
-                };
-                Some(z)
-            }
-            None => None,
-        }
+/// get all the international names from the osm tags
+///
+/// the names in osm are in a tag names `name:<lang>`,
+/// eg `name:fr`, `name:de`, ...
+///
+/// we don't add the international names that are equivalent to the default name
+/// to reduce the size of the map
+fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, String> {
+    lazy_static::lazy_static! {
+        static ref LANG_NAME_REG: Regex = Regex::new("^name:(.+)").unwrap();
     }
-}
 
-// those 2 methods have been shamelessly copied from https://github.com/CanalTP/mimirsbrunn/blob/master/libs/mimir/src/objects.rs#L277
-// see if there is a good way to share the code
-fn serialize_as_geojson<'a, S, T>(
-    multi_polygon_option: &'a Option<T>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    geojson::Value: From<&'a T>,
-    S: serde::Serializer,
-{
-    use geojson::{GeoJson, Geometry, Value};
+    tags.iter()
+        .filter(|&(_, v)| v != default_name)
+        .filter_map(|(k, v)| {
+            let lang = LANG_NAME_REG.captures(k)?.get(1)?;
 
-    match *multi_polygon_option {
-        Some(ref multi_polygon) => {
-            GeoJson::Geometry(Geometry::new(Value::from(multi_polygon))).serialize(serializer)
-        }
-        None => serializer.serialize_none(),
-    }
-}
-
-fn deserialize_geom<'de, D>(d: D) -> Result<Option<geo::Geometry<f64>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use geojson::conversion::TryInto;
-    use serde::Deserialize;
-
-    Option::<geojson::GeoJson>::deserialize(d).map(|option| {
-        option.and_then(|geojson| match geojson {
-            geojson::GeoJson::Geometry(geojson_geom) => {
-                let geo_geom: Result<geo::Geometry<f64>, _> = geojson_geom.value.try_into();
-                match geo_geom {
-                    Ok(g) => Some(g),
-                    Err(e) => {
-                        warn!("Error deserializing geometry: {}", e);
-                        None
-                    }
-                }
-            }
-            _ => None,
+            Some((lang.as_str().into(), v.clone()))
         })
-    })
-}
-
-fn deserialize_as_multipolygon<'de, D>(d: D) -> Result<Option<geo::MultiPolygon<f64>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    match deserialize_geom(d)? {
-        Some(geo::Geometry::MultiPolygon(geo_multi_polygon)) => Ok(Some(geo_multi_polygon)),
-        None => Ok(None),
-        Some(_) => Err(serde::de::Error::custom(
-            "invalid geometry type, should be a multipolygon",
-        )),
-    }
-}
-
-fn deserialize_as_coord<'de, D>(d: D) -> Result<Option<Coord>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    match deserialize_geom(d)? {
-        Some(geo::Geometry::Point(p)) => Ok(Some(p)),
-        None => Ok(None),
-        Some(_) => Err(serde::de::Error::custom(
-            "invalid geometry type, should be a point",
-        )),
-    }
-}
-
-fn serialize_bbox_as_geojson<'a, S>(
-    bbox: &'a Option<Rect<f64>>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    use geojson::Bbox as GeojsonBbox;
-    match bbox {
-        Some(b) => {
-            // bbox serialized as an array
-            // using GeoJSON bounding box format
-            // See RFC 7946: https://tools.ietf.org/html/rfc7946#section-5
-            let geojson_bbox: GeojsonBbox = vec![b.min.x, b.min.y, b.max.x, b.max.y];
-            geojson_bbox.serialize(serializer)
-        }
-        None => serializer.serialize_none(),
-    }
-}
-
-fn deserialize_as_rect<'de, D>(d: D) -> Result<Option<Rect<f64>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde::Deserialize;
-    Option::<Vec<f64>>::deserialize(d).map(|option| match option {
-        Some(b) => Some(Rect {
-            min: Coordinate { x: b[0], y: b[1] },
-            max: Coordinate { x: b[2], y: b[3] },
-        }),
-        None => None,
-    })
-}
-
-impl Serialize for ZoneIndex {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_u64(self.index as u64)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for ZoneIndex {
-    fn deserialize<D>(deserializer: D) -> Result<ZoneIndex, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_u64(ZoneIndexVisitor)
-    }
-}
-
-struct ZoneIndexVisitor;
-
-impl<'de> serde::de::Visitor<'de> for ZoneIndexVisitor {
-    type Value = ZoneIndex;
-
-    fn visit_u64<E>(self, data: u64) -> Result<ZoneIndex, E>
-    where
-        E: serde::de::Error,
-    {
-        Ok(ZoneIndex {
-            index: data as usize,
-        })
-    }
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("a zone index")
-    }
+        .collect()
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
     fn make_zone(name: &str, id: usize) -> Zone {
         make_zone_and_zip(name, id, vec![], None)
     }

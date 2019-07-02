@@ -1,8 +1,7 @@
 #[macro_use]
 extern crate approx;
-use cosmogony::{
-    create_ontology, get_zones_and_stats, is_admin, is_place, Cosmogony, Zone, ZoneIndex, ZoneType,
-};
+use cosmogony::{create_ontology, get_zones_and_stats, is_admin, is_place};
+use cosmogony_model::{Cosmogony, Zone, ZoneIndex, ZoneType};
 use osmpbfreader::OsmPbfReader;
 use std::collections::BTreeMap;
 use std::fs::File;
