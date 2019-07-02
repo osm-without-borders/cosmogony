@@ -6,7 +6,7 @@ use serde_derive::*;
 use std::collections::BTreeMap;
 use std::fmt;
 
-use include_dir::Dir;
+use include_dir::{include_dir, include_dir_impl, Dir};
 
 // :warning:
 // The include_dir macro cannot cannot watch for changes to rebuild,

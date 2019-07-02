@@ -1,20 +1,5 @@
 #[macro_use]
-extern crate include_dir;
-extern crate failure;
-extern crate geo;
-extern crate geo_types;
-#[macro_use]
 extern crate log;
-extern crate geos;
-extern crate ordered_float;
-extern crate osm_boundaries_utils;
-extern crate osmpbfreader;
-extern crate rayon;
-extern crate regex;
-extern crate serde;
-extern crate serde_derive;
-extern crate serde_yaml;
-extern crate structopt;
 
 mod additional_zones;
 mod country_finder;
