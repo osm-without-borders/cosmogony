@@ -13,25 +13,26 @@ use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub trait ZoneExt {
+    /// create a zone from an osm node
     fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Zone>;
-    fn from_osm(
+
+    /// create a zone from an osm relation and a geometry
+    fn from_osm_relation(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
     ) -> Option<Zone>;
 
-    fn from_osm_with_geom(
-        relation: &Relation,
-        objects: &BTreeMap<OsmId, OsmObj>,
-        index: ZoneIndex,
-    ) -> Option<Zone>;
+    /// check is a zone contains another zone
     fn contains(&self, other: &Zone) -> bool;
+
+    /// check if a zone contains another zone's center
     fn contains_center(&self, other: &Zone) -> bool;
-    //todo move this method
-    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice<'_>, f: F) -> String
-    where
-        F: Fn(&Zone) -> String;
+
+    /// compute the labels of a zone
     fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]);
+
+    /// compute the names of a zone
     fn compute_names(&mut self);
 
     /// a zone can be a child of another zone z if:
@@ -94,11 +95,13 @@ impl ZoneExt for Zone {
         })
     }
 
-    fn from_osm(
+    fn from_osm_relation(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
     ) -> Option<Self> {
+        use geo::centroid::Centroid;
+
         // Skip administrative region without name
         let name = match relation.tags.get("name") {
             Some(val) => val,
@@ -128,6 +131,8 @@ impl ZoneExt for Zone {
             .collect();
         let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
 
+        let osm_id = format!("relation:{}", relation.id.0.to_string());
+
         let label_node = relation
             .refs
             .iter()
@@ -145,9 +150,38 @@ impl ZoneExt for Zone {
                 })
         }
 
-        Some(Self {
+        let boundary = build_boundary(relation, objects);
+        let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
+
+        let refs = &relation.refs;
+        let osm_center = refs
+            .iter()
+            .find(|r| r.role == "admin_centre")
+            .or(refs.iter().find(|r| r.role == "label"))
+            .and_then(|r| objects.get(&r.member))
+            .and_then(|o| o.node());
+        let center_tags = osm_center.map_or(Tags::new(), |n| n.tags.clone());
+
+        let center = osm_center.map_or(
+            boundary.as_ref().and_then(|b| {
+                b.centroid().filter(|p| {
+                    /*
+                        On a broken polygon Geo may return Some(NaN,NaN) centroid.
+                        It should NOT be serialized as [null,null] in the JSON output.
+                    */
+                    if p.x().is_nan() || p.y().is_nan() {
+                        warn!("NaN in centroid {:?} for {}", p, osm_id);
+                        return false;
+                    }
+                    return true;
+                })
+            }),
+            |node| Some(Coord::new(node.lon(), node.lat())),
+        );
+
+        Some(Zone {
             id: index,
-            osm_id: format!("relation:{}", relation.id.0.to_string()), // for the moment we can only read relation
+            osm_id: osm_id,
             admin_level: level,
             zone_type: None,
             name: name.to_string(),
@@ -155,56 +189,14 @@ impl ZoneExt for Zone {
             international_labels: BTreeMap::default(),
             international_names: BTreeMap::default(),
             zip_codes,
-            center: None,
-            boundary: None,
-            bbox: None,
+            center,
+            boundary,
+            bbox: bbox,
             parent: None,
             tags,
-            center_tags: Tags::new(),
+            center_tags,
             wikidata,
             is_generated: false,
-        })
-    }
-
-    fn from_osm_with_geom(
-        relation: &Relation,
-        objects: &BTreeMap<OsmId, OsmObj>,
-        index: ZoneIndex,
-    ) -> Option<Self> {
-        use geo::centroid::Centroid;
-        Self::from_osm(relation, objects, index).map(|mut result| {
-            result.boundary = build_boundary(relation, objects);
-            result.bbox = result.boundary.as_ref().and_then(|b| b.bounding_rect());
-            result.is_generated = false;
-
-            let refs = &relation.refs;
-            let center = refs
-                .iter()
-                .find(|r| r.role == "admin_centre")
-                .or(refs.iter().find(|r| r.role == "label"))
-                .and_then(|r| objects.get(&r.member))
-                .and_then(|o| o.node());
-
-            result.center = center.map_or(
-                result.boundary.as_ref().and_then(|b| {
-                    b.centroid().filter(|p| {
-                        /*
-                            On a broken polygon Geo may return Some(NaN,NaN) centroid.
-                            It should NOT be serialized as [null,null] in the JSON output.
-                        */
-                        if p.x().is_nan() || p.y().is_nan() {
-                            warn!("NaN in centroid {:?} for {}", p, result.osm_id);
-                            return false;
-                        }
-                        return true;
-                    })
-                }),
-                |node| Some(Coord::new(node.lon(), node.lat())),
-            );
-
-            result.center_tags = center.map_or(Tags::new(), |n| n.tags.clone());
-
-            result
         })
     }
 
@@ -259,17 +251,6 @@ impl ZoneExt for Zone {
         }
     }
 
-    fn create_lbl<'a, F>(&'a self, all_zones: &'a MutableSlice<'_>, f: F) -> String
-    where
-        F: Fn(&Zone) -> String,
-    {
-        let mut hierarchy: Vec<String> = self.iter_hierarchy(all_zones).map(f).dedup().collect();
-
-        if let Some(ref mut zone_name) = hierarchy.first_mut() {
-            zone_name.push_str(&format_zip_code(&self.zip_codes));
-        }
-        hierarchy.join(", ")
-    }
     /// compute a nice human readable label
     /// The label carries the hierarchy of a zone.
     ///
@@ -285,7 +266,7 @@ impl ZoneExt for Zone {
     /// Note: for the moment we use the same format for every language,
     /// but in the future we might use opencage's configuration for this
     fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]) {
-        let label = self.create_lbl(all_zones, |z: &Zone| z.name.clone());
+        let label = create_lbl(self, all_zones, |z: &Zone| z.name.clone());
 
         // we compute a label per language
         let it = self
@@ -302,7 +283,7 @@ impl ZoneExt for Zone {
         let international_labels = all_lang
             .iter()
             .map(|lang| {
-                let lbl = self.create_lbl(all_zones, |z: &Zone| {
+                let lbl = create_lbl(self, all_zones, |z: &Zone| {
                     z.international_names.get(lang).unwrap_or(&z.name).clone()
                 });
                 (lang.to_string(), lbl)
@@ -338,6 +319,18 @@ impl ZoneExt for Zone {
     fn can_be_child_of(&self, z: &Zone) -> bool {
         z.is_admin() && (!self.is_admin() || self.zone_type < z.zone_type)
     }
+}
+
+fn create_lbl<'a, F>(zone: &'a Zone, all_zones: &'a MutableSlice<'_>, f: F) -> String
+where
+    F: Fn(&Zone) -> String,
+{
+    let mut hierarchy: Vec<String> = zone.iter_hierarchy(all_zones).map(f).dedup().collect();
+
+    if let Some(ref mut zone_name) = hierarchy.first_mut() {
+        zone_name.push_str(&format_zip_code(&zone.zip_codes));
+    }
+    hierarchy.join(", ")
 }
 
 /// format the zone's zip code
