@@ -25,11 +25,6 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
     #[structopt(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
     #[structopt(
-        help = "Do not read the geometry of the boundaries",
-        long = "disable-geom"
-    )]
-    disable_geom: bool,
-    #[structopt(
         help = "country code if the pbf file does not contains any country",
         long = "country-code"
     )]
@@ -89,7 +84,6 @@ fn cosmogony(args: Args) -> Result<(), failure::Error> {
 
     let cosmogony = build_cosmogony(
         args.input,
-        !args.disable_geom,
         args.country_code,
         args.disable_voronoi,
         &args.filter_langs,

@@ -62,7 +62,7 @@ pub fn get_zones_and_stats(
         }
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = Zone::from_osm_with_geom(relation, pbf, next_index) {
+            if let Some(zone) = Zone::from_osm_relation(relation, pbf, next_index) {
                 // Ignore zone without boundary polygon for the moment
                 if zone.boundary.is_some() {
                     zones.push(zone);
@@ -72,28 +72,6 @@ pub fn get_zones_and_stats(
     }
 
     return Ok((zones, stats));
-}
-
-pub fn get_zones_and_stats_without_geom(
-    pbf: &BTreeMap<OsmId, OsmObj>,
-) -> Result<(Vec<Zone>, CosmogonyStats), Error> {
-    info!("Reading pbf without geometries...");
-    let mut zones = Vec::with_capacity(1000);
-    let stats = CosmogonyStats::default();
-
-    for obj in pbf.values() {
-        if !is_admin(&obj) {
-            continue;
-        }
-        if let OsmObj::Relation(ref relation) = obj {
-            let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = Zone::from_osm(relation, &BTreeMap::default(), next_index) {
-                zones.push(zone);
-            }
-        }
-    }
-
-    Ok((zones, stats))
 }
 
 fn get_country_code<'a>(
@@ -226,7 +204,6 @@ pub fn create_ontology(
 
 pub fn build_cosmogony(
     pbf_path: String,
-    with_geom: bool,
     country_code: Option<String>,
     disable_voronoi: bool,
     filter_langs: &[String],
@@ -240,11 +217,7 @@ pub fn build_cosmogony(
         .context("invalid osm file")?;
     info!("reading pbf done.");
 
-    let (mut zones, mut stats) = if with_geom {
-        get_zones_and_stats(&parsed_pbf)?
-    } else {
-        get_zones_and_stats_without_geom(&parsed_pbf)?
-    };
+    let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf)?;
 
     create_ontology(
         &mut zones,
