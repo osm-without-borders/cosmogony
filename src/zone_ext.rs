@@ -2,7 +2,7 @@
 // The Zone's capabilities have been split in order to hide some functions specific to cosmogony
 // and that we do not want to expose in the model
 
-use cosmogony_model::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType};
+use cosmogony::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType};
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::Contains;
 use geos::Geometry;

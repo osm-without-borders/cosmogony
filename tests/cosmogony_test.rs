@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate approx;
-use cosmogony::{create_ontology, get_zones_and_stats, is_admin, is_place};
-use cosmogony_model::{Cosmogony, Zone, ZoneIndex, ZoneType};
+
+use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
+use cosmogony_builder::{create_ontology, get_zones_and_stats, is_admin, is_place};
 use osmpbfreader::OsmPbfReader;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -31,7 +32,7 @@ fn test_cmd_with_json_output() {
     ]);
     assert!(output.status.success());
 
-    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
+    let cosmo = cosmogony_builder::load_cosmogony_from_file(&out_file).unwrap();
     assert_eq!(cosmo.zones.len(), 195);
 }
 
@@ -47,7 +48,9 @@ fn test_cmd_with_json_stream_output() {
     assert!(output.status.success());
 
     // we try also the streaming zone's reader
-    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
+    let zones: Vec<_> = cosmogony_builder::read_zones_from_file(out_file)
+        .unwrap()
+        .collect();
     assert_eq!(zones.len(), 195);
 }
 
@@ -63,7 +66,9 @@ fn test_cmd_with_json_stream_gz_output() {
     assert!(output.status.success());
 
     // we try also the streaming zone's reader
-    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
+    let zones: Vec<_> = cosmogony_builder::read_zones_from_file(out_file)
+        .unwrap()
+        .collect();
     assert_eq!(zones.len(), 195);
 }
 
@@ -77,7 +82,7 @@ fn test_cmd_with_json_gz_output() {
         out_file,
     ]);
     assert!(output.status.success());
-    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
+    let cosmo = cosmogony_builder::load_cosmogony_from_file(&out_file).unwrap();
     assert_eq!(cosmo.zones.len(), 195);
 }
 
@@ -98,8 +103,9 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony = cosmogony::build_cosmogony(test_file.into(), Some("lu".into()), true, &[])
-        .expect("invalid cosmogony");
+    let cosmogony =
+        cosmogony_builder::build_cosmogony(test_file.into(), Some("lu".into()), true, &[])
+            .expect("invalid cosmogony");
     return cosmogony;
 }
 
@@ -280,7 +286,7 @@ fn test_center_label() {
         "/../../../../../tests/data/gatineau.osm.pbf"
     );
     let cosmogony =
-        cosmogony::build_cosmogony(ottawa_test_file.into(), Some("ca".into()), true, &[])
+        cosmogony_builder::build_cosmogony(ottawa_test_file.into(), Some("ca".into()), true, &[])
             .expect("invalid cosmogony");
 
     let gati = cosmogony

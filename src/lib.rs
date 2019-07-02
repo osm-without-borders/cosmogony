@@ -12,8 +12,8 @@ use crate::country_finder::CountryFinder;
 use crate::file_format::OutputFormat;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use additional_zones::compute_additional_cities;
-use cosmogony_model::mutable_slice::MutableSlice;
-use cosmogony_model::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
+use cosmogony::mutable_slice::MutableSlice;
+use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
 
-use cosmogony_model::{Zone, ZoneIndex};
+use cosmogony::{Zone, ZoneIndex};
 
 use crate::zone_ext::ZoneExt;
 

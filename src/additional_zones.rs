@@ -1,6 +1,6 @@
 use crate::hierarchy_builder::ZonesTree;
 use crate::is_place;
-use cosmogony_model::{Zone, ZoneIndex, ZoneType};
+use cosmogony::{Zone, ZoneIndex, ZoneType};
 use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::from_geo::TryInto;

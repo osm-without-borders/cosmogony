@@ -1,5 +1,5 @@
-use cosmogony::{build_cosmogony, file_format::OutputFormat};
-use cosmogony_model::Cosmogony;
+use cosmogony::Cosmogony;
+use cosmogony_builder::{build_cosmogony, file_format::OutputFormat};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;

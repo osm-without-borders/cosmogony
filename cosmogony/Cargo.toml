@@ -1,5 +1,5 @@
 [package]
-name = "cosmogony_model"
+name = "cosmogony"
 version = "0.6.0"
 authors = ["Adrien Matissart <a.matissart@qwantresearch.com>", "Antoine Desbordes <antoine.desbordes@gmail.com>"]
 license = "Apache-2.0"

@@ -8,10 +8,11 @@ matrix:
     - rustup component add rustfmt
     script:
     - cargo fmt --all -- --check
-    - cargo test
+    - cargo test --all
     after_success:
     - |-
       [ "$TRAVIS_TAG" = v$(cargo run -- --version | awk '{print $2}') ] &&
+      cd cosmogony &&
       cargo publish --token ${CRATESIO_TOKEN}
 env:
   global:

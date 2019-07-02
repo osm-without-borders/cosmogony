@@ -1,7 +1,7 @@
 extern crate geo;
 
-use cosmogony_model::mutable_slice::MutableSlice;
-use cosmogony_model::{Zone, ZoneIndex};
+use cosmogony::mutable_slice::MutableSlice;
+use cosmogony::{Zone, ZoneIndex};
 use geo_types::{Point, Rect};
 use log::{info, warn};
 use rstar::{RTree, RTreeObject, AABB};
@@ -131,7 +131,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
 #[cfg(test)]
 mod test {
     use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
-    use cosmogony_model::{Zone, ZoneType};
+    use cosmogony::{Zone, ZoneType};
     use geo::bounding_rect::BoundingRect;
     use geo_types::{Coordinate, LineString, MultiPolygon, Polygon};
 

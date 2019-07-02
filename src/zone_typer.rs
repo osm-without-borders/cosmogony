@@ -1,4 +1,4 @@
-use cosmogony_model::{Zone, ZoneIndex, ZoneType};
+use cosmogony::{Zone, ZoneIndex, ZoneType};
 use failure::Fail;
 use failure::{err_msg, Error};
 use log::warn;
@@ -250,7 +250,7 @@ where
 mod test {
     use super::CountryAdminTypeRules;
     use crate::zone_typer::read_libpostal_yaml;
-    use cosmogony_model::{Zone, ZoneIndex, ZoneType};
+    use cosmogony::{Zone, ZoneIndex, ZoneType};
 
     #[test]
     fn test_read_libpostal_yaml_basic() {
