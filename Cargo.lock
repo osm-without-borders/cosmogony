@@ -125,6 +125,7 @@ dependencies = [
  "env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_derive 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "flate2 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "geo 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "geo-types 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "geojson 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -132,6 +133,7 @@ dependencies = [
  "osmpbfreader 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.39 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

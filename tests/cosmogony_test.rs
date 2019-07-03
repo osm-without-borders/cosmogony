@@ -32,7 +32,7 @@ fn test_cmd_with_json_output() {
     ]);
     assert!(output.status.success());
 
-    let cosmo = cosmogony_builder::load_cosmogony_from_file(&out_file).unwrap();
+    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
     assert_eq!(cosmo.zones.len(), 195);
 }
 
@@ -48,9 +48,7 @@ fn test_cmd_with_json_stream_output() {
     assert!(output.status.success());
 
     // we try also the streaming zone's reader
-    let zones: Vec<_> = cosmogony_builder::read_zones_from_file(out_file)
-        .unwrap()
-        .collect();
+    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
     assert_eq!(zones.len(), 195);
 }
 
@@ -66,9 +64,7 @@ fn test_cmd_with_json_stream_gz_output() {
     assert!(output.status.success());
 
     // we try also the streaming zone's reader
-    let zones: Vec<_> = cosmogony_builder::read_zones_from_file(out_file)
-        .unwrap()
-        .collect();
+    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
     assert_eq!(zones.len(), 195);
 }
 
@@ -82,7 +78,7 @@ fn test_cmd_with_json_gz_output() {
         out_file,
     ]);
     assert!(output.status.success());
-    let cosmo = cosmogony_builder::load_cosmogony_from_file(&out_file).unwrap();
+    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
     assert_eq!(cosmo.zones.len(), 195);
 }
 
