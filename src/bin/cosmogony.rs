@@ -1,6 +1,5 @@
-use cosmogony::cosmogony::Cosmogony;
-use cosmogony::{build_cosmogony, file_format::OutputFormat};
-use failure::Error;
+use cosmogony::{file_format::OutputFormat, Cosmogony};
+use cosmogony_builder::build_cosmogony;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
@@ -26,11 +25,6 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
     #[structopt(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
     #[structopt(
-        help = "Do not read the geometry of the boundaries",
-        long = "disable-geom"
-    )]
-    disable_geom: bool,
-    #[structopt(
         help = "country code if the pbf file does not contains any country",
         long = "country-code"
     )]
@@ -44,7 +38,10 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
     filter_langs: Vec<String>,
 }
 
-fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Result<(), Error> {
+fn to_json_stream(
+    mut writer: impl std::io::Write,
+    cosmogony: &Cosmogony,
+) -> Result<(), failure::Error> {
     for z in &cosmogony.zones {
         serde_json::to_writer(&mut writer, z)?;
         writer.write(b"\n")?;
@@ -59,7 +56,7 @@ fn serialize_cosmogony(
     cosmogony: &Cosmogony,
     output_file: String,
     format: OutputFormat,
-) -> Result<(), Error> {
+) -> Result<(), failure::Error> {
     log::info!("writing the output file {}", output_file);
     let file = File::create(output_file)?;
     let stream = BufWriter::new(file);
@@ -82,12 +79,11 @@ fn serialize_cosmogony(
     Ok(())
 }
 
-fn cosmogony(args: Args) -> Result<(), Error> {
+fn cosmogony(args: Args) -> Result<(), failure::Error> {
     let format = OutputFormat::from_filename(&args.output)?;
 
     let cosmogony = build_cosmogony(
         args.input,
-        !args.disable_geom,
         args.country_code,
         args.disable_voronoi,
         &args.filter_langs,

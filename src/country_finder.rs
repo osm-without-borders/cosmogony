@@ -1,5 +1,5 @@
-use crate::zone::{Zone, ZoneIndex};
 use crate::zone_typer::ZoneTyper;
+use cosmogony::{Zone, ZoneIndex};
 use std::collections::BTreeMap;
 
 pub const COUNTRY_CODE_TAG: &str = "ISO3166-1:alpha2";

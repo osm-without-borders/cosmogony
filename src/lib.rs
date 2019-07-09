@@ -1,37 +1,17 @@
 #[macro_use]
-extern crate include_dir;
-extern crate failure;
-extern crate geo;
-extern crate geo_types;
-#[macro_use]
 extern crate log;
-extern crate geos;
-extern crate lazy_static;
-extern crate ordered_float;
-extern crate osm_boundaries_utils;
-extern crate osmpbfreader;
-extern crate rayon;
-extern crate regex;
-extern crate serde;
-extern crate serde_derive;
-extern crate serde_yaml;
-extern crate structopt;
 
 mod additional_zones;
-pub mod cosmogony;
 mod country_finder;
-pub mod file_format;
 mod hierarchy_builder;
-mod mutable_slice;
-pub mod zone;
+mod zone_ext;
 pub mod zone_typer;
 
-pub use crate::cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use crate::country_finder::CountryFinder;
-use crate::file_format::OutputFormat;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
-use crate::mutable_slice::MutableSlice;
 use additional_zones::compute_additional_cities;
+use cosmogony::mutable_slice::MutableSlice;
+use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
@@ -40,7 +20,9 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
 
-pub use crate::zone::{Zone, ZoneIndex, ZoneType};
+use cosmogony::{Zone, ZoneIndex};
+
+use crate::zone_ext::ZoneExt;
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -68,7 +50,7 @@ pub fn is_place(obj: &OsmObj) -> bool {
 
 pub fn get_zones_and_stats(
     pbf: &BTreeMap<OsmId, OsmObj>,
-) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
+) -> Result<(Vec<Zone>, CosmogonyStats), Error> {
     let stats = CosmogonyStats::default();
     let mut zones = Vec::with_capacity(1000);
 
@@ -78,7 +60,7 @@ pub fn get_zones_and_stats(
         }
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = zone::Zone::from_osm_with_geom(relation, pbf, next_index) {
+            if let Some(zone) = Zone::from_osm_relation(relation, pbf, next_index) {
                 // Ignore zone without boundary polygon for the moment
                 if zone.boundary.is_some() {
                     zones.push(zone);
@@ -90,31 +72,9 @@ pub fn get_zones_and_stats(
     return Ok((zones, stats));
 }
 
-pub fn get_zones_and_stats_without_geom(
-    pbf: &BTreeMap<OsmId, OsmObj>,
-) -> Result<(Vec<zone::Zone>, CosmogonyStats), Error> {
-    info!("Reading pbf without geometries...");
-    let mut zones = Vec::with_capacity(1000);
-    let stats = CosmogonyStats::default();
-
-    for obj in pbf.values() {
-        if !is_admin(&obj) {
-            continue;
-        }
-        if let OsmObj::Relation(ref relation) = obj {
-            let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = zone::Zone::from_osm(relation, &BTreeMap::default(), next_index) {
-                zones.push(zone);
-            }
-        }
-    }
-
-    Ok((zones, stats))
-}
-
 fn get_country_code<'a>(
     country_finder: &'a CountryFinder,
-    zone: &zone::Zone,
+    zone: &Zone,
     country_code: &'a Option<String>,
     inclusions: &Vec<ZoneIndex>,
 ) -> Option<String> {
@@ -126,7 +86,7 @@ fn get_country_code<'a>(
 }
 
 fn type_zones(
-    zones: &mut [zone::Zone],
+    zones: &mut [Zone],
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
     inclusions: &Vec<Vec<ZoneIndex>>,
@@ -200,7 +160,7 @@ fn compute_labels(zones: &mut [Zone], filter_langs: &[String]) {
 }
 
 // we don't want to keep zone's without zone_type (but the zone_type could be ZoneType::NonAdministrative)
-fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
+fn clean_untagged_zones(zones: &mut Vec<Zone>) {
     info!("cleaning untagged zones");
     let nb_zones = zones.len();
     zones.retain(|z| z.zone_type.is_some());
@@ -208,7 +168,7 @@ fn clean_untagged_zones(zones: &mut Vec<zone::Zone>) {
 }
 
 pub fn create_ontology(
-    zones: &mut Vec<zone::Zone>,
+    zones: &mut Vec<Zone>,
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
     disable_voronoi: bool,
@@ -242,7 +202,6 @@ pub fn create_ontology(
 
 pub fn build_cosmogony(
     pbf_path: String,
-    with_geom: bool,
     country_code: Option<String>,
     disable_voronoi: bool,
     filter_langs: &[String],
@@ -256,11 +215,7 @@ pub fn build_cosmogony(
         .context("invalid osm file")?;
     info!("reading pbf done.");
 
-    let (mut zones, mut stats) = if with_geom {
-        get_zones_and_stats(&parsed_pbf)?
-    } else {
-        get_zones_and_stats_without_geom(&parsed_pbf)?
-    };
+    let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf)?;
 
     create_ontology(
         &mut zones,
@@ -285,78 +240,4 @@ pub fn build_cosmogony(
         },
     };
     Ok(cosmogony)
-}
-
-/// Stream Cosmogony's Zone from a Reader
-pub fn read_zones(
-    reader: impl std::io::BufRead,
-) -> impl std::iter::Iterator<Item = Result<Zone, Error>> {
-    reader
-        .lines()
-        .map(|l| l.map_err(|e| failure::err_msg(e.to_string())))
-        .map(|l| {
-            l.and_then(|l| serde_json::from_str(&l).map_err(|e| failure::err_msg(e.to_string())))
-        })
-}
-
-fn from_json_stream(reader: impl std::io::BufRead) -> Result<Cosmogony, Error> {
-    let zones = read_zones(reader).collect::<Result<_, _>>()?;
-
-    Ok(Cosmogony {
-        zones,
-        ..Default::default()
-    })
-}
-
-/// Load a cosmogony from a file
-pub fn load_cosmogony_from_file(input: &str) -> Result<Cosmogony, Error> {
-    let format = OutputFormat::from_filename(input)?;
-    let f = std::fs::File::open(&input)?;
-    let f = std::io::BufReader::new(f);
-    load_cosmogony(f, format)
-}
-
-/// Return an iterator on the zones
-/// if the input file is a jsonstream, the zones are streamed
-/// if the input file is a json, the whole cosmogony is loaded
-pub fn read_zones_from_file(
-    input: &str,
-) -> Result<Box<dyn std::iter::Iterator<Item = Result<Zone, Error>>>, Error> {
-    let format = OutputFormat::from_filename(input)?;
-    let f = std::fs::File::open(&input)?;
-    let f = std::io::BufReader::new(f);
-    match format {
-        OutputFormat::JsonGz | OutputFormat::Json => {
-            let cosmo = load_cosmogony(f, format)?;
-            Ok(Box::new(cosmo.zones.into_iter().map(|z| Ok(z))))
-        }
-        OutputFormat::JsonStream => Ok(Box::new(read_zones(f))),
-        OutputFormat::JsonStreamGz => {
-            let r = flate2::bufread::GzDecoder::new(f);
-            let r = std::io::BufReader::new(r);
-            Ok(Box::new(read_zones(r)))
-        }
-    }
-}
-
-/// Load a cosmogony from a reader and a file_format
-pub fn load_cosmogony(
-    reader: impl std::io::BufRead,
-    format: OutputFormat,
-) -> Result<Cosmogony, Error> {
-    match format {
-        OutputFormat::JsonGz => {
-            let r = flate2::read::GzDecoder::new(reader);
-            serde_json::from_reader(r).map_err(|e| failure::err_msg(e.to_string()))
-        }
-        OutputFormat::Json => {
-            serde_json::from_reader(reader).map_err(|e| failure::err_msg(e.to_string()))
-        }
-        OutputFormat::JsonStream => from_json_stream(reader),
-        OutputFormat::JsonStreamGz => {
-            let r = flate2::bufread::GzDecoder::new(reader);
-            let r = std::io::BufReader::new(r);
-            from_json_stream(r)
-        }
-    }
 }

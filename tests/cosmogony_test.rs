@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate approx;
-use cosmogony::{
-    create_ontology, get_zones_and_stats, is_admin, is_place, Cosmogony, Zone, ZoneIndex, ZoneType,
-};
+
+use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
+use cosmogony_builder::{create_ontology, get_zones_and_stats, is_admin, is_place};
 use osmpbfreader::OsmPbfReader;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -100,7 +100,7 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
     let cosmogony =
-        cosmogony::build_cosmogony(test_file.into(), true, Some("lu".into()), true, &[])
+        cosmogony_builder::build_cosmogony(test_file.into(), Some("lu".into()), true, &[])
             .expect("invalid cosmogony");
     return cosmogony;
 }
@@ -282,7 +282,7 @@ fn test_center_label() {
         "/../../../../../tests/data/gatineau.osm.pbf"
     );
     let cosmogony =
-        cosmogony::build_cosmogony(ottawa_test_file.into(), true, Some("ca".into()), true, &[])
+        cosmogony_builder::build_cosmogony(ottawa_test_file.into(), Some("ca".into()), true, &[])
             .expect("invalid cosmogony");
 
     let gati = cosmogony

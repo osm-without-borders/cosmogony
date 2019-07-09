@@ -1,11 +1,13 @@
 extern crate geo;
 
-use crate::mutable_slice::MutableSlice;
-use crate::zone::{Zone, ZoneIndex};
+use cosmogony::mutable_slice::MutableSlice;
+use cosmogony::{Zone, ZoneIndex};
 use geo_types::{Point, Rect};
 use log::{info, warn};
 use rstar::{RTree, RTreeObject, AABB};
 use std::iter::FromIterator;
+
+use crate::zone_ext::ZoneExt;
 
 #[derive(Debug)]
 struct ZoneIndexAndBbox {
@@ -72,15 +74,6 @@ impl<'a> FromIterator<&'a Zone> for ZonesTree {
     }
 }
 
-impl Zone {
-    /// a zone can be a child of another zone z if:
-    /// z is an admin (we don't want to have non administrative zones as parent)
-    /// z's type is larger (so a State cannot have a City as parent)
-    fn can_be_child_of(&self, z: &Zone) -> bool {
-        z.is_admin() && (!self.is_admin() || self.zone_type < z.zone_type)
-    }
-}
-
 pub fn find_inclusions(zones: &[Zone]) -> (Vec<Vec<ZoneIndex>>, ZonesTree) {
     use rayon::prelude::*;
     info!("finding all the inclusions");
@@ -138,7 +131,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
 #[cfg(test)]
 mod test {
     use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
-    use crate::zone::{Zone, ZoneType};
+    use cosmogony::{Zone, ZoneType};
     use geo::bounding_rect::BoundingRect;
     use geo_types::{Coordinate, LineString, MultiPolygon, Polygon};
 

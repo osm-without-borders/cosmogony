@@ -1,4 +1,4 @@
-use crate::zone::{Zone, ZoneIndex, ZoneType};
+use cosmogony::{Zone, ZoneIndex, ZoneType};
 use failure::Fail;
 use failure::{err_msg, Error};
 use log::warn;
@@ -6,7 +6,7 @@ use serde_derive::*;
 use std::collections::BTreeMap;
 use std::fmt;
 
-use include_dir::Dir;
+use include_dir::{include_dir, include_dir_impl, Dir};
 
 // :warning:
 // The include_dir macro cannot cannot watch for changes to rebuild,
@@ -249,8 +249,8 @@ where
 #[cfg(test)]
 mod test {
     use super::CountryAdminTypeRules;
-    use crate::zone::{Zone, ZoneIndex, ZoneType};
     use crate::zone_typer::read_libpostal_yaml;
+    use cosmogony::{Zone, ZoneIndex, ZoneType};
 
     #[test]
     fn test_read_libpostal_yaml_basic() {
