@@ -9,7 +9,7 @@ pub enum OutputFormat {
     JsonStreamGz,
 }
 
-static ALL_EXTENTIONS: [(&str, OutputFormat); 4] = [
+static ALL_EXTENSIONS: [(&str, OutputFormat); 4] = [
     (".json", OutputFormat::Json),
     (".jsonl", OutputFormat::JsonStream),
     (".json.gz", OutputFormat::JsonGz),
@@ -18,7 +18,7 @@ static ALL_EXTENTIONS: [(&str, OutputFormat); 4] = [
 
 impl OutputFormat {
     pub fn from_filename(filename: impl AsRef<Path>) -> Result<OutputFormat, Error> {
-        ALL_EXTENTIONS
+        ALL_EXTENSIONS
             .iter()
             .find(|&&(ref e, _)| {
                 filename
@@ -29,7 +29,7 @@ impl OutputFormat {
             })
             .map(|&(_, ref f)| f.clone())
             .ok_or_else(|| {
-                let extensions_str = ALL_EXTENTIONS
+                let extensions_str = ALL_EXTENSIONS
                     .into_iter()
                     .map(|(e, _)| *e)
                     .collect::<Vec<_>>()
