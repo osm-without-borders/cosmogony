@@ -1,5 +1,6 @@
 *
 !src/
+!cosmogony/
 !tests/
 !Cargo*
 !build.rs
