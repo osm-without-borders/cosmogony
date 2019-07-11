@@ -181,8 +181,8 @@ fn deserialize_geom<'de, D>(d: D) -> Result<Option<geo::Geometry<f64>>, D::Error
 where
     D: serde::Deserializer<'de>,
 {
-    use geojson::conversion::TryInto;
     use serde::Deserialize;
+    use std::convert::TryInto;
 
     Option::<geojson::GeoJson>::deserialize(d).map(|option| {
         option.and_then(|geojson| match geojson {

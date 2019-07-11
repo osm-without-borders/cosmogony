@@ -21,7 +21,7 @@ serde_derive = "1"
 serde_json = "1"
 serde_yaml = "0.8"
 itertools = "0.8"
-geojson = "0.15"
+geojson = { version = "0.16", features = ["geo-types"] }
 failure = "0.1"
 failure_derive = "0.1"
 osm_boundaries_utils = "0.4"
