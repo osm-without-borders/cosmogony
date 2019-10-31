@@ -30,7 +30,7 @@ impl OutputFormat {
             .map(|&(_, ref f)| f.clone())
             .ok_or_else(|| {
                 let extensions_str = ALL_EXTENSIONS
-                    .into_iter()
+                    .iter()
                     .map(|(e, _)| *e)
                     .collect::<Vec<_>>()
                     .join(", ");
