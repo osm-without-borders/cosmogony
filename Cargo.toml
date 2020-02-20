@@ -27,7 +27,6 @@ failure_derive = "0.1"
 osm_boundaries_utils = "0.4"
 geos = { version = "5.0", features= ["geo"] }
 regex = "1"
-ordered-float = "0.0.2"
 flate2 = "1.0"
 rayon = "1.0"
 include_dir = "0.2"
