@@ -240,7 +240,7 @@ where
             // bbox serialized as an array
             // using GeoJSON bounding box format
             // See RFC 7946: https://tools.ietf.org/html/rfc7946#section-5
-            let geojson_bbox: GeojsonBbox = vec![b.min.x, b.min.y, b.max.x, b.max.y];
+            let geojson_bbox: GeojsonBbox = vec![b.min().x, b.min().y, b.max().x, b.max().y];
             geojson_bbox.serialize(serializer)
         }
         None => serializer.serialize_none(),
@@ -253,10 +253,10 @@ where
 {
     use serde::Deserialize;
     Option::<Vec<f64>>::deserialize(d).map(|option| match option {
-        Some(b) => Some(Rect {
-            min: Coordinate { x: b[0], y: b[1] },
-            max: Coordinate { x: b[2], y: b[3] },
-        }),
+        Some(b) => Some(Rect::new(
+            Coordinate { x: b[0], y: b[1] }, // min
+            Coordinate { x: b[2], y: b[3] }, // max
+        )),
         None => None,
     })
 }
