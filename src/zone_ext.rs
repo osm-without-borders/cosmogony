@@ -144,7 +144,7 @@ impl ZoneExt for Zone {
         if let Some(node) = label_node {
             node.tags
                 .iter()
-                .filter(|(k, _)| k.starts_with("name:"))
+                .filter(|(k, _)| k.starts_with("name:") || *k == "population")
                 .for_each(|(k, v)| {
                     tags.entry(k.to_string()).or_insert(v.to_string());
                 })
