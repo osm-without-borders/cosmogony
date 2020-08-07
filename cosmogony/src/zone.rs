@@ -227,10 +227,7 @@ where
     }
 }
 
-fn serialize_bbox_as_geojson<S>(
-    bbox: &Option<Rect<f64>>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+fn serialize_bbox_as_geojson<S>(bbox: &Option<Rect<f64>>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
