@@ -112,10 +112,10 @@ pub fn compute_additional_cities(
             .filter(|(_, places)| !places.is_empty())
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|(parent, mut places)| {
+            .map(|(parent, places)| {
                 compute_voronoi(
                     parent,
-                    &mut places,
+                    &places,
                     &zones,
                     &relation_cities_with_geos,
                     &zones_rtree,

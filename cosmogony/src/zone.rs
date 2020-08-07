@@ -130,7 +130,7 @@ impl Zone {
     pub fn iter_hierarchy<'a>(&'a self, all_zones: &'a MutableSlice<'_>) -> HierarchyIterator<'a> {
         HierarchyIterator {
             zone: Some(&self),
-            all_zones: all_zones,
+            all_zones,
         }
     }
 }
@@ -227,8 +227,8 @@ where
     }
 }
 
-fn serialize_bbox_as_geojson<'a, S>(
-    bbox: &'a Option<Rect<f64>>,
+fn serialize_bbox_as_geojson<S>(
+    bbox: &Option<Rect<f64>>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where

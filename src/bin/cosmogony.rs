@@ -44,7 +44,7 @@ fn to_json_stream(
 ) -> Result<(), failure::Error> {
     for z in &cosmogony.zones {
         serde_json::to_writer(&mut writer, z)?;
-        writer.write(b"\n")?;
+        writer.write_all(b"\n")?;
     }
 
     // since we don't dump the metadata in json stream for the moment, we log them
@@ -113,18 +113,14 @@ fn init_logger() {
 fn main() {
     init_logger();
     let args = Args::from_args();
-    match cosmogony(args) {
-        Err(e) => {
-            log::error!("cosmogony in error! {:?}", e);
-            e.iter_chain().for_each(|c| {
-                log::error!("{}", c);
-                if let Some(b) = c.backtrace() {
-                    log::error!("  - {}", b);
-                }
-            });
-
-            std::process::exit(1);
-        }
-        _ => (),
+    if let Err(e) = cosmogony(args) {
+        log::error!("cosmogony in error! {:?}", e);
+        e.iter_chain().for_each(|c| {
+            log::error!("{}", c);
+            if let Some(b) = c.backtrace() {
+                log::error!("  - {}", b);
+            }
+        });
+        std::process::exit(1);
     }
 }

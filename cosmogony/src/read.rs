@@ -44,7 +44,7 @@ pub fn read_zones_from_file(
     match format {
         OutputFormat::JsonGz | OutputFormat::Json => {
             let cosmo = load_cosmogony(f, format)?;
-            Ok(Box::new(cosmo.zones.into_iter().map(|z| Ok(z))))
+            Ok(Box::new(cosmo.zones.into_iter().map(Ok)))
         }
         OutputFormat::JsonStream => Ok(Box::new(read_zones(f))),
         OutputFormat::JsonStreamGz => {
