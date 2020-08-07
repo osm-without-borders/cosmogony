@@ -273,6 +273,9 @@ fn test_lux_zone_types() {
         lux.international_labels.get("ak"),
         Some(&"Laksembɛg".to_string())
     );
+
+    // Read population from label node
+    assert_eq!(lux.tags.get("population"), Some(&"493500".to_string()));
 }
 
 #[test]
