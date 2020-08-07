@@ -32,7 +32,7 @@ impl CosmogonyStats {
             let type_ = zone
                 .zone_type
                 .map(|t| format!("{:?}", t))
-                .unwrap_or("None".into());
+                .unwrap_or_else(|| "None".into());
             let count = self.zone_type_counts.entry(type_).or_insert(0);
             *count += 1;
             let level = zone.admin_level.unwrap_or(0);

@@ -85,7 +85,7 @@ impl ZoneTyper {
         &self,
         zone: &Zone,
         country_code: &str,
-        zone_inclusions: &Vec<ZoneIndex>,
+        zone_inclusions: &[ZoneIndex],
         all_zones: &[Zone],
     ) -> Result<ZoneType, ZoneTyperError> {
         let country_rules = self
@@ -95,7 +95,7 @@ impl ZoneTyper {
         Ok(country_rules
             .get_zone_type(zone, zone_inclusions, all_zones)
             .ok_or_else(|| {
-                ZoneTyperError::UnkownLevel(zone.admin_level.clone(), country_code.to_string())
+                ZoneTyperError::UnkownLevel(zone.admin_level, country_code.to_string())
             })?)
     }
 
@@ -112,7 +112,7 @@ impl CountryAdminTypeRules {
     fn get_zone_type(
         &self,
         zone: &Zone,
-        zone_inclusions: &Vec<ZoneIndex>,
+        zone_inclusions: &[ZoneIndex],
         all_zones: &[Zone],
     ) -> Option<ZoneType> {
         let overrides = self
@@ -137,14 +137,14 @@ impl RulesOverrides {
     fn get_overrided_type(
         &self,
         zone: &Zone,
-        zone_inclusions: &Vec<ZoneIndex>,
+        zone_inclusions: &[ZoneIndex],
         all_zones: &[Zone],
     ) -> Option<Option<ZoneType>> {
         // check id overrides
         let id_overrides = self.id_rules.get(&zone.osm_id);
         // if there is no override for this specific object, we check the contained_by overrides
         match id_overrides {
-            Some(overrides) => Some(overrides.clone()),
+            Some(overrides) => Some(*overrides),
             None => {
                 if self.contained_by.is_empty() {
                     return None;
@@ -159,7 +159,7 @@ impl RulesOverrides {
                     .and_then(|ref country_rules| {
                         country_rules
                             .get_zone_type(zone, zone_inclusions, all_zones)
-                            .map(|r| Some(r))
+                            .map(Some)
                     })
             }
         }

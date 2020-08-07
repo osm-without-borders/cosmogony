@@ -157,7 +157,7 @@ impl ZoneExt for Zone {
         let osm_center = refs
             .iter()
             .find(|r| r.role == "admin_centre")
-            .or(refs.iter().find(|r| r.role == "label"))
+            .or_else(|| refs.iter().find(|r| r.role == "label"))
             .and_then(|r| objects.get(&r.member))
             .and_then(|o| o.node());
         let center_tags = osm_center.map_or(Tags::new(), |n| n.tags.clone());
@@ -173,7 +173,7 @@ impl ZoneExt for Zone {
                         warn!("NaN in centroid {:?} for {}", p, osm_id);
                         return false;
                     }
-                    return true;
+                    true
                 })
             }),
             |node| Some(Coord::new(node.lon(), node.lat())),
@@ -181,7 +181,7 @@ impl ZoneExt for Zone {
 
         Some(Zone {
             id: index,
-            osm_id: osm_id,
+            osm_id,
             admin_level: level,
             zone_type: None,
             name: name.to_string(),
@@ -191,7 +191,7 @@ impl ZoneExt for Zone {
             zip_codes,
             center,
             boundary,
-            bbox: bbox,
+            bbox,
             parent: None,
             tags,
             center_tags,
@@ -272,7 +272,7 @@ impl ZoneExt for Zone {
         let it = self
             .iter_hierarchy(all_zones)
             .map(|z| z.international_names.keys())
-            .flat_map(|i| i)
+            .flatten()
             .map(|n| n.as_str().into());
         let all_lang: BTreeSet<String> = if !filter_langs.is_empty() {
             it.filter(|n| filter_langs.iter().any(|x| x == n)).collect()

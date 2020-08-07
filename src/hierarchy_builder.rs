@@ -49,8 +49,7 @@ impl ZonesTree {
             Some(ref bbox) => self
                 .tree
                 .locate_in_envelope_intersecting(&envelope(bbox))
-                .into_iter()
-                .map(|z_and_bbox| z_and_bbox.index.clone())
+                .map(|z_and_bbox| z_and_bbox.index)
                 .collect(),
         }
     }
@@ -61,7 +60,7 @@ impl<'a> FromIterator<&'a Zone> for ZonesTree {
         let z = zones
             .into_iter()
             .filter_map(|z| match z.bbox {
-                Some(ref b) => Some(ZoneIndexAndBbox::new(z.id.clone(), b)),
+                Some(ref b) => Some(ZoneIndexAndBbox::new(z.id, b)),
                 None => {
                     warn!("No bbox: Cannot insert zone with osm_id {}", z.osm_id);
                     None
@@ -124,7 +123,7 @@ pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
             })
             .min_by_key(|z| z.zone_type);
 
-        z.set_parent(parent.map(|z| z.id.clone()));
+        z.set_parent(parent.map(|z| z.id));
     }
 }
 

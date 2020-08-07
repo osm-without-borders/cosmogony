@@ -26,7 +26,7 @@ impl CountryFinder {
     pub fn init(zones: &[Zone], typer: &ZoneTyper) -> Self {
         CountryFinder {
             countries: zones
-                .into_iter()
+                .iter()
                 .filter_map(|z| {
                     z.tags
                         .get(COUNTRY_CODE_TAG) // iso3166 code, should use capital letters
@@ -34,9 +34,9 @@ impl CountryFinder {
                         .filter(|country_code| typer.contains_rule(country_code))
                         .map(|country_code| {
                             (
-                                z.id.clone(),
+                                z.id,
                                 Country {
-                                    iso: country_code.clone(),
+                                    iso: country_code,
                                     admin_level: z.admin_level,
                                 },
                             )

@@ -15,8 +15,8 @@ impl<'a> MutableSlice<'a> {
         let (left, temp) = zones.split_at_mut(index);
         let (z, right) = temp.split_at_mut(1);
         let s = Self {
-            right: right,
-            left: left,
+            right,
+            left,
             idx: index,
         };
         (s, &mut z[0])
@@ -25,11 +25,11 @@ impl<'a> MutableSlice<'a> {
     pub fn get(&self, zindex: &ZoneIndex) -> &Zone {
         let idx = zindex.index;
         if idx < self.idx {
-            return &self.left[idx];
+            &self.left[idx]
         } else if idx == self.idx {
             panic!("Cannot retrieve middle index");
         } else {
-            return &self.right[idx - self.idx - 1];
+            &self.right[idx - self.idx - 1]
         }
     }
 }

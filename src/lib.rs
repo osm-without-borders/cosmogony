@@ -69,14 +69,14 @@ pub fn get_zones_and_stats(
         }
     }
 
-    return Ok((zones, stats));
+    Ok((zones, stats))
 }
 
 fn get_country_code<'a>(
     country_finder: &'a CountryFinder,
     zone: &Zone,
     country_code: &'a Option<String>,
-    inclusions: &Vec<ZoneIndex>,
+    inclusions: &[ZoneIndex],
 ) -> Option<String> {
     if let Some(ref c) = *country_code {
         Some(c.to_uppercase())
@@ -89,7 +89,7 @@ fn type_zones(
     zones: &mut [Zone],
     stats: &mut CosmogonyStats,
     country_code: Option<String>,
-    inclusions: &Vec<Vec<ZoneIndex>>,
+    inclusions: &[Vec<ZoneIndex>],
 ) -> Result<(), Error> {
     use rayon::prelude::*;
     info!("reading libpostal's rules");
