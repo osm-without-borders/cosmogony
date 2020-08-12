@@ -144,7 +144,7 @@ impl ZoneExt for Zone {
         if let Some(node) = label_node {
             node.tags
                 .iter()
-                .filter(|(k, _)| k.starts_with("name:"))
+                .filter(|(k, _)| k.starts_with("name:") || *k == "population")
                 .for_each(|(k, v)| {
                     tags.entry(k.to_string()).or_insert(v.to_string());
                 })
@@ -295,9 +295,14 @@ impl ZoneExt for Zone {
     }
 
     fn compute_names(&mut self) {
-        if self.zone_type == Some(ZoneType::City)
-            || self.wikidata.is_some()
-                && self.wikidata == self.center_tags.get("wikidata").map(|s| s.to_string())
+        let center_wikidata = self.center_tags.get("wikidata").map(|s| s.to_string());
+
+        // Names from the center node can be used as additional tags, with some precautions:
+        //  * for zones where the center node and and the relation itself represent the same wikidata entity
+        //  * for all cities where these entities are not explicitly distinct
+        if (self.wikidata.is_some() && self.wikidata == center_wikidata)
+            || (self.zone_type == Some(ZoneType::City)
+                && (center_wikidata.is_none() || self.wikidata.is_none()))
         {
             let center_names: Vec<_> = self
                 .center_tags
