@@ -5,12 +5,14 @@
 use cosmogony::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType};
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::Contains;
+use geos::Geom;
 use geos::Geometry;
 use itertools::Itertools;
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::TryInto;
 
 pub trait ZoneExt {
     /// create a zone from an osm node
@@ -201,7 +203,6 @@ impl ZoneExt for Zone {
     }
 
     fn contains(&self, other: &Zone) -> bool {
-        use geos::from_geo::TryInto;
         match (&self.boundary, &other.boundary) {
             (&Some(ref mpoly1), &Some(ref mpoly2)) => {
                 let m_self: Result<Geometry, _> = mpoly1.try_into();
@@ -211,7 +212,7 @@ impl ZoneExt for Zone {
                     (&Ok(ref m_self), &Ok(ref m_other)) => {
                         // In GEOS, "covers" is less strict than "contains".
                         // eg: a polygon does NOT "contain" its boundary, but "covers" it.
-                        m_self.covers(&m_other)
+                        m_self.covers(m_other)
                         .map_err(|e| info!("impossible to compute geometries coverage for zone {:?}/{:?}: error {}",
                         &self.osm_id, &other.osm_id, e))
                         .unwrap_or(false)
