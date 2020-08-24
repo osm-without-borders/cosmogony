@@ -201,7 +201,7 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) -> bool {
     if towns.is_empty() {
         return true;
     }
-    if let Some(boundary) = zone.boundary.clone() {
+    if let Some(ref boundary) = zone.boundary {
         let mut updates = 0;
         let mut g_boundary = match geos::Geometry::try_from(boundary) {
             Ok(b) => b,
