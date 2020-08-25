@@ -36,7 +36,7 @@ pub struct ZonesTree {
 }
 
 fn envelope(bbox: &Rect<f64>) -> AABB<Point<f64>> {
-    AABB::from_corners(bbox.min.into(), bbox.max.into())
+    AABB::from_corners(bbox.min().into(), bbox.max().into())
 }
 
 impl ZonesTree {
@@ -68,7 +68,7 @@ impl<'a> FromIterator<&'a Zone> for ZonesTree {
             })
             .collect();
         ZonesTree {
-            tree: RTree::bulk_load_parallel(z),
+            tree: RTree::bulk_load(z),
         }
     }
 }

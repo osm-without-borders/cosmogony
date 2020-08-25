@@ -149,10 +149,10 @@ fn test_wrapper_for_lux_zones(a_cosmogony: &Cosmogony) {
         .unwrap();
 
     let bbox = zone.bbox.unwrap();
-    assert_relative_eq!(bbox.min.x, 5.9432118, epsilon = 1e-8);
-    assert_relative_eq!(bbox.min.y, 49.460907, epsilon = 1e-8);
-    assert_relative_eq!(bbox.max.x, 6.005144, epsilon = 1e-8);
-    assert_relative_eq!(bbox.max.y, 49.518616, epsilon = 1e-8);
+    assert_relative_eq!(bbox.min().x, 5.9432118, epsilon = 1e-8);
+    assert_relative_eq!(bbox.min().y, 49.460907, epsilon = 1e-8);
+    assert_relative_eq!(bbox.max().x, 6.005144, epsilon = 1e-8);
+    assert_relative_eq!(bbox.max().y, 49.518616, epsilon = 1e-8);
 }
 
 #[test]

@@ -3,12 +3,13 @@ use crate::is_place;
 use cosmogony::{Zone, ZoneIndex, ZoneType};
 use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
-use geos::from_geo::TryInto;
-use geos::{ContextInteractions, Geometry};
+use geos::{Geom, Geometry};
 use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::convert::TryInto;
 
 use crate::zone_ext::ZoneExt;
 
@@ -154,15 +155,17 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
                     }
                     zone.zone_type = Some(ZoneType::City);
                     zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
-                    zone.bbox = zone.center.as_ref().map(|p| Rect {
-                        min: Coordinate {
-                            x: p.0.x - std::f64::EPSILON,
-                            y: p.0.y - std::f64::EPSILON,
-                        },
-                        max: Coordinate {
-                            x: p.0.x + std::f64::EPSILON,
-                            y: p.0.y + std::f64::EPSILON,
-                        },
+                    zone.bbox = zone.center.as_ref().map(|p| {
+                        Rect::new(
+                            Coordinate {
+                                x: p.0.x - std::f64::EPSILON,
+                                y: p.0.y - std::f64::EPSILON,
+                            }, // min
+                            Coordinate {
+                                x: p.0.x + std::f64::EPSILON,
+                                y: p.0.y + std::f64::EPSILON,
+                            }, // max
+                        )
                     });
                     zone.is_generated = true;
                     return Some(zone);
@@ -183,7 +186,7 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     } {
         geo::Geometry::Polygon(x) => Some(MultiPolygon(vec![x])),
         y => {
-            if let Some(x) = y.into_multi_polygon() {
+            if let Ok(x) = y.try_into() {
                 Some(x)
             } else {
                 None
@@ -198,9 +201,9 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) -> bool {
     if towns.is_empty() {
         return true;
     }
-    if let Some(ref mut boundary) = zone.boundary {
+    if let Some(ref boundary) = zone.boundary {
         let mut updates = 0;
-        let mut g_boundary = match boundary.try_into() {
+        let mut g_boundary = match geos::Geometry::try_from(boundary) {
             Ok(b) => b,
             Err(e) => {
                 println!(
@@ -229,7 +232,7 @@ fn extrude_existing_town(zone: &mut Zone, towns: &[&ZoneWithGeos<'_>]) -> bool {
         if updates > 0 {
             match convert_to_geo(g_boundary) {
                 Some(g) => {
-                    *boundary = g;
+                    zone.boundary = Some(g);
                 }
                 None => {
                     println!(
@@ -297,7 +300,7 @@ fn compute_voronoi<'a, 'b>(
     let parent_index = parent.index;
     let parent = &zones[parent_index];
     let par = match match parent.boundary {
-        Some(ref par) => par.try_into(),
+        Some(ref par) => geos::Geometry::try_from(par),
         None => {
             println!("No parent matches the index {}...", parent_index);
             return Vec::new();
