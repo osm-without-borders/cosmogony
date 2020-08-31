@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony"
-version = "0.7.4"
+version = "0.8.0"
 dependencies = [
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -129,10 +129,10 @@ dependencies = [
 
 [[package]]
 name = "cosmogony_builder"
-version = "0.7.4"
+version = "0.8.0"
 dependencies = [
  "approx 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "cosmogony 0.7.4",
+ "cosmogony 0.8.0",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_derive 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
