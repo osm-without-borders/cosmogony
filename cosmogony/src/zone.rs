@@ -9,7 +9,7 @@ use std::fmt;
 
 pub type Coord = Point<f64>;
 
-#[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Copy, Debug, Clone, Eq, Hash, PartialEq, Ord, PartialOrd)]
 #[serde(rename_all = "snake_case")]
 pub enum ZoneType {
     Suburb,
@@ -37,7 +37,7 @@ impl ZoneType {
     }
 }
 
-#[derive(Copy, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ZoneIndex {
     pub index: usize,
 }
