@@ -1,6 +1,11 @@
 dist: bionic
 language: rust
 cache: cargo
+addons:
+  apt:
+    packages:
+    - libgeos-c1v5
+    - libgeos-dev
 matrix:
   include:
   - rust: stable
