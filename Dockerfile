@@ -1,4 +1,4 @@
-FROM rust:1-slim-stretch as builder
+FROM rust:1-slim-buster as builder
 
 WORKDIR /srv/cosmogony
 
@@ -9,7 +9,7 @@ COPY . ./
 
 RUN cargo build --release
 
-FROM debian:stretch-slim
+FROM debian:buster-slim
 
 WORKDIR /srv
 
