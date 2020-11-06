@@ -144,7 +144,7 @@ checksum = "c478836e029dcef17fb47c89023448c64f781a046e0300e257ad8225ae59afab"
 
 [[package]]
 name = "cosmogony"
-version = "0.8.1"
+version = "0.9.0"
 dependencies = [
  "failure",
  "flate2",
@@ -159,7 +159,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony_builder"
-version = "0.8.1"
+version = "0.9.0"
 dependencies = [
  "approx",
  "cosmogony",
