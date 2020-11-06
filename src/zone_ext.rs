@@ -138,7 +138,7 @@ impl ZoneExt for Zone {
         let label_node = relation
             .refs
             .iter()
-            .find(|r| r.role == "label")
+            .find(|r| &r.role == "label")
             .and_then(|r| objects.get(&r.member))
             .and_then(|o| o.node());
 
@@ -148,7 +148,7 @@ impl ZoneExt for Zone {
                 .iter()
                 .filter(|(k, _)| k.starts_with("name:") || *k == "population")
                 .for_each(|(k, v)| {
-                    tags.entry(k.to_string()).or_insert(v.to_string());
+                    tags.entry(k.clone()).or_insert(v.clone());
                 })
         }
 
@@ -158,8 +158,8 @@ impl ZoneExt for Zone {
         let refs = &relation.refs;
         let osm_center = refs
             .iter()
-            .find(|r| r.role == "admin_centre")
-            .or_else(|| refs.iter().find(|r| r.role == "label"))
+            .find(|r| &r.role == "admin_centre")
+            .or_else(|| refs.iter().find(|r| &r.role == "label"))
             .and_then(|r| objects.get(&r.member))
             .and_then(|o| o.node());
         let center_tags = osm_center.map_or(Tags::new(), |n| n.tags.clone());
@@ -313,7 +313,7 @@ impl ZoneExt for Zone {
                 .collect();
 
             center_names.into_iter().for_each(|(k, v)| {
-                self.tags.entry(k).or_insert(v);
+                self.tags.entry(k.into()).or_insert(v.into());
             })
         }
         self.international_names = get_international_names(&self.tags, &self.name);
@@ -376,7 +376,7 @@ fn get_international_names(tags: &Tags, default_name: &str) -> BTreeMap<String, 
         .filter_map(|(k, v)| {
             let lang = LANG_NAME_REG.captures(k)?.get(1)?;
 
-            Some((lang.as_str().into(), v.clone()))
+            Some((lang.as_str().into(), v.clone().into()))
         })
         .collect()
 }

@@ -240,10 +240,7 @@ fn test_lux_zone_types() {
     );
 
     assert!(!lux.center_tags.is_empty());
-    assert_eq!(
-        lux.center_tags.get("population"),
-        Some(&"103641".to_string())
-    );
+    assert_eq!(lux.center_tags.get("population"), Some(&"103641".into()));
 
     // check the country
     let lux = cosmogony
@@ -275,7 +272,7 @@ fn test_lux_zone_types() {
     );
 
     // Read population from label node
-    assert_eq!(lux.tags.get("population"), Some(&"493500".to_string()));
+    assert_eq!(lux.tags.get("population"), Some(&"493500".into()));
 }
 
 #[test]

@@ -1,5 +1,5 @@
 use crate::mutable_slice::MutableSlice;
-use geo_types::{Coordinate, Point, Rect};
+use geo_types::{Coordinate, Geometry, MultiPolygon, Point, Rect};
 use log::warn;
 use osmpbfreader::objects::Tags;
 use serde::Serialize;
@@ -177,7 +177,7 @@ where
     }
 }
 
-fn deserialize_geom<'de, D>(d: D) -> Result<Option<geo::Geometry<f64>>, D::Error>
+fn deserialize_geom<'de, D>(d: D) -> Result<Option<Geometry<f64>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -187,7 +187,7 @@ where
     Option::<geojson::GeoJson>::deserialize(d).map(|option| {
         option.and_then(|geojson| match geojson {
             geojson::GeoJson::Geometry(geojson_geom) => {
-                let geo_geom: Result<geo::Geometry<f64>, _> = geojson_geom.value.try_into();
+                let geo_geom: Result<Geometry<f64>, _> = geojson_geom.value.try_into();
                 match geo_geom {
                     Ok(g) => Some(g),
                     Err(e) => {
@@ -201,12 +201,12 @@ where
     })
 }
 
-fn deserialize_as_multipolygon<'de, D>(d: D) -> Result<Option<geo::MultiPolygon<f64>>, D::Error>
+fn deserialize_as_multipolygon<'de, D>(d: D) -> Result<Option<MultiPolygon<f64>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     match deserialize_geom(d)? {
-        Some(geo::Geometry::MultiPolygon(geo_multi_polygon)) => Ok(Some(geo_multi_polygon)),
+        Some(Geometry::MultiPolygon(geo_multi_polygon)) => Ok(Some(geo_multi_polygon)),
         None => Ok(None),
         Some(_) => Err(serde::de::Error::custom(
             "invalid geometry type, should be a multipolygon",
@@ -219,7 +219,7 @@ where
     D: serde::Deserializer<'de>,
 {
     match deserialize_geom(d)? {
-        Some(geo::Geometry::Point(p)) => Ok(Some(p)),
+        Some(Geometry::Point(p)) => Ok(Some(p)),
         None => Ok(None),
         Some(_) => Err(serde::de::Error::custom(
             "invalid geometry type, should be a point",

@@ -9,14 +9,13 @@ edition = "2018"
 [dependencies]
 cosmogony = { path = "cosmogony" }
 log = "0.4"
-env_logger = "0.6"
-geo = "0.14"
+env_logger = "0.8"
+geo = "0.15"
 geo-types = { version = "0.6", features = ["rstar"] }
-geojson = { version = "0.19", features = ["geo-types"] }
+geojson = { version = "0.20", features = ["geo-types"] }
 geos = { version = "7.0", features= ["geo"] }
-structopt = "0.2"
-structopt-derive = "0.1"
-osmpbfreader = "0.13"
+structopt = "0.3"
+osmpbfreader = "0.14"
 lazy_static = "1"
 serde = {version = "1", features = ["rc"]}
 serde_derive = "1"
@@ -25,11 +24,11 @@ serde_yaml = "0.8"
 itertools = "0.8"
 failure = "0.1"
 failure_derive = "0.1"
-osm_boundaries_utils = "0.6"
+osm_boundaries_utils = "0.8"
 regex = "1"
 flate2 = "1.0"
-rayon = "1.0"
-include_dir = "0.2"
+rayon = "1.5"
+include_dir = "0.6"
 rstar = "0.8"
 
 [dev-dependencies]

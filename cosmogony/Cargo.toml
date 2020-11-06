@@ -16,14 +16,11 @@ travis-ci = { repository = "osm-without-borders/cosmogony" }
 
 [dependencies]
 log = "0.4"
-env_logger = "0.6"
-geo = "0.14"
 geo-types = { version = "0.6", features = ["rstar"] }
-geojson = { version = "0.19", features = ["geo-types"] }
+geojson = { version = "0.20", features = ["geo-types"] }
 serde = {version = "1", features = ["rc"]}
 serde_derive = "1"
 serde_json = "1"
 failure = "0.1"
-failure_derive = "0.1"
 flate2 = "1.0"
-osmpbfreader = "0.13"
+osmpbfreader = "0.14"
