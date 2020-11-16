@@ -10,14 +10,14 @@ use structopt::StructOpt;
 /// Cosmogony arguments
 ///
 /// You can:
-/// * generate a cosmogony file from an osm file
-/// * merge several cosmogonies into one
+///
+/// * generate a cosmogony file from an osm file (generate)
+///
+/// * merge several cosmogonies into one (merge)
 ///
 /// Note: for retrocompatibility, if no subcommand is provided, the default one is `generate`
 ///
-/// So
-/// `cosmogony -i <osm-file> -o output file`
-/// if the same as
+/// So `cosmogony -i <osm-file> -o output file` if the same as
 /// `cosmogony generate -i <osm-file> -o output file`
 #[derive(StructOpt, Debug)]
 enum Args {
@@ -166,10 +166,10 @@ fn init_logger() {
 
 fn main() {
     init_logger();
-    let args = Args::from_args_safe().unwrap_or_else(|_| {
-        // Note: for retrocompatibility, we also try to read the args without subcommand
-        // to generate a cosmogony
-        Args::Generate(GenerateArgs::from_args())
+    // Note: for retrocompatibility, we also try to read the args without subcommand
+    // to generate a cosmogony
+    let args = GenerateArgs::from_args_safe().map(|a| Args::Generate(a)).unwrap_or_else(|_| {
+        Args::from_args()
     });
     if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);

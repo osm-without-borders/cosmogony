@@ -43,7 +43,7 @@ cargo build --release                  # finally build cosmogony
 - #### Run
 
 You can now grab some OSM pbf and extract your geographic zones:
-`cargo run --release -- -i /path/to/your/file.osm.pbf`
+`cargo run --release -- generate -i /path/to/your/file.osm.pbf`
 
 Check out cosmogony help for more options:
 `cargo run --release -- -h`
