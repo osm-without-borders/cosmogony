@@ -48,6 +48,19 @@ You can now grab some OSM pbf and extract your geographic zones:
 Check out cosmogony help for more options:
 `cargo run --release -- -h`
 
+- #### Other subcomands
+
+Note: the default subcommand is the `generate` subcommand, so `cosmogony -i <osm-file> -o output file` if the same as `cosmogony generate -i <osm-file> -o output file`
+
+- ##### Merging cosmogonies
+
+To generate a world cosmogony on a server withtout a lot of RAM, you can generate cosmogonies on split non overlapping osm files, without a shared parent (eg. split by continent or country) and merge the generated cosmogony.
+
+To merge several cosmogonies into one you can use the custom subcommand `merge`:
+`cargo run --release -- merge *.jsonl -o merged_cosmo.jsonl`
+
+Note: to reduce the memory footprint, it can only merge json lines  cosmogonies (so `.jsonl` or `.jsonl.gz`). 
+
 ## Documentation
 
 The initial purpose of Cosmogony is to enhance [mimir](https://github.com/CanalTP/mimirsbrunn), our geocoder (See [the founding issue](https://github.com/CanalTP/mimirsbrunn/issues/178) for a bit of context).

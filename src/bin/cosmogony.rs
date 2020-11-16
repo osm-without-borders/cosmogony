@@ -1,13 +1,42 @@
 use cosmogony::{file_format::OutputFormat, Cosmogony};
-use cosmogony_builder::build_cosmogony;
+use cosmogony_builder::{build_cosmogony, merger};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::BufWriter;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
+/// Cosmogony arguments
+///
+/// You can:
+/// * generate a cosmogony file from an osm file
+/// * merge several cosmogonies into one
+///
+/// Note: for retrocompatibility, if no subcommand is provided, the default one is `generate`
+///
+/// So
+/// `cosmogony -i <osm-file> -o output file`
+/// if the same as
+/// `cosmogony generate -i <osm-file> -o output file`
 #[derive(StructOpt, Debug)]
-struct Args {
+enum Args {
+    /// Generate cosmogony subcommand
+    ///
+    /// Note: for retrocompatibility this is also the default subcommand if none is provided
+    #[structopt(name = "generate")]
+    Generate(GenerateArgs),
+    /// Merge cosmogony subcommand
+    ///
+    /// Use it to merge several streamed cosmogony files into one.
+    /// Can be useful to split the processing of a large osm file (like the planet)
+    /// into several non overlapping small ones
+    #[structopt(name = "merge")]
+    Merge(MergeArgs),
+}
+
+#[derive(StructOpt, Debug)]
+struct GenerateArgs {
     /// OSM PBF file.
     #[structopt(short = "i", long = "input")]
     input: String,
@@ -36,6 +65,24 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
     disable_voronoi: bool,
     #[structopt(help = "Only generates labels for given langs", long = "filter-langs")]
     filter_langs: Vec<String>,
+}
+
+#[derive(StructOpt, Debug)]
+struct MergeArgs {
+    /// Cosmogony files to process
+    #[structopt(name = "FILE", parse(from_os_str))]
+    files: Vec<PathBuf>,
+    /// output file name
+    #[structopt(
+        short = "o",
+        long = "output",
+        default_value = "cosmogony.json",
+        help = r#"Output file name. Format will be deduced from the file extension.
+    Accepted extensions are '.jsonl', '.jsonl.gz' (no json or json.gz)
+    'jsonl' is json stream, each line is a zone as json
+    "#
+    )]
+    output: PathBuf,
 }
 
 fn to_json_stream(
@@ -79,7 +126,7 @@ fn serialize_cosmogony(
     Ok(())
 }
 
-fn cosmogony(args: Args) -> Result<(), failure::Error> {
+fn cosmogony(args: GenerateArgs) -> Result<(), failure::Error> {
     let format = OutputFormat::from_filename(&args.output)?;
 
     let cosmogony = build_cosmogony(
@@ -101,6 +148,13 @@ fn cosmogony(args: Args) -> Result<(), failure::Error> {
     Ok(())
 }
 
+fn run(args: Args) -> Result<(), failure::Error> {
+    match args {
+        Args::Merge(merge_args) => merger::merge_cosmogony(&merge_args.files, &merge_args.output),
+        Args::Generate(gen_args) => cosmogony(gen_args),
+    }
+}
+
 fn init_logger() {
     let mut builder = env_logger::Builder::new();
     builder.filter(None, log::LevelFilter::Info);
@@ -112,8 +166,12 @@ fn init_logger() {
 
 fn main() {
     init_logger();
-    let args = Args::from_args();
-    if let Err(e) = cosmogony(args) {
+    let args = Args::from_args_safe().unwrap_or_else(|_| {
+        // Note: for retrocompatibility, we also try to read the args without subcommand
+        // to generate a cosmogony
+        Args::Generate(GenerateArgs::from_args())
+    });
+    if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);
         e.iter_chain().for_each(|c| {
             log::error!("{}", c);
