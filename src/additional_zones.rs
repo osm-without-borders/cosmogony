@@ -135,7 +135,7 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
         .fetch_zone_bbox(&place)
         .into_iter()
         .map(|z_idx| &zones[z_idx.index])
-        .filter(|z| z.contains_center(place) && z.zone_type.is_some())
+        .filter(|z| z.zone_type.is_some() && z.contains_center(place))
         .min_by_key(|z| z.zone_type)
 }
 
