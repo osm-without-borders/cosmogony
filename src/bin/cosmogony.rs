@@ -76,7 +76,7 @@ struct MergeArgs {
     #[structopt(
         short = "o",
         long = "output",
-        default_value = "cosmogony.json",
+        default_value = "cosmogony.jsonl",
         help = r#"Output file name. Format will be deduced from the file extension.
     Accepted extensions are '.jsonl', '.jsonl.gz' (no json or json.gz)
     'jsonl' is json stream, each line is a zone as json
@@ -168,9 +168,9 @@ fn main() {
     init_logger();
     // Note: for retrocompatibility, we also try to read the args without subcommand
     // to generate a cosmogony
-    let args = GenerateArgs::from_args_safe().map(|a| Args::Generate(a)).unwrap_or_else(|_| {
-        Args::from_args()
-    });
+    let args = GenerateArgs::from_args_safe()
+        .map(|a| Args::Generate(a))
+        .unwrap_or_else(|_| Args::from_args());
     if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);
         e.iter_chain().for_each(|c| {

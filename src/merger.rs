@@ -67,7 +67,7 @@ pub fn merge_cosmogony(files: &[PathBuf], output: &Path) -> Result<(), failure::
     let mut stream = std::io::BufWriter::new(file);
     match format {
         OutputFormat::JsonGz | OutputFormat::Json => panic!(
-            "cannot read real cosmogonies, only jsonl/jsonl.gz to be able to stream the files"
+            "cannot write real cosmogonies, only jsonl/jsonl.gz to be able to stream the files"
         ),
         OutputFormat::JsonStream => {
             merger.merge_cosmogony(files, &mut stream)?;
