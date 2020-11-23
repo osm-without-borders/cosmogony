@@ -4,6 +4,7 @@ extern crate log;
 mod additional_zones;
 mod country_finder;
 mod hierarchy_builder;
+pub mod merger;
 mod zone_ext;
 pub mod zone_typer;
 
