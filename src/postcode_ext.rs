@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
 use rstar::{RTreeObject, AABB};
 use geo::{Point, Rect};
+use geo::algorithm::area::Area;
 
 
 #[derive(Debug)]
@@ -73,10 +74,14 @@ impl PostcodeExt for Postcode {
 
         let boundary = build_boundary(relation, objects);
 
-        boundary.map(|boundary| Postcode {
-            osm_id,
-            zipcode: zipcode.to_string(),
-            boundary,
+        boundary.map(|boundary| {
+            let area = boundary.unsigned_area();
+            Postcode {
+                osm_id,
+                zipcode: zipcode.to_string(),
+                boundary,
+                area
+            }
         })
     }
 }

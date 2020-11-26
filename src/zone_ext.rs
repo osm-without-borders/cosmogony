@@ -151,25 +151,19 @@ impl ZoneExt for Zone {
         if let Some(boundary) = boundary.as_ref() {
             if let Some(bbox) = bbox {
                 if (zip_codes.is_empty()) {
-                    info!("ZipCodes were empty for {:?}, trying to fill them", name);
+                    //info!("ZipCodes were empty for {:?}, trying to fill them", name);
                     zip_codes = postcodes.locate_in_envelope_intersecting(&envelope(bbox))
-                        .filter(|postcode| {
-                            info!(" - Candidate Postcode: {:?}", postcode.get_postcode().zipcode);
+                        .filter(|postcode_bbox| {
+                            //info!(" - Candidate Postcode: {:?}", postcode_bbox.get_postcode().zipcode);
 
-                            let postcodeBoundary = postcode.get_postcode().get_boundary();
-                            if boundary.intersects(postcodeBoundary) {
-                                let x = BooleanOp::intersection(boundary, postcodeBoundary);
+                            let overlap_between_postcode_and_area = BooleanOp::intersection(boundary, postcode_bbox.get_postcode().get_boundary());
 
-                                // anteil überlappender Bereiches / Postcode: "Wieviel % des Postcodes sind von dieser Fläche befüllt"
-                                let percentage = x.unsigned_area() / postcodeBoundary.unsigned_area(); // TODO: cache postcodeBoundary size
+                            // anteil überlappender Bereiches / Postcode: "Wieviel % des Postcodes sind von dieser Fläche befüllt"
+                            let overlap_percentage_relative_to_postcode = overlap_between_postcode_and_area.unsigned_area() / postcode_bbox.get_postcode().unsigned_area();
 
-                                info!("   CHOSEN {} {:?}", percentage, percentage > 0.05);
-                                // at least 5% des Postcodes müssen in der genannten Fläche liegen
-                                percentage > 0.05
-                            } else {
-                                info!("   NOT CHOSEN");
-                                false
-                            }
+                            //info!("   CHOSEN {} {:?}", overlap_percentage_relative_to_postcode, overlap_percentage_relative_to_postcode > 0.05);
+                            // at least 5% des Postcodes müssen in der genannten Fläche liegen
+                            overlap_percentage_relative_to_postcode > 0.05
 
                         })
                         .map(|x| x.get_postcode().zipcode.to_string())
