@@ -2,7 +2,7 @@
 // The Zone's capabilities have been split in order to hide some functions specific to cosmogony
 // and that we do not want to expose in the model
 
-use cosmogony::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType};
+use cosmogony::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType, Postcode};
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::Contains;
 use geos::Geom;
@@ -13,6 +13,10 @@ use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
+use rstar::{RTree, AABB, RTreeObject};
+use geo::{Rect, Point};
+use geo::intersects::Intersects;
+use crate::postcode_ext::PostcodeBbox;
 
 pub trait ZoneExt {
     /// create a zone from an osm node
@@ -23,6 +27,7 @@ pub trait ZoneExt {
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
+        postcodes: &RTree<PostcodeBbox>,
     ) -> Option<Zone>;
 
     /// check is a zone contains another zone
@@ -101,6 +106,7 @@ impl ZoneExt for Zone {
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
         index: ZoneIndex,
+        postcodes: &RTree<PostcodeBbox>,
     ) -> Option<Self> {
         use geo::centroid::Centroid;
 
@@ -125,12 +131,33 @@ impl ZoneExt for Zone {
             .get("addr:postcode")
             .or_else(|| relation.tags.get("postal_code"))
             .map_or("", |val| &val[..]);
-        let zip_codes = zip_code
+
+        let boundary = build_boundary(relation, objects);
+        let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
+
+        let mut zip_codes: Vec<String> = zip_code
             .split(';')
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string())
             .sorted()
             .collect();
+        //if let Some(boundary) = boundary {
+            if let Some(bbox) = bbox {
+                if (zip_codes.is_empty()) {
+                    zip_codes = postcodes.locate_in_envelope_intersecting(&envelope(bbox))
+                        // TODO: fine-grained intersection
+                        /*.filter(|x|
+                            x.get_postcode().boundary.and_then(|b|
+                                b.intersects(boundary)
+                            )
+                        )*/
+                        .map(|x| x.get_postcode().zipcode.to_string())
+                        .collect();
+
+                    info!("ZipCodes were empty, trying to find it {:?}", zip_codes);
+                }
+            }
+        //}
         let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
 
         let osm_id = format!("relation:{}", relation.id.0.to_string());
@@ -151,9 +178,6 @@ impl ZoneExt for Zone {
                     tags.entry(k.clone()).or_insert(v.clone());
                 })
         }
-
-        let boundary = build_boundary(relation, objects);
-        let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
 
         let refs = &relation.refs;
         let osm_center = refs
@@ -213,9 +237,9 @@ impl ZoneExt for Zone {
                         // In GEOS, "covers" is less strict than "contains".
                         // eg: a polygon does NOT "contain" its boundary, but "covers" it.
                         m_self.covers(m_other)
-                        .map_err(|e| info!("impossible to compute geometries coverage for zone {:?}/{:?}: error {}",
-                        &self.osm_id, &other.osm_id, e))
-                        .unwrap_or(false)
+                            .map_err(|e| info!("impossible to compute geometries coverage for zone {:?}/{:?}: error {}",
+                                               &self.osm_id, &other.osm_id, e))
+                            .unwrap_or(false)
                     }
                     (&Err(ref e), _) => {
                         info!(
@@ -303,7 +327,7 @@ impl ZoneExt for Zone {
         //  * for all cities where these entities are not explicitly distinct
         if (self.wikidata.is_some() && self.wikidata == center_wikidata)
             || (self.zone_type == Some(ZoneType::City)
-                && (center_wikidata.is_none() || self.wikidata.is_none()))
+            && (center_wikidata.is_none() || self.wikidata.is_none()))
         {
             let center_names: Vec<_> = self
                 .center_tags
@@ -328,8 +352,8 @@ impl ZoneExt for Zone {
 }
 
 fn create_lbl<'a, F>(zone: &'a Zone, all_zones: &'a MutableSlice<'_>, f: F) -> String
-where
-    F: Fn(&Zone) -> String,
+    where
+        F: Fn(&Zone) -> String,
 {
     let mut hierarchy: Vec<String> = zone.iter_hierarchy(all_zones).map(f).dedup().collect();
 
@@ -358,6 +382,11 @@ fn format_zip_code(zip_codes: &[String]) -> String {
         ),
     }
 }
+
+fn envelope(bbox: Rect<f64>) -> AABB<Point<f64>> {
+    AABB::from_corners(bbox.min().into(), bbox.max().into())
+}
+
 
 /// get all the international names from the osm tags
 ///
@@ -474,9 +503,9 @@ mod test {
             ("name", "bobito"),
             ("name:a_strange_lang_name", "bibi"),
         ]
-        .into_iter()
-        .map(|(k, v)| (k.into(), v.into()))
-        .collect();
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
 
         let names = get_international_names(&tags, "bob");
 
