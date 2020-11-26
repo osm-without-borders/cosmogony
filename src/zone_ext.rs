@@ -17,6 +17,12 @@ use rstar::{RTree, AABB, RTreeObject};
 use geo::{Rect, Point};
 use geo::intersects::Intersects;
 use crate::postcode_ext::PostcodeBbox;
+use geo_booleanop::boolean::BooleanOp;
+
+use geo_booleanop;
+use geo;
+use geo_types::MultiPolygon;
+use geo::algorithm::area::Area;
 
 pub trait ZoneExt {
     /// create a zone from an osm node
@@ -133,7 +139,7 @@ impl ZoneExt for Zone {
             .or_else(|| relation.tags.get("postal_code"))
             .map_or("", |val| &val[..]);
 
-        let boundary = build_boundary(relation, objects);
+        let boundary:Option<MultiPolygon<f64>> = build_boundary(relation, objects);
         let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
 
         let mut zip_codes: Vec<String> = zip_code
@@ -147,16 +153,24 @@ impl ZoneExt for Zone {
                 if (zip_codes.is_empty()) {
                     info!("ZipCodes were empty for {:?}, trying to fill them", name);
                     zip_codes = postcodes.locate_in_envelope_intersecting(&envelope(bbox))
-                        .filter(|x| {
-                            info!(" - Candidate Postcode: {:?}", x.get_postcode().zipcode);
+                        .filter(|postcode| {
+                            info!(" - Candidate Postcode: {:?}", postcode.get_postcode().zipcode);
 
-                            if let Some(b) = x.get_postcode().get_boundary() {
-                                info!("   CHOSEN");
-                                boundary.intersects(b)
+                            let postcodeBoundary = postcode.get_postcode().get_boundary();
+                            if boundary.intersects(postcodeBoundary) {
+                                let x = BooleanOp::intersection(boundary, postcodeBoundary);
+
+                                // anteil überlappender Bereiches / Postcode: "Wieviel % des Postcodes sind von dieser Fläche befüllt"
+                                let percentage = x.unsigned_area() / postcodeBoundary.unsigned_area(); // TODO: cache postcodeBoundary size
+
+                                info!("   CHOSEN {} {:?}", percentage, percentage > 0.05);
+                                // at least 5% des Postcodes müssen in der genannten Fläche liegen
+                                percentage > 0.05
                             } else {
                                 info!("   NOT CHOSEN");
                                 false
                             }
+
                         })
                         .map(|x| x.get_postcode().zipcode.to_string())
                         .collect();

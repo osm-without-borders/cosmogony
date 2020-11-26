@@ -30,6 +30,7 @@ flate2 = "1.0"
 rayon = "1.5"
 include_dir = "0.6"
 rstar = "0.8"
+geo-booleanop = "0.3.0"
 
 [dev-dependencies]
 approx = "0.3"

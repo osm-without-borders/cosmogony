@@ -81,13 +81,11 @@ pub fn get_postcodes(
         if let OsmObj::Relation(ref relation) = *obj {
             if let Some(postcode) = Postcode::from_osm_relation(relation, pbf) {
                 // Ignore zone without boundary polygon for the moment
-                if postcode.boundary.is_some() {
-                    let bbox = postcode.boundary.as_ref().and_then(|b| b.bounding_rect()).unwrap();
-                    postcodes.push(PostcodeBbox::new(
-                        postcode,
-                        &bbox
-                    ));
-                }
+                let bbox = postcode.boundary.bounding_rect().unwrap();
+                postcodes.push(PostcodeBbox::new(
+                    postcode,
+                    &bbox
+                ));
             };
         }
     }

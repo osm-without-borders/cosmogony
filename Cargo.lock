@@ -168,6 +168,7 @@ dependencies = [
  "failure_derive",
  "flate2",
  "geo",
+ "geo-booleanop",
  "geo-types",
  "geojson",
  "geos",
@@ -319,6 +320,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "float_next_after"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fc612c5837986b7104a87a0df74a5460931f1c5274be12f8d0f40aa2f30d632"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "futures"
 version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -371,8 +381,20 @@ dependencies = [
  "geo-types",
  "geographiclib-rs",
  "num-traits",
- "robust",
+ "robust 0.2.2",
  "rstar",
+]
+
+[[package]]
+name = "geo-booleanop"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b68ff17c819296610e9eee41bdf5eb37f71b09870a95f0086e07d8fcc1f45b"
+dependencies = [
+ "float_next_after",
+ "geo-types",
+ "num-traits",
+ "robust 0.1.2",
 ]
 
 [[package]]
@@ -871,6 +893,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "robust"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "222155e5550abd9100afdcdefbd08aa1b856d226b60e327044ec21b1ece2f78e"
 
 [[package]]
 name = "robust"

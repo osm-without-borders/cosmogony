@@ -73,7 +73,7 @@ impl PostcodeExt for Postcode {
 
         let boundary = build_boundary(relation, objects);
 
-        Some(Postcode {
+        boundary.map(|boundary| Postcode {
             osm_id,
             zipcode: zipcode.to_string(),
             boundary,
