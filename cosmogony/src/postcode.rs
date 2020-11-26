@@ -16,6 +16,12 @@ pub struct Postcode {
     pub boundary: Option<geo_types::MultiPolygon<f64>>,
 }
 
+impl Postcode {
+    pub fn get_boundary(&self) -> Option<&geo_types::MultiPolygon<f64>> {
+        return self.boundary.as_ref()
+    }
+}
+
 impl Default for Postcode {
     fn default() -> Self {
         Postcode {
@@ -26,5 +32,4 @@ impl Default for Postcode {
     }
 }
 
-impl Postcode {
-}
+impl Postcode {}

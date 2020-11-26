@@ -78,6 +78,7 @@ impl ZoneExt for Zone {
             .map(|s| s.to_string())
             .sorted()
             .collect();
+
         let wikidata = tags.get("wikidata").map(|s| s.to_string());
 
         let international_names = get_international_names(&tags, name);
@@ -141,23 +142,27 @@ impl ZoneExt for Zone {
             .map(|s| s.to_string())
             .sorted()
             .collect();
-        //if let Some(boundary) = boundary {
+        if let Some(boundary) = boundary.as_ref() {
             if let Some(bbox) = bbox {
                 if (zip_codes.is_empty()) {
+                    info!("ZipCodes were empty for {:?}, trying to fill them", name);
                     zip_codes = postcodes.locate_in_envelope_intersecting(&envelope(bbox))
-                        // TODO: fine-grained intersection
-                        /*.filter(|x|
-                            x.get_postcode().boundary.and_then(|b|
-                                b.intersects(boundary)
-                            )
-                        )*/
+                        .filter(|x| {
+                            info!(" - Candidate Postcode: {:?}", x.get_postcode().zipcode);
+
+                            if let Some(b) = x.get_postcode().get_boundary() {
+                                info!("   CHOSEN");
+                                boundary.intersects(b)
+                            } else {
+                                info!("   NOT CHOSEN");
+                                false
+                            }
+                        })
                         .map(|x| x.get_postcode().zipcode.to_string())
                         .collect();
-
-                    info!("ZipCodes were empty, trying to find it {:?}", zip_codes);
                 }
             }
-        //}
+        }
         let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
 
         let osm_id = format!("relation:{}", relation.id.0.to_string());
