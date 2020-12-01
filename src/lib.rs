@@ -73,13 +73,14 @@ pub fn is_place(obj: &OsmObj) -> bool {
 pub fn get_postcodes(
     pbf: &BTreeMap<OsmId, OsmObj>,
 ) -> Result<(RTree<PostcodeBbox>, CosmogonyStats), Error> {
-
-
     let mut postcodes: Vec<PostcodeBbox> = Vec::with_capacity(1000);
 
     let stats = CosmogonyStats::default();
 
     for obj in pbf.values() {
+        if !is_postal_code(obj) {
+            continue;
+        }
         if let OsmObj::Relation(ref relation) = *obj {
             if let Some(postcode) = Postcode::from_osm_relation(relation, pbf) {
                 // Ignore zone without boundary polygon for the moment
@@ -94,8 +95,6 @@ pub fn get_postcodes(
 
     let tree = RTree::bulk_load(postcodes);
 
-
-
     Ok((tree, stats))
 }
 
@@ -108,6 +107,9 @@ pub fn get_zones_and_stats(
     let mut zones = Vec::with_capacity(1000);
 
     for obj in pbf.values() {
+        if !is_admin(obj) {
+            continue;
+        }
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
             if let Some(zone) = Zone::from_osm_relation(relation, pbf, next_index, postcodes) {
@@ -261,18 +263,13 @@ pub fn build_cosmogony(
     let file = File::open(&path).context("no pbf file")?;
 
     let parsed_pbf = OsmPbfReader::new(file)
-        .get_objs_and_deps(|o| is_admin(o) || is_place(o))
+        .get_objs_and_deps(|o| is_admin(o) || is_place(o) || is_postal_code(o))
         .context("invalid osm file")?;
     info!("reading pbf done.");
 
-    info!("Reading postal codes");
-    let file = File::open(&path).context("no pbf file")?;
-    let parsed_postal_code = OsmPbfReader::new(file)
-        .get_objs_and_deps(|o| is_postal_code(o))
-        .context("invalid osm file")?;
-    info!("reading postal code from pbf done.");
-
-    let (postcodes,_) = get_postcodes(&parsed_postal_code)?;
+    info!("Starting to extract postcodes.");
+    let (postcodes,_) = get_postcodes(&parsed_pbf)?;
+    info!("Finished extracting postcodes.");
 
     let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf, &postcodes)?;
 
