@@ -8,12 +8,13 @@ pub mod merger;
 mod zone_ext;
 pub mod zone_typer;
 mod postcode_ext;
+mod postcode;
 
 use crate::country_finder::CountryFinder;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use additional_zones::compute_additional_cities;
 use cosmogony::mutable_slice::MutableSlice;
-use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats, Postcode};
+use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
 use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
@@ -28,6 +29,7 @@ use crate::zone_ext::ZoneExt;
 use crate::postcode_ext::{PostcodeExt, PostcodeBbox};
 use rstar::RTree;
 use geo::bounding_rect::BoundingRect;
+use crate::postcode::Postcode;
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {

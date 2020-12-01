@@ -2,7 +2,7 @@
 // The Zone's capabilities have been split in order to hide some functions specific to cosmogony
 // and that we do not want to expose in the model
 
-use cosmogony::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType, Postcode};
+use cosmogony::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType};
 use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{OsmId, OsmObj, Relation};
 use std::collections::{BTreeMap, BTreeSet};
@@ -10,6 +10,7 @@ use std::convert::TryInto;
 use rstar::{RTreeObject, AABB};
 use geo::{Point, Rect};
 use geo::algorithm::area::Area;
+use crate::postcode::Postcode;
 
 
 #[derive(Debug)]

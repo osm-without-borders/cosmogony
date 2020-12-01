@@ -1,4 +1,4 @@
-use crate::mutable_slice::MutableSlice;
+use cosmogony::mutable_slice::MutableSlice;
 use geo_types::{Coordinate, Geometry, MultiPolygon, Point, Rect, Polygon};
 use log::warn;
 use osmpbfreader::objects::Tags;
