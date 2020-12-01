@@ -73,25 +73,28 @@ pub fn is_place(obj: &OsmObj) -> bool {
 pub fn get_postcodes(
     pbf: &BTreeMap<OsmId, OsmObj>,
 ) -> Result<(RTree<PostcodeBbox>, CosmogonyStats), Error> {
-    let mut postcodes: Vec<PostcodeBbox> = Vec::with_capacity(1000);
+    use rayon::prelude::*;
 
     let stats = CosmogonyStats::default();
 
-    for obj in pbf.values() {
-        if !is_postal_code(obj) {
-            continue;
-        }
-        if let OsmObj::Relation(ref relation) = *obj {
-            if let Some(postcode) = Postcode::from_osm_relation(relation, pbf) {
-                // Ignore zone without boundary polygon for the moment
-                let bbox = postcode.boundary.bounding_rect().unwrap();
-                postcodes.push(PostcodeBbox::new(
-                    postcode,
-                    &bbox
-                ));
-            };
-        }
-    }
+    let postcodes: Vec<PostcodeBbox> = pbf.into_par_iter()
+        .filter_map(|(_, obj)| {
+            if !is_postal_code(obj) {
+                return None;
+            }
+            if let OsmObj::Relation(ref relation) = *obj {
+                if let Some(postcode) = Postcode::from_osm_relation(relation, pbf) {
+                    // Ignore zone without boundary polygon for the moment
+                    let bbox = postcode.boundary.bounding_rect().unwrap();
+                    return Some(PostcodeBbox::new(
+                        postcode,
+                        &bbox
+                    ));
+                };
+            }
+            return None;
+        })
+        .collect();
 
     let tree = RTree::bulk_load(postcodes);
 
@@ -269,9 +272,11 @@ pub fn build_cosmogony(
 
     info!("Starting to extract postcodes.");
     let (postcodes,_) = get_postcodes(&parsed_pbf)?;
-    info!("Finished extracting postcodes.");
+    info!("Finished extracting postcodes {}", postcodes.size());
 
+    info!("Starting to extract zones.");
     let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf, &postcodes)?;
+    info!("Finishing to extract zones.");
 
     create_ontology(
         &mut zones,
@@ -282,7 +287,7 @@ pub fn build_cosmogony(
         filter_langs,
     )?;
 
-    stats.compute(&zones);
+        stats.compute(&zones);
 
     let cosmogony = Cosmogony {
         zones,
