@@ -13,9 +13,8 @@ use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
-use rstar::{RTree, AABB, RTreeObject};
+use rstar::{RTree, AABB};
 use geo::{Rect, Point};
-use geo::intersects::Intersects;
 use crate::postcode_ext::PostcodeBbox;
 use geo_booleanop::boolean::BooleanOp;
 
@@ -150,7 +149,7 @@ impl ZoneExt for Zone {
             .collect();
         if let Some(boundary) = boundary.as_ref() {
             if let Some(bbox) = bbox {
-                if (zip_codes.is_empty()) {
+                if zip_codes.is_empty() {
                     //info!("ZipCodes were empty for {:?}, trying to fill them", name);
                     zip_codes = postcodes.locate_in_envelope_intersecting(&envelope(bbox))
                         .filter(|postcode_bbox| {

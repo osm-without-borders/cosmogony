@@ -92,7 +92,7 @@ pub fn get_postcodes(
         }
     }
 
-    let mut tree = RTree::bulk_load(postcodes);
+    let tree = RTree::bulk_load(postcodes);
 
 
 
@@ -272,7 +272,7 @@ pub fn build_cosmogony(
         .context("invalid osm file")?;
     info!("reading postal code from pbf done.");
 
-    let (postcodes, mut stats2) = get_postcodes(&parsed_postal_code)?;
+    let (postcodes,_) = get_postcodes(&parsed_postal_code)?;
 
     let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf, &postcodes)?;
 

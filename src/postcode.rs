@@ -1,13 +1,4 @@
-use cosmogony::mutable_slice::MutableSlice;
-use geo_types::{Coordinate, Geometry, MultiPolygon, Point, Rect, Polygon};
-use log::warn;
-use osmpbfreader::objects::Tags;
-use serde::Serialize;
-use serde_derive::*;
-use std::collections::BTreeMap;
-use std::fmt;
-
-pub type Coord = Point<f64>;
+use geo_types::{MultiPolygon};
 
 #[derive(Debug, Clone)]
 pub struct Postcode {
