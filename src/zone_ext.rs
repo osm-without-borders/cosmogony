@@ -13,15 +13,9 @@ use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
-use rstar::{RTree, AABB};
-use geo::{Rect, Point};
-use crate::postcode_ext::PostcodeBbox;
-use geo_booleanop::boolean::BooleanOp;
 
-use geo_booleanop;
 use geo;
 use geo_types::MultiPolygon;
-use geo::algorithm::area::Area;
 
 pub trait ZoneExt {
     /// create a zone from an osm node
@@ -31,8 +25,7 @@ pub trait ZoneExt {
     fn from_osm_relation(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
-        index: ZoneIndex,
-        postcodes: &RTree<PostcodeBbox>,
+        index: ZoneIndex
     ) -> Option<Zone>;
 
     /// check is a zone contains another zone
@@ -111,8 +104,7 @@ impl ZoneExt for Zone {
     fn from_osm_relation(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
-        index: ZoneIndex,
-        postcodes: &RTree<PostcodeBbox>,
+        index: ZoneIndex
     ) -> Option<Self> {
         use geo::centroid::Centroid;
 
@@ -141,35 +133,12 @@ impl ZoneExt for Zone {
         let boundary:Option<MultiPolygon<f64>> = build_boundary(relation, objects);
         let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
 
-        let mut zip_codes: Vec<String> = zip_code
+        let zip_codes: Vec<String> = zip_code
             .split(';')
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string())
             .sorted()
             .collect();
-        if let Some(boundary) = boundary.as_ref() {
-            if let Some(bbox) = bbox {
-                if zip_codes.is_empty() {
-                    //info!("ZipCodes were empty for {:?}, trying to fill them", name);
-                    zip_codes = postcodes.locate_in_envelope_intersecting(&envelope(bbox))
-                        .filter(|postcode_bbox| {
-                            //info!(" - Candidate Postcode: {:?}", postcode_bbox.get_postcode().zipcode);
-
-                            let overlap_between_postcode_and_area = BooleanOp::intersection(boundary, postcode_bbox.get_postcode().get_boundary());
-
-                            // anteil überlappender Bereiches / Postcode: "Wieviel % des Postcodes sind von dieser Fläche befüllt"
-                            let overlap_percentage_relative_to_postcode = overlap_between_postcode_and_area.unsigned_area() / postcode_bbox.get_postcode().unsigned_area();
-
-                            //info!("   CHOSEN {} {:?}", overlap_percentage_relative_to_postcode, overlap_percentage_relative_to_postcode > 0.05);
-                            // at least 5% des Postcodes müssen in der genannten Fläche liegen
-                            overlap_percentage_relative_to_postcode > 0.05
-
-                        })
-                        .map(|x| x.get_postcode().zipcode.to_string())
-                        .collect();
-                }
-            }
-        }
         let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
 
         let osm_id = format!("relation:{}", relation.id.0.to_string());
@@ -393,10 +362,6 @@ fn format_zip_code(zip_codes: &[String]) -> String {
             zip_codes.last().unwrap_or(&"".to_string())
         ),
     }
-}
-
-fn envelope(bbox: Rect<f64>) -> AABB<Point<f64>> {
-    AABB::from_corners(bbox.min().into(), bbox.max().into())
 }
 
 

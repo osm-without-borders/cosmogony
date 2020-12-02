@@ -7,8 +7,8 @@ mod hierarchy_builder;
 pub mod merger;
 mod zone_ext;
 pub mod zone_typer;
-mod postcode_ext;
 mod postcode;
+mod postcode_service;
 
 use crate::country_finder::CountryFinder;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
@@ -26,10 +26,7 @@ use std::path::Path;
 use cosmogony::{Zone, ZoneIndex};
 
 use crate::zone_ext::ZoneExt;
-use crate::postcode_ext::{PostcodeExt, PostcodeBbox};
-use rstar::RTree;
-use geo::bounding_rect::BoundingRect;
-use crate::postcode::Postcode;
+use crate::postcode_service::{get_postcodes, assign_postcodes_to_zones};
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -70,41 +67,9 @@ pub fn is_place(obj: &OsmObj) -> bool {
     }
 }
 
-pub fn get_postcodes(
-    pbf: &BTreeMap<OsmId, OsmObj>,
-) -> Result<(RTree<PostcodeBbox>, CosmogonyStats), Error> {
-    use rayon::prelude::*;
-
-    let stats = CosmogonyStats::default();
-
-    let postcodes: Vec<PostcodeBbox> = pbf.into_par_iter()
-        .filter_map(|(_, obj)| {
-            if !is_postal_code(obj) {
-                return None;
-            }
-            if let OsmObj::Relation(ref relation) = *obj {
-                if let Some(postcode) = Postcode::from_osm_relation(relation, pbf) {
-                    // Ignore zone without boundary polygon for the moment
-                    let bbox = postcode.boundary.bounding_rect().unwrap();
-                    return Some(PostcodeBbox::new(
-                        postcode,
-                        &bbox
-                    ));
-                };
-            }
-            return None;
-        })
-        .collect();
-
-    let tree = RTree::bulk_load(postcodes);
-
-    Ok((tree, stats))
-}
-
 
 pub fn get_zones_and_stats(
-    pbf: &BTreeMap<OsmId, OsmObj>,
-    postcodes: &RTree<PostcodeBbox>
+    pbf: &BTreeMap<OsmId, OsmObj>
 ) -> Result<(Vec<Zone>, CosmogonyStats), Error> {
     let stats = CosmogonyStats::default();
     let mut zones = Vec::with_capacity(1000);
@@ -115,7 +80,7 @@ pub fn get_zones_and_stats(
         }
         if let OsmObj::Relation(ref relation) = *obj {
             let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = Zone::from_osm_relation(relation, pbf, next_index, postcodes) {
+            if let Some(zone) = Zone::from_osm_relation(relation, pbf, next_index) {
                 // Ignore zone without boundary polygon for the moment
                 if zone.boundary.is_some() {
                     zones.push(zone);
@@ -270,12 +235,8 @@ pub fn build_cosmogony(
         .context("invalid osm file")?;
     info!("reading pbf done.");
 
-    info!("Starting to extract postcodes.");
-    let (postcodes,_) = get_postcodes(&parsed_pbf)?;
-    info!("Finished extracting postcodes {}", postcodes.size());
-
     info!("Starting to extract zones.");
-    let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf, &postcodes)?;
+    let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf)?;
     info!("Finishing to extract zones.");
 
     create_ontology(
@@ -287,7 +248,13 @@ pub fn build_cosmogony(
         filter_langs,
     )?;
 
-        stats.compute(&zones);
+    info!("Starting to extract postcodes.");
+    let postcodes = get_postcodes(&parsed_pbf)?;
+    info!("Finished extracting postcodes {}", postcodes.size());
+
+    assign_postcodes_to_zones(&mut zones, &postcodes);
+
+    stats.compute(&zones);
 
     let cosmogony = Cosmogony {
         zones,
