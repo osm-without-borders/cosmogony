@@ -1,7 +1,6 @@
 use crate::is_postal_code;
 use crate::postcode::{Postcode, PostcodeBbox};
 use cosmogony::Zone;
-use failure::Error;
 use geo::prelude::{Area, BoundingRect};
 use geo::{Point, Rect};
 use geo_booleanop::boolean::BooleanOp;
@@ -9,33 +8,13 @@ use osmpbfreader::{OsmId, OsmObj};
 use rstar::{RTree, AABB};
 use std::collections::BTreeMap;
 
-pub fn get_postcodes(pbf: &BTreeMap<OsmId, OsmObj>) -> Result<RTree<PostcodeBbox>, Error> {
+pub fn assign_postcodes_to_zones(zones: &mut Vec<Zone>, pbf: &BTreeMap<OsmId, OsmObj>) {
     use rayon::prelude::*;
 
-    let postcodes: Vec<PostcodeBbox> = pbf
-        .into_par_iter()
-        .filter_map(|(_, obj)| {
-            if !is_postal_code(obj) {
-                return None;
-            }
-            if let OsmObj::Relation(ref relation) = *obj {
-                if let Some(postcode) = Postcode::from_osm_relation(relation, pbf) {
-                    // Ignore zone without boundary polygon for the moment
-                    let bbox = postcode.boundary.bounding_rect().unwrap();
-                    return Some(PostcodeBbox::new(postcode, &bbox));
-                };
-            }
-            None
-        })
-        .collect();
+    info!("Starting to extract postcodes.");
+    let postcodes = get_postcodes_from_pbf(pbf);
+    info!("Finished extracting {} postcodes, now starting to match postcodes and zones", postcodes.size());
 
-    let tree = RTree::bulk_load(postcodes);
-
-    Ok(tree)
-}
-
-pub fn assign_postcodes_to_zones(zones: &mut Vec<Zone>, postcodes: &RTree<PostcodeBbox>) {
-    use rayon::prelude::*;
     zones.into_par_iter().for_each(|z| {
         if let Some(boundary) = z.boundary.as_ref() {
             if let Some(bbox) = z.bbox {
@@ -66,6 +45,31 @@ pub fn assign_postcodes_to_zones(zones: &mut Vec<Zone>, postcodes: &RTree<Postco
             }
         }
     });
+    info!("Finished matching postcodes and zones.");
+}
+
+
+fn get_postcodes_from_pbf(pbf: &BTreeMap<OsmId, OsmObj>) -> RTree<PostcodeBbox> {
+    use rayon::prelude::*;
+
+    let postcodes_list: Vec<PostcodeBbox> = pbf
+        .into_par_iter()
+        .filter_map(|(_, obj)| {
+            if !is_postal_code(obj) {
+                return None;
+            }
+            if let OsmObj::Relation(ref relation) = *obj {
+                if let Some(postcode) = Postcode::from_osm_relation(relation, pbf) {
+                    // Ignore zone without boundary polygon for the moment
+                    let bbox = postcode.boundary.bounding_rect().unwrap();
+                    return Some(PostcodeBbox::new(postcode, &bbox));
+                };
+            }
+            None
+        })
+        .collect();
+
+    RTree::bulk_load(postcodes_list)
 }
 
 fn envelope(bbox: &Rect<f64>) -> AABB<Point<f64>> {

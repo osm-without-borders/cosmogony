@@ -25,7 +25,7 @@ use std::path::Path;
 
 use cosmogony::{Zone, ZoneIndex};
 
-use crate::postcode_service::{assign_postcodes_to_zones, get_postcodes};
+use crate::postcode_service::{assign_postcodes_to_zones};
 use crate::zone_ext::ZoneExt;
 
 #[rustfmt::skip]
@@ -246,11 +246,7 @@ pub fn build_cosmogony(
         filter_langs,
     )?;
 
-    info!("Starting to extract postcodes.");
-    let postcodes = get_postcodes(&parsed_pbf)?;
-    info!("Finished extracting postcodes {}", postcodes.size());
-
-    assign_postcodes_to_zones(&mut zones, &postcodes);
+    assign_postcodes_to_zones(&mut zones, &parsed_pbf);
 
     stats.compute(&zones);
 
