@@ -14,7 +14,6 @@ use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
 
-use geo;
 use geo_types::MultiPolygon;
 
 pub trait ZoneExt {

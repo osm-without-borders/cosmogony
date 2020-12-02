@@ -16,11 +16,11 @@ pub struct Postcode {
 
 impl Postcode {
     pub fn get_boundary(&self) -> &geo_types::MultiPolygon<f64> {
-        return &self.boundary;
+        &self.boundary
     }
 
     pub fn unsigned_area(&self) -> f64 {
-        return self.area;
+        self.area
     }
 
     /// create a zone from an osm relation and a geometry
@@ -82,7 +82,7 @@ impl PostcodeBbox {
     }
 
     pub fn get_postcode(&self) -> &Postcode {
-        return &self.postcode;
+        &self.postcode
     }
 }
 

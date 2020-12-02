@@ -25,7 +25,7 @@ pub fn get_postcodes(pbf: &BTreeMap<OsmId, OsmObj>) -> Result<RTree<PostcodeBbox
                     return Some(PostcodeBbox::new(postcode, &bbox));
                 };
             }
-            return None;
+            None
         })
         .collect();
 
@@ -34,7 +34,7 @@ pub fn get_postcodes(pbf: &BTreeMap<OsmId, OsmObj>) -> Result<RTree<PostcodeBbox
     Ok(tree)
 }
 
-pub fn assign_postcodes_to_zones(zones: &mut Vec<Zone>, postcodes: &RTree<PostcodeBbox>) -> () {
+pub fn assign_postcodes_to_zones(zones: &mut Vec<Zone>, postcodes: &RTree<PostcodeBbox>) {
     use rayon::prelude::*;
     zones.into_par_iter().for_each(|z| {
         if let Some(boundary) = z.boundary.as_ref() {
