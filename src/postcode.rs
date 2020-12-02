@@ -1,22 +1,22 @@
-use geo_types::{MultiPolygon};
-use osmpbfreader::{Relation, OsmId, OsmObj};
-use std::collections::BTreeMap;
-use osm_boundaries_utils::build_boundary;
 use geo::algorithm::area::Area;
-use rstar::{AABB, RTreeObject};
 use geo::{Point, Rect};
+use geo_types::MultiPolygon;
+use osm_boundaries_utils::build_boundary;
+use osmpbfreader::{OsmId, OsmObj, Relation};
+use rstar::{RTreeObject, AABB};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct Postcode {
     pub osm_id: String,
     pub zipcode: String,
     pub boundary: geo_types::MultiPolygon<f64>,
-    pub area: f64
+    pub area: f64,
 }
 
 impl Postcode {
     pub fn get_boundary(&self) -> &geo_types::MultiPolygon<f64> {
-        return &self.boundary
+        return &self.boundary;
     }
 
     pub fn unsigned_area(&self) -> f64 {
@@ -28,7 +28,7 @@ impl Postcode {
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
     ) -> Option<Postcode> {
-// Skip postcode withjout postcode
+        // Skip postcode withjout postcode
         let zipcode = match relation.tags.get("postal_code") {
             Some(val) => val,
             None => {
@@ -50,7 +50,7 @@ impl Postcode {
                 osm_id,
                 zipcode: zipcode.to_string(),
                 boundary,
-                area
+                area,
             }
         })
     }
@@ -62,11 +62,10 @@ impl Default for Postcode {
             osm_id: "".into(),
             boundary: MultiPolygon(vec![]),
             zipcode: "".into(),
-            area: 0.0
+            area: 0.0,
         }
     }
 }
-
 
 #[derive(Debug)]
 pub struct PostcodeBbox {
@@ -87,7 +86,6 @@ impl PostcodeBbox {
     }
 }
 
-
 impl RTreeObject for PostcodeBbox {
     type Envelope = AABB<Point<f64>>;
     fn envelope(&self) -> Self::Envelope {
@@ -95,11 +93,8 @@ impl RTreeObject for PostcodeBbox {
     }
 }
 
-
 fn envelope(bbox: &Rect<f64>) -> AABB<Point<f64>> {
     AABB::from_corners(bbox.min().into(), bbox.max().into())
 }
-
-
 
 impl Postcode {}

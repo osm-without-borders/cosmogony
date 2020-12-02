@@ -25,7 +25,7 @@ pub trait ZoneExt {
     fn from_osm_relation(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
-        index: ZoneIndex
+        index: ZoneIndex,
     ) -> Option<Zone>;
 
     /// check is a zone contains another zone
@@ -104,7 +104,7 @@ impl ZoneExt for Zone {
     fn from_osm_relation(
         relation: &Relation,
         objects: &BTreeMap<OsmId, OsmObj>,
-        index: ZoneIndex
+        index: ZoneIndex,
     ) -> Option<Self> {
         use geo::centroid::Centroid;
 
@@ -130,7 +130,7 @@ impl ZoneExt for Zone {
             .or_else(|| relation.tags.get("postal_code"))
             .map_or("", |val| &val[..]);
 
-        let boundary:Option<MultiPolygon<f64>> = build_boundary(relation, objects);
+        let boundary: Option<MultiPolygon<f64>> = build_boundary(relation, objects);
         let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
 
         let zip_codes: Vec<String> = zip_code
@@ -308,7 +308,7 @@ impl ZoneExt for Zone {
         //  * for all cities where these entities are not explicitly distinct
         if (self.wikidata.is_some() && self.wikidata == center_wikidata)
             || (self.zone_type == Some(ZoneType::City)
-            && (center_wikidata.is_none() || self.wikidata.is_none()))
+                && (center_wikidata.is_none() || self.wikidata.is_none()))
         {
             let center_names: Vec<_> = self
                 .center_tags
@@ -333,8 +333,8 @@ impl ZoneExt for Zone {
 }
 
 fn create_lbl<'a, F>(zone: &'a Zone, all_zones: &'a MutableSlice<'_>, f: F) -> String
-    where
-        F: Fn(&Zone) -> String,
+where
+    F: Fn(&Zone) -> String,
 {
     let mut hierarchy: Vec<String> = zone.iter_hierarchy(all_zones).map(f).dedup().collect();
 
@@ -363,7 +363,6 @@ fn format_zip_code(zip_codes: &[String]) -> String {
         ),
     }
 }
-
 
 /// get all the international names from the osm tags
 ///
@@ -480,9 +479,9 @@ mod test {
             ("name", "bobito"),
             ("name:a_strange_lang_name", "bibi"),
         ]
-            .into_iter()
-            .map(|(k, v)| (k.into(), v.into()))
-            .collect();
+        .into_iter()
+        .map(|(k, v)| (k.into(), v.into()))
+        .collect();
 
         let names = get_international_names(&tags, "bob");
 

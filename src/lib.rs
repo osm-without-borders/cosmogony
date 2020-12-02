@@ -5,10 +5,10 @@ mod additional_zones;
 mod country_finder;
 mod hierarchy_builder;
 pub mod merger;
-mod zone_ext;
-pub mod zone_typer;
 mod postcode;
 mod postcode_service;
+mod zone_ext;
+pub mod zone_typer;
 
 use crate::country_finder::CountryFinder;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
@@ -25,8 +25,8 @@ use std::path::Path;
 
 use cosmogony::{Zone, ZoneIndex};
 
+use crate::postcode_service::{assign_postcodes_to_zones, get_postcodes};
 use crate::zone_ext::ZoneExt;
-use crate::postcode_service::{get_postcodes, assign_postcodes_to_zones};
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -56,7 +56,6 @@ pub fn is_postal_code(obj: &OsmObj) -> bool {
     }
 }
 
-
 pub fn is_place(obj: &OsmObj) -> bool {
     match *obj {
         OsmObj::Node(ref node) => node
@@ -67,9 +66,8 @@ pub fn is_place(obj: &OsmObj) -> bool {
     }
 }
 
-
 pub fn get_zones_and_stats(
-    pbf: &BTreeMap<OsmId, OsmObj>
+    pbf: &BTreeMap<OsmId, OsmObj>,
 ) -> Result<(Vec<Zone>, CosmogonyStats), Error> {
     let stats = CosmogonyStats::default();
     let mut zones = Vec::with_capacity(1000);
