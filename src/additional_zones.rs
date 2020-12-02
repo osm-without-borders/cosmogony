@@ -323,11 +323,11 @@ fn compute_voronoi(
 
         place.boundary = parent.boundary.clone();
         place.parent = Some(parent.id);
-        if let Some(ref boundary) = place.boundary {
-            place.bbox = boundary.bounding_rect();
-        }
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
         if extrude_existing_town(&mut place, &towns, &geos_cache) {
+            if let Some(ref boundary) = place.boundary {
+                place.bbox = boundary.bounding_rect();
+            }
             return vec![place];
         }
         return Vec::new();
@@ -402,10 +402,10 @@ fn compute_voronoi(
                 Ok(s) => {
                     place.parent = Some(parent.id);
                     place.boundary = convert_to_geo(s);
+                    extrude_existing_town(&mut place, &towns, &geos_cache);
                     if let Some(ref boundary) = place.boundary {
                         place.bbox = boundary.bounding_rect();
                     }
-                    extrude_existing_town(&mut place, &towns, &geos_cache);
                     Some(place)
                 }
                 Err(e) => {
