@@ -5,6 +5,7 @@ use flate2::Compression;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
+use structopt::clap::ErrorKind;
 use structopt::StructOpt;
 
 /// Cosmogony arguments
@@ -169,8 +170,16 @@ fn main() {
     // Note: for retrocompatibility, we also try to read the args without subcommand
     // to generate a cosmogony
     let args = GenerateArgs::from_args_safe()
-        .map(|a| Args::Generate(a))
-        .unwrap_or_else(|_| Args::from_args());
+        .map(Args::Generate)
+        .unwrap_or_else(|err| {
+            if let ErrorKind::VersionDisplayed = err.kind {
+                // The version number has been displayed.
+                // Args should not be parsed a second time.
+                println!();
+                std::process::exit(0)
+            }
+            Args::from_args()
+        });
     if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);
         e.iter_chain().for_each(|c| {
