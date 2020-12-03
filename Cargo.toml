@@ -10,7 +10,7 @@ edition = "2018"
 cosmogony = { path = "cosmogony" }
 log = "0.4"
 env_logger = "0.8"
-geo = "0.15"
+geo = "0.16"
 geo-types = { version = "0.6", features = ["rstar"] }
 geojson = { version = "0.20", features = ["geo-types"] }
 geos = { version = "7.0", features= ["geo"] }
@@ -24,7 +24,7 @@ serde_yaml = "0.8"
 itertools = "0.8"
 failure = "0.1"
 failure_derive = "0.1"
-osm_boundaries_utils = "0.8"
+osm_boundaries_utils = "0.8.2"
 regex = "1"
 flate2 = "1.0"
 rayon = "1.5"
