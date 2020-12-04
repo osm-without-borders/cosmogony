@@ -22,6 +22,16 @@ fn launch_command_line(args: Vec<&str>) -> Output {
 }
 
 #[test]
+fn test_cmd_version() {
+    let output = launch_command_line(vec!["--version"]);
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!("cosmogony_builder {}\n", env!("CARGO_PKG_VERSION"))
+    );
+}
+
+#[test]
 fn test_cmd_with_json_output() {
     let out_file = concat!(env!("OUT_DIR"), "/test_cosmogony.json");
     let output = launch_command_line(vec![
