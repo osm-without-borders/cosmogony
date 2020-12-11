@@ -133,7 +133,7 @@ fn type_zones(
                 stats.zone_without_country += 1;
             }
             Some(Ok((country_code, t))) => {
-                z.country_code = Some(country_code.to_lowercase());
+                z.country_code = Some(country_code);
                 z.zone_type = Some(t)
             }
             Some(Err(zone_typer::ZoneTyperError::InvalidCountry(c))) => {
