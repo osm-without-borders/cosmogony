@@ -114,14 +114,17 @@ fn type_zones(
         .par_iter()
         .map(|z| {
             get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index])
-                .map(|c| zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones))
+                .map(|c| {
+                    zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones)
+                        .map(|zone_type| (c, zone_type))
+                })
         })
         .collect();
 
     zones
         .iter_mut()
         .zip(zones_type.into_iter())
-        .for_each(|(z, zone_type)| match zone_type {
+        .for_each(|(z, country_code_and_zone_type)| match country_code_and_zone_type {
             None => {
                 info!(
                     "impossible to find a country for {} ({}), skipping",
@@ -129,7 +132,10 @@ fn type_zones(
                 );
                 stats.zone_without_country += 1;
             }
-            Some(Ok(t)) => z.zone_type = Some(t),
+            Some(Ok((country_code, t))) => {
+                z.country_code = Some(country_code.to_lowercase());
+                z.zone_type = Some(t)
+            }
             Some(Err(zone_typer::ZoneTyperError::InvalidCountry(c))) => {
                 info!("impossible to find rules for country {}", c);
                 *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;

@@ -87,6 +87,7 @@ pub struct Zone {
     // pub links: Vec<ZoneIndex>
     #[serde(default)]
     pub is_generated: bool,
+    pub country_code: Option<String>,
 }
 
 impl Default for Zone {
@@ -109,6 +110,7 @@ impl Default for Zone {
             wikidata: None,
             zip_codes: vec![],
             is_generated: true,
+            country_code: None
         }
     }
 }
