@@ -113,46 +113,48 @@ fn type_zones(
     let zones_type: Vec<_> = zones
         .par_iter()
         .map(|z| {
-            get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index])
-                .map(|c| {
-                    zone_typer.get_zone_type(&z, &c, &inclusions[z.id.index], zones)
-                        .map(|zone_type| (c, zone_type))
-                })
+            get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index]).map(|c| {
+                zone_typer
+                    .get_zone_type(&z, &c, &inclusions[z.id.index], zones)
+                    .map(|zone_type| (c, zone_type))
+            })
         })
         .collect();
 
     zones
         .iter_mut()
         .zip(zones_type.into_iter())
-        .for_each(|(z, country_code_and_zone_type)| match country_code_and_zone_type {
-            None => {
-                info!(
-                    "impossible to find a country for {} ({}), skipping",
-                    z.osm_id, z.name
-                );
-                stats.zone_without_country += 1;
-            }
-            Some(Ok((country_code, t))) => {
-                z.country_code = Some(country_code);
-                z.zone_type = Some(t)
-            }
-            Some(Err(zone_typer::ZoneTyperError::InvalidCountry(c))) => {
-                info!("impossible to find rules for country {}", c);
-                *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
-            }
-            Some(Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country))) => {
-                debug!(
-                    "impossible to find a rule for level {:?} for country {}",
-                    lvl, country
-                );
-                *stats
-                    .unhandled_admin_level
-                    .entry(country)
-                    .or_insert_with(BTreeMap::new)
-                    .entry(lvl.unwrap_or(0))
-                    .or_insert(0) += 1;
-            }
-        });
+        .for_each(
+            |(z, country_code_and_zone_type)| match country_code_and_zone_type {
+                None => {
+                    info!(
+                        "impossible to find a country for {} ({}), skipping",
+                        z.osm_id, z.name
+                    );
+                    stats.zone_without_country += 1;
+                }
+                Some(Ok((country_code, t))) => {
+                    z.country_code = Some(country_code);
+                    z.zone_type = Some(t)
+                }
+                Some(Err(zone_typer::ZoneTyperError::InvalidCountry(c))) => {
+                    info!("impossible to find rules for country {}", c);
+                    *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
+                }
+                Some(Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country))) => {
+                    debug!(
+                        "impossible to find a rule for level {:?} for country {}",
+                        lvl, country
+                    );
+                    *stats
+                        .unhandled_admin_level
+                        .entry(country)
+                        .or_insert_with(BTreeMap::new)
+                        .entry(lvl.unwrap_or(0))
+                        .or_insert(0) += 1;
+                }
+            },
+        );
 
     Ok(())
 }

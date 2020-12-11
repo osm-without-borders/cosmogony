@@ -110,7 +110,7 @@ impl Default for Zone {
             wikidata: None,
             zip_codes: vec![],
             is_generated: true,
-            country_code: None
+            country_code: None,
         }
     }
 }
