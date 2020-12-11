@@ -78,10 +78,6 @@ pub fn compute_additional_cities(
         place_zones.len()
     );
 
-    let init_map = || {
-        let map: BTreeMap<_, Vec<_>> = BTreeMap::new();
-        map
-    };
     let candidate_parent_zones = place_zones
         .par_iter()
         .filter_map(|place| {
@@ -104,11 +100,11 @@ pub fn compute_additional_cities(
                 })
                 .unwrap_or_else(|| false)
         })
-        .fold(init_map, |mut map, (parent, place)| {
+        .fold(BTreeMap::<_, Vec<_>>::new, |mut map, (parent, place)| {
             map.entry(&parent.id).or_default().push(place);
             map
         })
-        .reduce(init_map, |mut map1, map2| {
+        .reduce(BTreeMap::<_, Vec<_>>::new, |mut map1, map2| {
             for (k, mut v) in map2.into_iter() {
                 map1.entry(k).or_default().append(&mut v);
             }
@@ -144,8 +140,7 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
         .map(|z_idx| &zones[z_idx.index])
         .filter(|z| z.zone_type.is_some())
         .sorted_by_key(|z| z.zone_type)
-        .filter(|z| z.contains_center(place))
-        .next()
+        .find(|z| z.contains_center(place))
 }
 
 fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
