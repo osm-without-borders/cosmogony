@@ -1,6 +1,6 @@
 [package]
 name = "cosmogony_builder"
-version = "0.9.1"
+version = "0.9.2"
 authors = ["Adrien Matissart <a.matissart@qwantresearch.com>", "Antoine Desbordes <antoine.desbordes@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/osm-without-borders/cosmogony"
@@ -21,7 +21,7 @@ serde = {version = "1", features = ["rc"]}
 serde_derive = "1"
 serde_json = "1"
 serde_yaml = "0.8"
-itertools = "0.8"
+itertools = "0.9"
 failure = "0.1"
 failure_derive = "0.1"
 osm_boundaries_utils = "0.8.2"
