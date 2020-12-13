@@ -138,10 +138,12 @@ fn type_zones(
                     z.zone_type = Some(t)
                 }
                 Some(Err(zone_typer::ZoneTyperError::InvalidCountry(c))) => {
+                    z.country_code = Some(c.clone());
                     info!("impossible to find rules for country {}", c);
                     *stats.zone_with_unkwown_country_rules.entry(c).or_insert(0) += 1;
                 }
                 Some(Err(zone_typer::ZoneTyperError::UnkownLevel(lvl, country))) => {
+                    z.country_code = Some(country.clone());
                     debug!(
                         "impossible to find a rule for level {:?} for country {}",
                         lvl, country
