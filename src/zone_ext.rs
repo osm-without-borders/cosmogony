@@ -94,6 +94,7 @@ impl ZoneExt for Zone {
             label: "".to_string(),
             zip_codes,
             is_generated: true,
+            country_code: None,
         })
     }
 
@@ -199,6 +200,7 @@ impl ZoneExt for Zone {
             center_tags,
             wikidata,
             is_generated: false,
+            country_code: None,
         })
     }
 
@@ -408,6 +410,7 @@ mod test {
             wikidata: None,
             zip_codes: zips.iter().map(|s| s.to_string()).collect(),
             is_generated: false,
+            country_code: None,
         }
     }
 

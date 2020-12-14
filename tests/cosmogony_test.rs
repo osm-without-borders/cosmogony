@@ -224,6 +224,7 @@ fn test_lux_zone_types() {
     assert_eq!(lux.osm_id, "relation:407489");
     assert_eq!(lux.admin_level, Some(8));
     assert_eq!(lux.label, "Luxembourg, Canton Luxembourg, Lëtzebuerg");
+    assert_eq!(lux.country_code, Some("LU".into()));
     assert!(lux.zip_codes.is_empty());
     assert!(lux.center.is_some());
     assert_eq!(
@@ -261,6 +262,7 @@ fn test_lux_zone_types() {
     assert_eq!(lux.osm_id, "relation:2171347");
     assert_eq!(lux.admin_level, Some(2));
     assert_eq!(lux.label, "Lëtzebuerg");
+    assert_eq!(lux.country_code, Some("LU".into()));
     assert!(lux.zip_codes.is_empty());
     assert!(lux.center.is_some());
     assert_eq!(&lux.parent, &None::<ZoneIndex>);
