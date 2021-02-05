@@ -4,7 +4,7 @@
 
 use cosmogony::{mutable_slice::MutableSlice, Coord, Zone, ZoneIndex, ZoneType};
 use geo::algorithm::bounding_rect::BoundingRect;
-use geo::prelude::Contains;
+use geo::prelude::{Contains, Intersects};
 use geos::Geom;
 use geos::Geometry;
 use itertools::Itertools;
@@ -30,6 +30,9 @@ pub trait ZoneExt {
 
     /// check if a zone contains another zone's center
     fn contains_center(&self, other: &Zone) -> bool;
+
+    /// check if a zone intersects another zone
+    fn intersects(&self, other: &Zone) -> bool;
 
     /// compute the labels of a zone
     fn compute_labels(&mut self, all_zones: &MutableSlice<'_>, filter_langs: &[String]);
@@ -250,6 +253,15 @@ impl ZoneExt for Zone {
     fn contains_center(&self, other: &Zone) -> bool {
         match (&self.boundary, &other.center) {
             (&Some(ref mpoly1), &Some(ref point)) => mpoly1.contains(point),
+            _ => false,
+        }
+    }
+
+    fn intersects(&self, other: &Zone) -> bool {
+        match (&self.boundary, &other.boundary) {
+            (Some(ref mpoly1), Some(ref mpoly2)) => {
+                mpoly1.iter().any(|poly| poly.intersects(mpoly2))
+            }
             _ => false,
         }
     }

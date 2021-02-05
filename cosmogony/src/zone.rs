@@ -117,10 +117,13 @@ impl Default for Zone {
 
 impl Zone {
     pub fn is_admin(&self) -> bool {
+        matches!(self.zone_type, Some(t) if t!= ZoneType::NonAdministrative)
+    }
+
+    pub fn admin_type(&self) -> Option<ZoneType> {
         match self.zone_type {
-            None => false,
-            Some(ZoneType::NonAdministrative) => false,
-            _ => true,
+            Some(t) if t != ZoneType::NonAdministrative => Some(t),
+            _ => None
         }
     }
 
