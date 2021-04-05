@@ -7,60 +7,29 @@ use geos::{Geom, Geometry};
 use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::BTreeMap;
-use std::collections::HashMap;
+
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
-use std::sync::RwLock;
-
 use crate::zone_ext::ZoneExt;
 
-#[derive(Default)]
-struct GeosBoundaryCache<'a> {
-    cache: RwLock<HashMap<ZoneIndex, Option<Geometry<'a>>>>,
-}
-
-impl<'a> GeosBoundaryCache<'a> {
-    fn difference(&self, g: &geos::Geometry<'a>, other: &Zone) -> Option<Geometry<'a>> {
-        let mut geos_value = None;
-        let mut to_cache = false;
-        let difference = match self.cache.read().unwrap().get(&other.id) {
-            Some(Some(geom)) => g
-                .difference(geom)
-                .map_err(|e| warn!("Geos difference failed with {}: {:?}", other.osm_id, e))
-                .ok(),
-            Some(None) => None,
-            None => {
-                to_cache = true;
-                geos_value = other.boundary.as_ref().and_then(|b| {
-                    info!("Converting boundary to Geos {}", other.osm_id);
-                    b.try_into()
-                        .map_err(|e| {
-                            warn!(
-                                "Failed to convert boundary to geos Geometry for {}. Got {}",
-                                other.osm_id, e
-                            );
-                        })
-                        .map(|geos| {
-                            info!("Converting boundary to Geos {} OK", other.osm_id);
-                            geos
-                        })
-                        .ok()
-                });
-                match geos_value {
-                    Some(ref geom) => g
-                        .difference(geom)
-                        .map_err(|e| warn!("Geos difference failed for {}: {:?}", other.osm_id, e))
-                        .ok(),
-                    None => None,
-                }
-            }
-        };
-        if to_cache {
-            let mut cache = self.cache.write().unwrap();
-            cache.insert(other.id, geos_value);
-        }
-        difference
+fn difference<'a>(g: &geos::Geometry<'a>, other: &Zone) -> Option<geos::Geometry<'a>> {
+    let zone_as_geos: Option<Geometry> = other.boundary.as_ref().and_then(|b| {
+        b.try_into()
+            .map_err(|e| {
+                warn!(
+                    "Failed to convert boundary to geos Geometry for {}. Got {}",
+                    other.osm_id, e
+                );
+            })
+            .ok()
+    });
+    match zone_as_geos {
+        Some(ref geom) => g
+            .difference(geom)
+            .map_err(|e| warn!("Geos difference failed for {}: {:?}", other.osm_id, e))
+            .ok(),
+        None => None,
     }
 }
 
@@ -111,15 +80,11 @@ pub fn compute_additional_cities(
         candidate_parent_zones.len()
     );
 
-    let geos_cache = GeosBoundaryCache::default();
-
     let new_cities: Vec<Vec<Zone>> = {
         candidate_parent_zones
             .into_par_iter()
             .filter(|(_, places)| !places.is_empty())
-            .map(|(parent, places)| {
-                compute_voronoi(parent, &places, &zones, &zones_rtree, &geos_cache)
-            })
+            .map(|(parent, places)| compute_voronoi(parent, &places, &zones, &zones_rtree))
             .collect()
     };
     for cities in new_cities.into_iter() {
@@ -200,11 +165,7 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
 
 // Extrude all common parts between `zone` and the given zones `to_subtract`. If an error occurs during the
 // process, it'll return `false`.
-fn subtract_existing_zones(
-    zone: &mut Zone,
-    to_subtract: &[&Zone],
-    geos_cache: &GeosBoundaryCache,
-) -> Result<(), String> {
+fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(), String> {
     if to_subtract.is_empty() {
         return Ok(());
     }
@@ -222,7 +183,7 @@ fn subtract_existing_zones(
         };
         for z in to_subtract {
             if zone.intersects(z) {
-                if let Some(b) = geos_cache.difference(&g_boundary, z) {
+                if let Some(b) = difference(&g_boundary, z) {
                     updates += 1;
                     g_boundary = b;
                 }
@@ -272,7 +233,6 @@ fn compute_voronoi(
     places: &[&Zone],
     zones: &[Zone],
     zones_rtree: &ZonesTree,
-    geos_cache: &GeosBoundaryCache,
 ) -> Vec<Zone> {
     let points: Vec<(usize, Point<_>)> = places
         .iter()
@@ -296,7 +256,7 @@ fn compute_voronoi(
         place.parent = Some(parent.id);
         let zones_to_subtract = get_zones_to_subtract(&parent, &parent.id, zones, zones_rtree);
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
-        if subtract_existing_zones(&mut place, &zones_to_subtract, &geos_cache).is_ok() {
+        if subtract_existing_zones(&mut place, &zones_to_subtract).is_ok() {
             return vec![place];
         }
         return Vec::new();
@@ -413,7 +373,7 @@ fn compute_voronoi(
                     }
                     let zones_to_subtract =
                         get_zones_to_subtract(&place, &parent.id, zones, zones_rtree);
-                    subtract_existing_zones(&mut place, &zones_to_subtract, &geos_cache).ok()?;
+                    subtract_existing_zones(&mut place, &zones_to_subtract).ok()?;
                     Some(place)
                 }
                 Err(e) => {
