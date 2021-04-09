@@ -5,9 +5,7 @@ use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::{Geom, Geometry};
 use osmpbfreader::{OsmId, OsmObj};
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -127,14 +125,6 @@ pub fn compute_additional_cities(
     for cities in new_cities.into_iter() {
         publish_new_cities(zones, cities);
     }
-
-    // println!("CACHE SIZE {}", geos_cache.cache.read().unwrap().len());
-
-    // for (id, geom) in geos_cache.cache.read().unwrap().iter() {
-    //     if let Some(g) = geom {
-    //         println!("{:?} {:?}", id, g.area());
-    //     }
-    // }
 }
 
 fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> Option<&'a Zone> {
@@ -249,7 +239,7 @@ fn subtract_existing_zones(
                         "subtract_existing_town: failed to convert back to geo for {}...",
                         zone.osm_id
                     );
-                    return Err("Failed to convert to Geo".to_string());
+                    return Err("Failed to convert to Geo".to_owned());
                 }
             }
         }
@@ -299,8 +289,6 @@ fn compute_voronoi(
     let parent_index = parent.index;
     let parent = &zones[parent_index];
 
-    info!("Computing voronoi for parent {}", parent.osm_id);
-
     if points.len() == 1 {
         let mut place = places[0].clone();
 
@@ -309,7 +297,6 @@ fn compute_voronoi(
         let zones_to_subtract = get_zones_to_subtract(&parent, &parent.id, zones, zones_rtree);
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
         if subtract_existing_zones(&mut place, &zones_to_subtract, &geos_cache).is_ok() {
-            info!("Computing voronoi for parent {} OK", parent.osm_id);
             return vec![place];
         }
         return Vec::new();
@@ -322,7 +309,6 @@ fn compute_voronoi(
         for point in &points {
             println!(" => ignoring {}", places[point.0].osm_id);
         }
-        info!("Computing voronoi for parent {} OK", parent.osm_id);
         return Vec::new();
     }
     let points_geom = match Geometry::create_geometry_collection(
@@ -331,13 +317,9 @@ fn compute_voronoi(
             .filter_map(|(_, p)| p.try_into().ok())
             .collect::<Vec<_>>(),
     ) {
-        Ok(p) => {
-            info!("Computing voronoi for parent {} PointsOK", parent.osm_id);
-            p
-        }
+        Ok(p) => p,
         Err(e) => {
             warn!("Geometry::create_geometry_collection failed: {:?}", e);
-            info!("Computing voronoi for parent {} OK", parent.osm_id);
             return Vec::new();
         }
     };
@@ -345,52 +327,32 @@ fn compute_voronoi(
     let geos_parent = match match parent.boundary {
         Some(ref par) => geos::Geometry::try_from(par),
         None => {
-            println!("No parent matches the index {}...", parent_index);
+            warn!("Parent {} has no boundary", parent.osm_id);
             return Vec::new();
         }
     } {
-        Ok(par) => {
-            info!(
-                "Computing voronoi for parent {} GeosParentOK",
-                parent.osm_id
-            );
-            par
-        }
+        Ok(par) => par,
         Err(e) => {
-            println!(
-                "Failed to convert parent with index {}: {}",
-                parent.osm_id, e
-            );
+            warn!("Failed to convert parent {} to geos: {}", parent.osm_id, e);
             return Vec::new();
         }
     };
 
     let voronois = match points_geom.voronoi(Some(&geos_parent), 1e-5, false) {
-        Ok(v) => {
-            info!("Computing voronoi for parent {} VoronoiOK", parent.osm_id);
-            v
-        }
+        Ok(v) => v,
         Err(e) => {
             warn!(
                 "Failed to compute voronoi for parent {}: {}",
                 parent.osm_id, e
             );
-            info!("Computing voronoi for parent {} OK", parent.osm_id);
             return Vec::new();
         }
     };
     let mut voronoi_polygons = Vec::with_capacity(points.len());
     let len = match voronois.get_num_geometries() {
-        Ok(x) => {
-            info!(
-                "Computing voronoi for parent {} VoronoiNumOK",
-                parent.osm_id
-            );
-            x
-        }
+        Ok(x) => x,
         Err(e) => {
             warn!("get_num_geometries failed: {:?}", e);
-            info!("Computing voronoi for parent {} OK", parent.osm_id);
             return Vec::new();
         }
     };
@@ -420,26 +382,17 @@ fn compute_voronoi(
         })
         .collect();
 
-    info!(
-        "Computing voronoi for parent {} VoronoiPolyOK ({} polygons)",
-        parent.osm_id, len
-    );
-
-    let res = voronoi_polygons
+    voronoi_polygons
         .into_par_iter()
-        // .map(|p| p.clone())
-        .enumerate()
-        .filter_map(|(v_idx, voronoi)| {
-            info!(
-                "Computing voronoi for parent {} v_idx {} contains?",
-                parent.osm_id, v_idx
-            );
+        .filter_map(|voronoi| {
+            // WARNING: This clone should not be necessary, but rare segfault occur. Thread-safety issue in geos ?
+            let geos_points = geos_points.clone();
 
             // Since GEOS doesn't return voronoi geometries in the same order as the given points...
             let mut place = {
                 if let Some(idx) = geos_points
                     .iter()
-                    .filter(|(_, x)| voronoi.covers(x).unwrap_or(false))
+                    .filter(|(_, x)| voronoi.contains(x).unwrap_or(false))
                     .map(|(pos, _)| *pos)
                     .next()
                 {
@@ -450,24 +403,10 @@ fn compute_voronoi(
                 }
             };
 
-            info!(
-                "Computing voronoi for parent {} v_idx {} intersection?",
-                parent.osm_id, v_idx
-            );
-
-            match voronoi.intersection(&geos_parent) {
+            match geos_parent.intersection(&voronoi) {
                 Ok(s) => {
-                    info!(
-                        "Computing voronoi for parent {} v_idx {} intersection OK",
-                        parent.osm_id, v_idx
-                    );
                     place.parent = Some(parent.id);
                     place.boundary = convert_to_geo(s);
-
-                    info!(
-                        "Computing voronoi for parent {} v_idx {} convert to geo OK",
-                        parent.osm_id, v_idx
-                    );
 
                     if let Some(ref boundary) = place.boundary {
                         place.bbox = boundary.bounding_rect();
@@ -478,7 +417,7 @@ fn compute_voronoi(
                     Some(place)
                 }
                 Err(e) => {
-                    println!(
+                    warn!(
                         "intersection failure: {} ({})",
                         e,
                         voronoi
@@ -490,11 +429,7 @@ fn compute_voronoi(
                 }
             }
         })
-        .collect();
-
-    info!("Computing voronoi for parent {} OK", parent.osm_id);
-
-    res
+        .collect()
 }
 
 fn publish_new_cities(zones: &mut Vec<Zone>, new_cities: Vec<Zone>) {
