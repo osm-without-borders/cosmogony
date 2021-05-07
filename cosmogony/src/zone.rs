@@ -123,7 +123,7 @@ impl Zone {
     pub fn admin_type(&self) -> Option<ZoneType> {
         match self.zone_type {
             Some(t) if t != ZoneType::NonAdministrative => Some(t),
-            _ => None
+            _ => None,
         }
     }
 

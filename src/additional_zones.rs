@@ -345,7 +345,7 @@ fn compute_voronoi(
     voronoi_polygons
         .into_par_iter()
         .filter_map(|voronoi| {
-            // WARNING: This clone should not be necessary, but rare segfault occur. Thread-safety issue in geos ?
+            // WARNING: This clone should not be necessary, but segfaults occured. Thread-safety issue in geos ?
             let geos_points = geos_points.clone();
 
             // Since GEOS doesn't return voronoi geometries in the same order as the given points...
