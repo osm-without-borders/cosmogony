@@ -17,7 +17,7 @@ use failure::Error;
 use failure::ResultExt;
 use log::{debug, info};
 use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::path::Path;
 
@@ -216,6 +216,7 @@ pub fn build_cosmogony(
     country_code: Option<String>,
     disable_voronoi: bool,
     filter_langs: &[String],
+    bbox_override: HashMap<String, geo::Rect<f64>>,
 ) -> Result<Cosmogony, Error> {
     let path = Path::new(&pbf_path);
     info!("Reading pbf with geometries...");
@@ -227,6 +228,12 @@ pub fn build_cosmogony(
     info!("reading pbf done.");
 
     let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf)?;
+
+    for zone in zones.iter_mut() {
+        if let Some(new_bbox) = bbox_override.get(&zone.osm_id.to_string()) {
+            zone.bbox = Some(*new_bbox);
+        }
+    }
 
     create_ontology(
         &mut zones,

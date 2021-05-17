@@ -2,9 +2,10 @@ use cosmogony::{file_format::OutputFormat, Cosmogony};
 use cosmogony_builder::{build_cosmogony, merger};
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufWriter;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::clap::ErrorKind;
 use structopt::StructOpt;
 
@@ -66,6 +67,37 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
     disable_voronoi: bool,
     #[structopt(help = "Only generates labels for given langs", long = "filter-langs")]
     filter_langs: Vec<String>,
+    #[structopt(
+        help = "File containing a list of bboxes to override",
+        long = "override-bbox-config"
+    )]
+    override_bbox_config: Option<PathBuf>,
+}
+
+fn load_bbox_override(path: &Path) -> HashMap<String, geo::Rect<f64>> {
+    let path = File::open(path).expect("could not load bbox file");
+
+    let raw_data: HashMap<String, Vec<f64>> =
+        serde_json::from_reader(path).expect("failed to parse bbox file");
+
+    raw_data
+        .into_iter()
+        .map(|(key, bbox)| {
+            (
+                key,
+                geo::Rect::new(
+                    geo::Coordinate {
+                        x: bbox[0],
+                        y: bbox[1],
+                    },
+                    geo::Coordinate {
+                        x: bbox[2],
+                        y: bbox[3],
+                    },
+                ),
+            )
+        })
+        .collect()
 }
 
 #[derive(StructOpt, Debug)]
@@ -130,11 +162,17 @@ fn serialize_cosmogony(
 fn cosmogony(args: GenerateArgs) -> Result<(), failure::Error> {
     let format = OutputFormat::from_filename(&args.output)?;
 
+    let bbox_override = args
+        .override_bbox_config
+        .map(|path| load_bbox_override(&path))
+        .unwrap_or_default();
+
     let cosmogony = build_cosmogony(
         args.input,
         args.country_code,
         args.disable_voronoi,
         &args.filter_langs,
+        bbox_override,
     )?;
 
     serialize_cosmogony(&cosmogony, args.output, format)?;

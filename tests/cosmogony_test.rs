@@ -3,8 +3,9 @@ extern crate approx;
 
 use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 use cosmogony_builder::{create_ontology, get_zones_and_stats, is_admin, is_place};
+use geo::{Coordinate, Rect};
 use osmpbfreader::OsmPbfReader;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -19,6 +20,20 @@ fn launch_command_line(args: Vec<&str>) -> Output {
         .args(&args)
         .output()
         .expect("command failed")
+}
+
+fn overriden_bbox() -> HashMap<String, geo::Rect<f64>> {
+    let mut res = HashMap::new();
+
+    res.insert(
+        "relation:2171347".into(),
+        Rect::new(
+            Coordinate { x: 5.72, y: 49.43 },
+            Coordinate { x: 6.55, y: 49.84 },
+        ),
+    );
+
+    res
 }
 
 #[test]
@@ -109,9 +124,14 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony =
-        cosmogony_builder::build_cosmogony(test_file.into(), Some("lu".into()), true, &[])
-            .expect("invalid cosmogony");
+    let cosmogony = cosmogony_builder::build_cosmogony(
+        test_file.into(),
+        Some("lu".into()),
+        true,
+        &[],
+        overriden_bbox(),
+    )
+    .expect("invalid cosmogony");
     return cosmogony;
 }
 
@@ -165,6 +185,20 @@ fn test_wrapper_for_lux_zones(a_cosmogony: &Cosmogony) {
     assert_relative_eq!(bbox.max().y, 49.518616, epsilon = 1e-8);
 }
 
+fn test_lux_overriden_bbox(a_cosmogony: &Cosmogony) {
+    let zone = a_cosmogony
+        .zones
+        .iter()
+        .find(|z| z.name == "Lëtzebuerg" && z.zone_type == Some(ZoneType::Country))
+        .unwrap();
+
+    let bbox = zone.bbox.unwrap();
+    assert_relative_eq!(bbox.min().x, 5.72, epsilon = 1e-8);
+    assert_relative_eq!(bbox.max().x, 6.55, epsilon = 1e-8);
+    assert_relative_eq!(bbox.min().y, 49.43, epsilon = 1e-8);
+    assert_relative_eq!(bbox.max().y, 49.84, epsilon = 1e-8);
+}
+
 #[test]
 fn test_lux_cosmogony() {
     // Check some random values in the built cosmogony
@@ -175,6 +209,7 @@ fn test_lux_cosmogony() {
 
     test_wrapper_for_lux_admin_levels(&cosmogony);
     test_wrapper_for_lux_zones(&cosmogony);
+    test_lux_overriden_bbox(&cosmogony);
 }
 
 #[test]
@@ -293,9 +328,14 @@ fn test_center_label() {
         env!("OUT_DIR"),
         "/../../../../../tests/data/gatineau.osm.pbf"
     );
-    let cosmogony =
-        cosmogony_builder::build_cosmogony(ottawa_test_file.into(), Some("ca".into()), true, &[])
-            .expect("invalid cosmogony");
+    let cosmogony = cosmogony_builder::build_cosmogony(
+        ottawa_test_file.into(),
+        Some("ca".into()),
+        true,
+        &[],
+        HashMap::new(),
+    )
+    .expect("invalid cosmogony");
 
     let gati = cosmogony
         .zones
