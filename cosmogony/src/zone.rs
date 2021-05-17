@@ -117,11 +117,7 @@ impl Default for Zone {
 
 impl Zone {
     pub fn is_admin(&self) -> bool {
-        match self.zone_type {
-            None => false,
-            Some(ZoneType::NonAdministrative) => false,
-            _ => true,
-        }
+        !matches!(self.zone_type, None | Some(ZoneType::NonAdministrative))
     }
 
     pub fn set_parent(&mut self, idx: Option<ZoneIndex>) {

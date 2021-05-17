@@ -69,13 +69,13 @@ pub enum ZoneTyperError {
 impl ZoneTyper {
     pub fn new() -> Result<ZoneTyper, Error> {
         let z = ZoneTyper {
-            countries_rules: read_libpostal_yaml_folder()?,
+            countries_rules: read_libpostal_yaml_folder(),
         };
         if z.countries_rules.is_empty() {
-            Err(err_msg(format!(
+            Err(err_msg(
                 "no country rules have been loaded, the libpostal directory \
-                 must contains valid libpostal rules"
-            )))
+                 must contains valid libpostal rules",
+            ))
         } else {
             Ok(z)
         }
@@ -92,11 +92,9 @@ impl ZoneTyper {
             .countries_rules
             .get(country_code)
             .ok_or_else(|| ZoneTyperError::InvalidCountry(country_code.to_string()))?;
-        Ok(country_rules
+        country_rules
             .get_zone_type(zone, zone_inclusions, all_zones)
-            .ok_or_else(|| {
-                ZoneTyperError::UnkownLevel(zone.admin_level, country_code.to_string())
-            })?)
+            .ok_or_else(|| ZoneTyperError::UnkownLevel(zone.admin_level, country_code.to_string()))
     }
 
     pub fn contains_rule(&self, country_code: &str) -> bool {
@@ -149,13 +147,11 @@ impl RulesOverrides {
                 if self.contained_by.is_empty() {
                     return None;
                 }
-                let parents_osm_id = zone_inclusions
-                    .iter()
-                    .map(|idx| &all_zones[idx.index].osm_id);
 
-                parents_osm_id
-                    .filter_map(|parent_osm_id| self.contained_by.get(parent_osm_id))
-                    .next()
+                zone_inclusions
+                    .iter()
+                    .map(|idx| &all_zones[idx.index].osm_id)
+                    .find_map(|parent_osm_id| self.contained_by.get(parent_osm_id))
                     .and_then(|ref country_rules| {
                         country_rules
                             .get_zone_type(zone, zone_inclusions, all_zones)
@@ -166,8 +162,8 @@ impl RulesOverrides {
     }
 }
 
-fn read_libpostal_yaml_folder() -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
-    Ok(LIBPOSTAL_RULES_DIR.files().iter().filter_map(|d| {
+fn read_libpostal_yaml_folder() -> BTreeMap<String, CountryAdminTypeRules> {
+    LIBPOSTAL_RULES_DIR.files().iter().filter_map(|d| {
         let contents = d.contents_utf8()?;
         let deserialized_level = read_libpostal_yaml(&contents)
             .map_err(|e| {
@@ -192,7 +188,7 @@ fn read_libpostal_yaml_folder() -> Result<BTreeMap<String, CountryAdminTypeRules
             .ok()?;
 
         Some((country_code.to_uppercase(), deserialized_level))
-    }).collect())
+    }).collect()
 }
 
 fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
@@ -393,7 +389,7 @@ mod test {
     #[test]
     fn test_read_all_libpostal_files() {
         // there should be no error while reading a file
-        let rules = super::read_libpostal_yaml_folder().unwrap();
+        let rules = super::read_libpostal_yaml_folder();
 
         // we should have been able to read all the files
         // Note: this value can change if libpostal add/remove some rules
@@ -433,12 +429,13 @@ mod test {
 
         let mut idx = 0usize;
         let mut make_zone = |id: &str, lvl| {
-            let mut z = Zone::default();
-            z.id = ZoneIndex { index: idx };
             idx += 1;
-            z.osm_id = format!("relation:{}", id.to_string());
-            z.admin_level = lvl;
-            z
+            Zone {
+                id: ZoneIndex { index: idx - 1 },
+                osm_id: format!("relation:{}", id.to_string()),
+                admin_level: lvl,
+                ..Zone::default()
+            }
         };
         let zones = vec![
             make_zone("z1", None),
@@ -460,7 +457,6 @@ mod test {
                         .find(|z| z.osm_id == format!("relation:{}", osm_id))
                         .unwrap()
                         .id
-                        .clone()
                 };
                 inclusions[find_zone_id(z_osm_id).index] =
                     parents_id.into_iter().map(&find_zone_id).collect();

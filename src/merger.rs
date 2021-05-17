@@ -33,7 +33,7 @@ impl CosmogonyMerger {
 
     fn read_cosmogony(
         &mut self,
-        file: &PathBuf,
+        file: &Path,
         writer: impl std::io::Write,
     ) -> Result<(), failure::Error> {
         let mut max_id = 0;

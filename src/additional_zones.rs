@@ -80,12 +80,8 @@ pub fn compute_additional_cities(
 
     let candidate_parent_zones = place_zones
         .par_iter()
-        .filter_map(|place| {
-            if place.zone_type.is_none() {
-                return None;
-            }
-            get_parent(&place, &zones, &zones_rtree).map(|p| (p, place))
-        })
+        .filter(|place| place.zone_type.is_some())
+        .filter_map(|place| get_parent(&place, &zones, &zones_rtree).map(|p| (p, place)))
         .filter(|(p, place)| {
             p.zone_type
                 .as_ref()

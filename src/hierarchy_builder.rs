@@ -136,7 +136,7 @@ mod test {
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);
-        let mp = MultiPolygon(vec![p.clone()]);
+        let mp = MultiPolygon(vec![p]);
 
         let mut z = Zone::default();
         z.id.index = idx;
@@ -192,7 +192,7 @@ mod test {
     }
 
     fn assert_parent(zones: &[Zone], idx: usize, expected_parent: Option<usize>) {
-        match (expected_parent, zones[idx].parent.clone()) {
+        match (expected_parent, zones[idx].parent) {
             (None, None) => (),
             (Some(_), None) => panic!("Zone {} should have a parent", idx),
             (None, Some(_)) => panic!("Zone {} should not have a parent", idx),

@@ -1,4 +1,5 @@
 use crate::{Zone, ZoneIndex};
+use std::cmp::Ordering;
 
 // This struct is necessary to wrap the `zones` slice
 // and keep a mutable reference to a zone (and set
@@ -24,12 +25,11 @@ impl<'a> MutableSlice<'a> {
 
     pub fn get(&self, zindex: &ZoneIndex) -> &Zone {
         let idx = zindex.index;
-        if idx < self.idx {
-            &self.left[idx]
-        } else if idx == self.idx {
-            panic!("Cannot retrieve middle index");
-        } else {
-            &self.right[idx - self.idx - 1]
+
+        match idx.cmp(&self.idx) {
+            Ordering::Less => &self.left[idx],
+            Ordering::Greater => &self.right[idx - self.idx - 1],
+            Ordering::Equal => panic!("Cannot retrieve middle index"),
         }
     }
 }
