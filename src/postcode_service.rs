@@ -41,6 +41,7 @@ pub fn assign_postcodes_to_zones(zones: &mut Vec<Zone>, pbf: &BTreeMap<OsmId, Os
                         })
                         .map(|x| x.get_postcode().zipcode.to_string())
                         .collect();
+                    z.zip_codes.sort();
                 }
             }
         }
