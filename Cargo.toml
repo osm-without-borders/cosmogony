@@ -10,10 +10,10 @@ edition = "2018"
 cosmogony = { path = "cosmogony" }
 log = "0.4"
 env_logger = "0.8"
-geo = "0.16"
-geo-types = { version = "0.6", features = ["rstar"] }
-geojson = { version = "0.20", features = ["geo-types"] }
-geos = { version = "7.0", features= ["geo"] }
+geo = "0.18"
+geo-types = { version = "0.7", features = ["rstar"] }
+geojson = { version = "0.22", features = ["geo-types"] }
+geos = { version = "8.0", features= ["geo"] }
 structopt = "0.3"
 osmpbfreader = "0.14"
 lazy_static = "1"
@@ -24,7 +24,7 @@ serde_yaml = "0.8"
 itertools = "0.9"
 failure = "0.1"
 failure_derive = "0.1"
-osm_boundaries_utils = "0.8.2"
+osm_boundaries_utils = "0.9"
 regex = "1"
 flate2 = "1.0"
 rayon = "1.5"
