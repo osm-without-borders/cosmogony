@@ -5,6 +5,8 @@ mod additional_zones;
 mod country_finder;
 mod hierarchy_builder;
 pub mod merger;
+mod postcode;
+mod postcode_service;
 mod zone_ext;
 pub mod zone_typer;
 
@@ -23,6 +25,7 @@ use std::path::Path;
 
 use cosmogony::{Zone, ZoneIndex};
 
+use crate::postcode_service::{assign_postcodes_to_zones};
 use crate::zone_ext::ZoneExt;
 
 #[rustfmt::skip]
@@ -34,6 +37,20 @@ pub fn is_admin(obj: &OsmObj) -> bool {
                 .map_or(false, |v| v == "administrative")
             &&
             rel.tags.get("admin_level").is_some()
+        }
+        _ => false,
+    }
+}
+
+#[rustfmt::skip]
+pub fn is_postal_code(obj: &OsmObj) -> bool {
+    match *obj {
+        OsmObj::Relation(ref rel) => {
+            rel.tags
+                .get("boundary")
+                .map_or(false, |v| v == "postal_code")
+                &&
+                rel.tags.get("postal_code").is_some()
         }
         _ => false,
     }
@@ -222,11 +239,13 @@ pub fn build_cosmogony(
     let file = File::open(&path).context("no pbf file")?;
 
     let parsed_pbf = OsmPbfReader::new(file)
-        .get_objs_and_deps(|o| is_admin(o) || is_place(o))
+        .get_objs_and_deps(|o| is_admin(o) || is_place(o) || is_postal_code(o))
         .context("invalid osm file")?;
     info!("reading pbf done.");
 
+    info!("Starting to extract zones.");
     let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf)?;
+    info!("Finishing to extract zones.");
 
     create_ontology(
         &mut zones,
@@ -236,6 +255,8 @@ pub fn build_cosmogony(
         &parsed_pbf,
         filter_langs,
     )?;
+
+    assign_postcodes_to_zones(&mut zones, &parsed_pbf);
 
     stats.compute(&zones);
 

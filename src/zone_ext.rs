@@ -14,6 +14,8 @@ use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
 
+use geo_types::MultiPolygon;
+
 pub trait ZoneExt {
     /// create a zone from an osm node
     fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Zone>;
@@ -73,6 +75,7 @@ impl ZoneExt for Zone {
             .map(|s| s.to_string())
             .sorted()
             .collect();
+
         let wikidata = tags.get("wikidata").map(|s| s.to_string());
 
         let international_names = get_international_names(&tags, name);
@@ -126,7 +129,11 @@ impl ZoneExt for Zone {
             .get("addr:postcode")
             .or_else(|| relation.tags.get("postal_code"))
             .map_or("", |val| &val[..]);
-        let zip_codes = zip_code
+
+        let boundary: Option<MultiPolygon<f64>> = build_boundary(relation, objects);
+        let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
+
+        let zip_codes: Vec<String> = zip_code
             .split(';')
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string())
@@ -152,9 +159,6 @@ impl ZoneExt for Zone {
                     tags.entry(k.clone()).or_insert(v.clone());
                 })
         }
-
-        let boundary = build_boundary(relation, objects);
-        let bbox = boundary.as_ref().and_then(|b| b.bounding_rect());
 
         let refs = &relation.refs;
         let osm_center = refs
@@ -215,9 +219,9 @@ impl ZoneExt for Zone {
                         // In GEOS, "covers" is less strict than "contains".
                         // eg: a polygon does NOT "contain" its boundary, but "covers" it.
                         m_self.covers(m_other)
-                        .map_err(|e| info!("impossible to compute geometries coverage for zone {:?}/{:?}: error {}",
-                        &self.osm_id, &other.osm_id, e))
-                        .unwrap_or(false)
+                            .map_err(|e| info!("impossible to compute geometries coverage for zone {:?}/{:?}: error {}",
+                                               &self.osm_id, &other.osm_id, e))
+                            .unwrap_or(false)
                     }
                     (&Err(ref e), _) => {
                         info!(
