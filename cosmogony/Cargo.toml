@@ -16,7 +16,7 @@ travis-ci = { repository = "osm-without-borders/cosmogony" }
 
 [dependencies]
 log = "0.4"
-geo-types = { version = "0.7", features = ["rstar"] }
+geo-types = { version = "0.7", features = ["use-rstar"] }
 geojson = { version = "0.22", features = ["geo-types"] }
 serde = {version = "1", features = ["rc"]}
 serde_derive = "1"
