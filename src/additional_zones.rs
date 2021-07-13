@@ -237,13 +237,7 @@ fn compute_voronoi(
     let points: Vec<(usize, Point<_>)> = places
         .iter()
         .enumerate()
-        .filter_map(|(idx, p)| {
-            if let Some(c) = p.center {
-                Some((idx, c))
-            } else {
-                None
-            }
-        })
+        .filter_map(|(idx, p)| p.center.map(|c| (idx, c)))
         .collect();
 
     let parent_index = parent.index;
