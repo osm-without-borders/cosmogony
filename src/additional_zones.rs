@@ -3,68 +3,34 @@ use crate::is_place;
 use cosmogony::{Zone, ZoneIndex, ZoneType};
 use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
-use geos::{Error as GeosError, Geom, Geometry};
+use geos::{Geom, Geometry};
 use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::BTreeMap;
-use std::collections::HashMap;
+
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use std::sync::RwLock;
 
 use crate::zone_ext::ZoneExt;
 
-#[derive(Default)]
-struct GeosBoundaryCache<'a> {
-    cache: RwLock<HashMap<ZoneIndex, Option<Geometry<'a>>>>,
-}
-
-impl<'a> GeosBoundaryCache<'a> {
-    fn intersects(&self, g: &Geometry, town: &Zone) -> bool {
-        let mut geos_value = None;
-        let mut to_cache = false;
-        let is_intersecting = match self.cache.read().unwrap().get(&town.id) {
-            Some(Some(geom)) => g.intersects(geom).unwrap_or(false),
-            Some(None) => false,
-            None => {
-                to_cache = true;
-                geos_value = town.boundary.as_ref().and_then(|b| {
-                    b.try_into()
-                        .map_err(|e| {
-                            warn!(
-                                "Failed to convert boundary to geos Geometry for {}. Got {}",
-                                town.osm_id, e
-                            );
-                        })
-                        .ok()
-                });
-                match geos_value {
-                    Some(ref geom) => g.intersects(geom).unwrap_or(false),
-                    None => false,
-                }
-            }
-        };
-        if to_cache {
-            let mut cache = self.cache.write().unwrap();
-            cache.insert(town.id, geos_value);
-        }
-        is_intersecting
+fn difference<'a>(g: &geos::Geometry<'a>, other: &Zone) -> Option<geos::Geometry<'a>> {
+    let zone_as_geos: Option<Geometry> = other.boundary.as_ref().and_then(|b| {
+        b.try_into()
+            .map_err(|e| {
+                warn!(
+                    "Failed to convert boundary to geos Geometry for {}. Got {}",
+                    other.osm_id, e
+                );
+            })
+            .ok()
+    });
+    match zone_as_geos {
+        Some(ref geom) => g
+            .difference(geom)
+            .map_err(|e| warn!("Geos difference failed for {}: {:?}", other.osm_id, e))
+            .ok(),
+        None => None,
     }
-
-    fn difference(&self, g: &geos::Geometry<'a>, town: &Zone) -> Result<Geometry<'a>, GeosError> {
-        /*
-            The difference will be computed only for zones that are intersecting.
-            At this point, we know that the GEOS boundary already exists in cache.
-        */
-        match self.cache.read().unwrap().get(&town.id) {
-            Some(Some(geom)) => g.difference(geom),
-            _ => unreachable!(),
-        }
-    }
-}
-
-fn is_city(zone: &Zone) -> bool {
-    zone.zone_type == Some(ZoneType::City) && zone.boundary.is_some() && !zone.name.is_empty()
 }
 
 pub fn compute_additional_cities(
@@ -81,24 +47,23 @@ pub fn compute_additional_cities(
     let candidate_parent_zones = place_zones
         .par_iter()
         .filter_map(|place| {
-            if place.zone_type.is_none() {
-                return None;
-            }
-            get_parent(&place, &zones, &zones_rtree).map(|p| (p, place))
+            place.zone_type?;
+            get_parent(&place, &zones, &zones_rtree).map(|parent| (parent, place))
         })
-        .filter(|(p, place)| {
-            p.zone_type
+        .filter(|(parent, place)| {
+            parent
+                .zone_type
                 .as_ref()
                 .map(|x| {
                     if *x == ZoneType::Country {
                         info!(
                             "Ignoring place with id {} and country {} as parent",
-                            place.osm_id, p.osm_id
+                            place.osm_id, parent.osm_id
                         );
                     }
                     *x > ZoneType::City && *x < ZoneType::Country
                 })
-                .unwrap_or_else(|| false)
+                .unwrap_or(false)
         })
         .fold(BTreeMap::<_, Vec<_>>::new, |mut map, (parent, place)| {
             map.entry(&parent.id).or_default().push(place);
@@ -116,15 +81,11 @@ pub fn compute_additional_cities(
         candidate_parent_zones.len()
     );
 
-    let geos_cache = GeosBoundaryCache::default();
-
     let new_cities: Vec<Vec<Zone>> = {
         candidate_parent_zones
             .into_par_iter()
             .filter(|(_, places)| !places.is_empty())
-            .map(|(parent, places)| {
-                compute_voronoi(parent, &places, &zones, &zones_rtree, &geos_cache)
-            })
+            .map(|(parent, places)| compute_voronoi(parent, &places, &zones, &zones_rtree))
             .collect()
     };
     for cities in new_cities.into_iter() {
@@ -138,7 +99,17 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
         .fetch_zone_bbox(&place)
         .into_iter()
         .map(|z_idx| &zones[z_idx.index])
-        .filter(|z| z.zone_type.is_some())
+        .filter(|z| {
+            // We would like to find a parent geometry used to build voronoi polygons
+            // for all additional city points.
+            // This parent geometry needs to represent a region whose type is larger than "City",
+            // as it would not make sense to limit the extent of a city point
+            // to the boundary of a city distinct (for instance).
+            // Points which are already part of a "City" will be ignored afterwards.
+            z.admin_type()
+                .map(|zt| zt >= ZoneType::City)
+                .unwrap_or(false)
+        })
         .sorted_by_key(|z| z.zone_type)
         .find(|z| z.contains_center(place))
 }
@@ -184,7 +155,7 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     match match geom.try_into() {
         Ok(c) => c,
         Err(e) => {
-            println!("convert_to_geo: conversion to geo failed: {}", e);
+            warn!("convert_to_geo: conversion to geo failed: {}", e);
             return None;
         }
     } {
@@ -199,68 +170,66 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     }
 }
 
-// Extrude all common parts between `zone` and the given `towns`. If an error occurs during the
-// process, it'll return `false`.
-fn extrude_existing_town(zone: &mut Zone, towns: &[&Zone], geos_cache: &GeosBoundaryCache) -> bool {
-    if towns.is_empty() {
-        return true;
+fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(), String> {
+    if to_subtract.is_empty() {
+        return Ok(());
     }
     if let Some(ref boundary) = zone.boundary {
         let mut updates = 0;
         let mut g_boundary = match geos::Geometry::try_from(boundary) {
             Ok(b) => b,
             Err(e) => {
-                println!(
-                    "extrude_existing_town: failed to convert to geos for zone {}: {}",
+                warn!(
+                    "subtract_existing_town: failed to convert to geos for zone {}: {}",
                     zone.osm_id, e
                 );
-                return false;
+                return Err(e.to_string());
             }
         };
-        for town in towns {
-            if geos_cache.intersects(&g_boundary, town) {
-                match geos_cache.difference(&g_boundary, town) {
-                    Ok(b) => {
-                        updates += 1;
-                        g_boundary = b;
-                    }
-                    Err(e) => {
-                        println!(
-                            "extrude_existing_town: difference failed for {}: {:?}",
-                            zone.osm_id, e
-                        );
-                    }
+        for z in to_subtract {
+            if zone.intersects(z) {
+                if let Some(b) = difference(&g_boundary, z) {
+                    updates += 1;
+                    g_boundary = b;
                 }
             }
         }
         if updates > 0 {
             match convert_to_geo(g_boundary) {
                 Some(g) => {
+                    zone.bbox = g.bounding_rect();
                     zone.boundary = Some(g);
                 }
                 None => {
-                    println!(
-                        "extrude_existing_town: failed to convert back to geo for {}...",
+                    warn!(
+                        "subtract_existing_town: failed to convert back to geo for {}...",
                         zone.osm_id
                     );
-                    return false;
+                    return Err("Failed to convert to Geo".to_owned());
                 }
             }
         }
     }
-    true
+    Ok(())
 }
 
-fn get_parent_neighbors<'a>(
-    parent: &Zone,
+fn get_zones_to_subtract<'a>(
+    zone: &Zone,
+    parent_id: &ZoneIndex,
     zones: &'a [Zone],
     zones_rtree: &ZonesTree,
 ) -> Vec<&'a Zone> {
     zones_rtree
-        .fetch_zone_bbox(&parent)
+        .fetch_zone_bbox(&zone)
         .into_iter()
         .map(|z_idx| &zones[z_idx.index])
-        .filter(|z| is_city(z))
+        .filter(|z| {
+            z.admin_type()
+                .map(|zt| {
+                    zt == ZoneType::City || (zt > ZoneType::City && z.parent == Some(*parent_id))
+                })
+                .unwrap_or(false)
+        })
         .collect()
 }
 
@@ -269,68 +238,24 @@ fn compute_voronoi(
     places: &[&Zone],
     zones: &[Zone],
     zones_rtree: &ZonesTree,
-    geos_cache: &GeosBoundaryCache,
 ) -> Vec<Zone> {
     let points: Vec<(usize, Point<_>)> = places
         .iter()
         .enumerate()
-        .filter_map(|(idx, p)| {
-            if let Some(c) = p.center {
-                Some((idx, c))
-            } else {
-                None
-            }
-        })
+        .filter_map(|(idx, p)| p.center.map(|c| (idx, c)))
         .collect();
-    let geos_points: Vec<(usize, Geometry<'_>)> = points
-        .iter()
-        .filter_map(|(pos, x)| {
-            let x = match x.try_into() {
-                Ok(x) => x,
-                Err(e) => {
-                    println!(
-                        "Failed to convert point's center with id {}: {}",
-                        places[*pos].osm_id, e
-                    );
-                    return None;
-                }
-            };
-            Some((*pos, x))
-        })
-        .collect();
+
     let parent_index = parent.index;
     let parent = &zones[parent_index];
-    let par = match match parent.boundary {
-        Some(ref par) => geos::Geometry::try_from(par),
-        None => {
-            println!("No parent matches the index {}...", parent_index);
-            return Vec::new();
-        }
-    } {
-        Ok(par) => par,
-        Err(e) => {
-            println!(
-                "Failed to convert parent with index {}: {}",
-                parent.osm_id, e
-            );
-            return Vec::new();
-        }
-    };
-
-    // TODO: It "could" be better to instead compute the bbox for every new town and then call
-    //       this function instead. To be checked...
-    let towns = get_parent_neighbors(&parent, zones, zones_rtree);
 
     if points.len() == 1 {
         let mut place = places[0].clone();
-
         place.boundary = parent.boundary.clone();
+        place.bbox = parent.bbox;
         place.parent = Some(parent.id);
+        let zones_to_subtract = get_zones_to_subtract(&parent, &parent.id, zones, zones_rtree);
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
-        if extrude_existing_town(&mut place, &towns, &geos_cache) {
-            if let Some(ref boundary) = place.boundary {
-                place.bbox = boundary.bounding_rect();
-            }
+        if subtract_existing_zones(&mut place, &zones_to_subtract).is_ok() {
             return vec![place];
         }
         return Vec::new();
@@ -353,14 +278,29 @@ fn compute_voronoi(
     ) {
         Ok(p) => p,
         Err(e) => {
-            println!("Geometry::create_geometry_collection failed: {:?}", e);
+            warn!("Geometry::create_geometry_collection failed: {:?}", e);
             return Vec::new();
         }
     };
-    let voronois = match points_geom.voronoi(Some(&par), 0., false) {
+
+    let geos_parent = match match parent.boundary {
+        Some(ref par) => geos::Geometry::try_from(par),
+        None => {
+            warn!("Parent {} has no boundary", parent.osm_id);
+            return Vec::new();
+        }
+    } {
+        Ok(par) => par,
+        Err(e) => {
+            warn!("Failed to convert parent {} to geos: {}", parent.osm_id, e);
+            return Vec::new();
+        }
+    };
+
+    let voronois = match points_geom.voronoi(Some(&geos_parent), 1e-5, false) {
         Ok(v) => v,
         Err(e) => {
-            println!(
+            warn!(
                 "Failed to compute voronoi for parent {}: {}",
                 parent.osm_id, e
             );
@@ -371,7 +311,7 @@ fn compute_voronoi(
     let len = match voronois.get_num_geometries() {
         Ok(x) => x,
         Err(e) => {
-            println!("get_num_geometries failed: {:?}", e);
+            warn!("get_num_geometries failed: {:?}", e);
             return Vec::new();
         }
     };
@@ -379,40 +319,64 @@ fn compute_voronoi(
         match voronois.get_geometry_n(idx) {
             Ok(x) => voronoi_polygons.push(x),
             Err(e) => {
-                println!("get_geometry_n failed: {:?}", e);
+                warn!("get_geometry_n failed: {:?}", e);
             }
         }
     }
 
+    let geos_points: Vec<(usize, Geometry<'_>)> = points
+        .iter()
+        .filter_map(|(pos, x)| {
+            let x = match x.try_into() {
+                Ok(x) => x,
+                Err(e) => {
+                    warn!(
+                        "Failed to convert point's center with id {}: {}",
+                        places[*pos].osm_id, e
+                    );
+                    return None;
+                }
+            };
+            Some((*pos, x))
+        })
+        .collect();
+
     voronoi_polygons
         .into_par_iter()
         .filter_map(|voronoi| {
+            // WARNING: This clone should not be necessary, but segfaults occured. Thread-safety issue in geos ?
+            let geos_points = geos_points.clone();
+
             // Since GEOS doesn't return voronoi geometries in the same order as the given points...
             let mut place = {
-                let x = geos_points
+                if let Some(idx) = geos_points
                     .iter()
                     .filter(|(_, x)| voronoi.contains(x).unwrap_or(false))
                     .map(|(pos, _)| *pos)
-                    .collect::<Vec<_>>();
-                if !x.is_empty() {
-                    places[x[0]].clone()
+                    .next()
+                {
+                    places[idx].clone()
                 } else {
                     println!("town not found for parent {}...", parent.osm_id);
                     return None;
                 }
             };
-            match voronoi.intersection(&par) {
+
+            match geos_parent.intersection(&voronoi) {
                 Ok(s) => {
                     place.parent = Some(parent.id);
                     place.boundary = convert_to_geo(s);
-                    extrude_existing_town(&mut place, &towns, &geos_cache);
+
                     if let Some(ref boundary) = place.boundary {
                         place.bbox = boundary.bounding_rect();
                     }
+                    let zones_to_subtract =
+                        get_zones_to_subtract(&place, &parent.id, zones, zones_rtree);
+                    subtract_existing_zones(&mut place, &zones_to_subtract).ok()?;
                     Some(place)
                 }
                 Err(e) => {
-                    println!(
+                    warn!(
                         "intersection failure: {} ({})",
                         e,
                         voronoi
