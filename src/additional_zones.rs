@@ -250,8 +250,8 @@ fn compute_voronoi(
 
     if points.len() == 1 {
         let mut place = places[0].clone();
-
         place.boundary = parent.boundary.clone();
+        place.bbox = parent.bbox;
         place.parent = Some(parent.id);
         let zones_to_subtract = get_zones_to_subtract(&parent, &parent.id, zones, zones_rtree);
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
