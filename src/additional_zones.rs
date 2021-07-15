@@ -48,21 +48,22 @@ pub fn compute_additional_cities(
         .par_iter()
         .filter_map(|place| {
             place.zone_type?;
-            get_parent(&place, &zones, &zones_rtree).map(|p| (p, place))
+            get_parent(&place, &zones, &zones_rtree).map(|parent| (parent, place))
         })
-        .filter(|(p, place)| {
-            p.zone_type
+        .filter(|(parent, place)| {
+            parent
+                .zone_type
                 .as_ref()
                 .map(|x| {
                     if *x == ZoneType::Country {
                         info!(
                             "Ignoring place with id {} and country {} as parent",
-                            place.osm_id, p.osm_id
+                            place.osm_id, parent.osm_id
                         );
                     }
                     *x > ZoneType::City && *x < ZoneType::Country
                 })
-                .unwrap_or_else(|| false)
+                .unwrap_or(false)
         })
         .fold(BTreeMap::<_, Vec<_>>::new, |mut map, (parent, place)| {
             map.entry(&parent.id).or_default().push(place);
@@ -99,6 +100,12 @@ fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> O
         .into_iter()
         .map(|z_idx| &zones[z_idx.index])
         .filter(|z| {
+            // We would like to find a parent geometry used to build voronoi polygons
+            // for all additional city points.
+            // This parent geometry needs to represent a region whose type is larger than "City",
+            // as it would not make sense to limit the extent of a city point
+            // to the boundary of a city distinct (for instance).
+            // Points which are already part of a "City" will be ignored afterwards.
             z.admin_type()
                 .map(|zt| zt >= ZoneType::City)
                 .unwrap_or(false)
@@ -163,8 +170,6 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     }
 }
 
-// Extrude all common parts between `zone` and the given zones `to_subtract`. If an error occurs during the
-// process, it'll return `false`.
 fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(), String> {
     if to_subtract.is_empty() {
         return Ok(());
