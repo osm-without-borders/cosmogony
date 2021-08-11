@@ -187,11 +187,9 @@ fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(),
             }
         };
         for z in to_subtract {
-            if zone.intersects(z) {
-                if let Some(b) = difference(&g_boundary, z) {
-                    updates += 1;
-                    g_boundary = b;
-                }
+            if let Some(b) = difference(&g_boundary, z) {
+                updates += 1;
+                g_boundary = b;
             }
         }
         if updates > 0 {
@@ -221,7 +219,7 @@ fn get_zones_to_subtract<'a>(
 ) -> Vec<&'a Zone> {
     zones_rtree
         .fetch_zone_bbox(&zone)
-        .into_iter()
+        .into_par_iter()
         .map(|z_idx| &zones[z_idx.index])
         .filter(|z| {
             z.admin_type()
@@ -230,6 +228,7 @@ fn get_zones_to_subtract<'a>(
                 })
                 .unwrap_or(false)
         })
+        .filter(|z| zone.intersects(z))
         .collect()
 }
 
