@@ -11,9 +11,6 @@ description = "Provides geographical zones with a structured hierarchy"
 readme = "README.md"
 edition = "2018"
 
-[badges]
-travis-ci = { repository = "osm-without-borders/cosmogony" }
-
 [dependencies]
 log = "0.4"
 geo-types = { version = "0.7", features = ["use-rstar"] }

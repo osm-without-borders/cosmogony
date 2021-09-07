@@ -1,5 +1,5 @@
 # Cosmogony
-[![travis](https://travis-ci.org/osm-without-borders/cosmogony.svg?branch=master)](https://travis-ci.org/osm-without-borders/cosmogony) 
+[![Github workflow](https://github.com/osm-without-borders/cosmogony/actions/workflows/test-and-publish.yml/badge.svg?branch=master)](https://github.com/osm-without-borders/cosmogony/actions)
 [![Crates.io](https://img.shields.io/crates/v/cosmogony.svg)](https://crates.io/crates/cosmogony)
  [![Crates.io](https://img.shields.io/crates/d/cosmogony.svg)](https://crates.io/crates/cosmogony)
 
