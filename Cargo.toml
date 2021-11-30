@@ -1,6 +1,6 @@
 [package]
 name = "cosmogony_builder"
-version = "0.10.3"
+version = "0.11.0"
 authors = ["Adrien Matissart <a.matissart@qwantresearch.com>", "Antoine Desbordes <antoine.desbordes@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/osm-without-borders/cosmogony"
@@ -19,8 +19,8 @@ include_dir = "0.7"
 itertools = "0.10"
 lazy_static = "1"
 log = "0.4"
-osm_boundaries_utils = "0.9"
-osmpbfreader = "0.14"
+osm_boundaries_utils = "0.10"
+osmpbfreader = "0.15"
 rayon = "1.5"
 regex = "1"
 rstar = "0.8"

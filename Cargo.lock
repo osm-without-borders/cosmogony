@@ -120,7 +120,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "flate2",
@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony_builder"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "approx 0.5.0",
@@ -248,9 +248,9 @@ dependencies = [
 
 [[package]]
 name = "flat_map"
-version = "0.0.9"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dbb562ef75bc322a6d4b5860794457438b89079f23471fb2ba876c2f39b24e5"
+checksum = "e4fa2a56a33c493fc81acbad4676c599cf2b128f21462a020043ea1eee46244f"
 dependencies = [
  "serde",
  "serde_derive",
@@ -618,9 +618,9 @@ dependencies = [
 
 [[package]]
 name = "osm_boundaries_utils"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae39916a4d4ef0609d0be56d6bf6800b6fa57d4469959fd4af3ca0dafffbedb0"
+checksum = "dd6c56628b8a1a8fc78615358e83c5f87d04e46229e9587232ad793117ed79ff"
 dependencies = [
  "geo",
  "geo-types",
@@ -630,9 +630,9 @@ dependencies = [
 
 [[package]]
 name = "osmpbfreader"
-version = "0.14.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c35ee93f436bd4685458c4f27df8071f7ff10ee4f9fadf1d4cfd14a940bc5672"
+checksum = "350c902b84c57c1d0fa657bfbf380cb1cdcc7352732aa8763ec4bbed4a474a8b"
 dependencies = [
  "byteorder",
  "flat_map",
@@ -641,9 +641,8 @@ dependencies = [
  "protobuf",
  "protobuf-codegen-pure",
  "pub-iterator-type",
- "rental",
+ "self_cell",
  "serde",
- "serde_derive",
  "smartstring",
 ]
 
@@ -787,27 +786,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
-name = "rental"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc89fe2acac36d212474d138aaf939c04a82df5b61d07011571ebce5aef81f2e"
-dependencies = [
- "rental-impl",
- "stable_deref_trait",
-]
-
-[[package]]
-name = "rental-impl"
-version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "475e68978dc5b743f2f40d8e0a8fdc83f1c5e78cbf4b8fa5e74e73beebc340de"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "robust"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -838,10 +816,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
+name = "self_cell"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ef965a420fe14fdac7dd018862966a4c14094f900e1650bbc71ddd7d580c8af"
+
+[[package]]
 name = "serde"
 version = "1.0.130"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f12d06de37cf59146fbdecab66aa99f9fe4f78722e3607577a5375d66bd0c913"
+dependencies = [
+ "serde_derive",
+]
 
 [[package]]
 name = "serde_derive"
