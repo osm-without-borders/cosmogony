@@ -35,7 +35,7 @@ pub fn load_cosmogony_from_file(input: impl AsRef<Path>) -> Result<Cosmogony, Er
 /// if the input file is a json, the whole cosmogony is loaded
 pub fn read_zones_from_file(
     input: impl AsRef<Path>,
-) -> Result<Box<dyn std::iter::Iterator<Item = Result<Zone, Error>> + Sync + Send>, Error> {
+) -> Result<Box<dyn Iterator<Item = Result<Zone, Error>> + Send + Sync>, Error> {
     let format = OutputFormat::from_filename(input.as_ref())?;
     let f = std::fs::File::open(input.as_ref())?;
     let f = std::io::BufReader::new(f);
