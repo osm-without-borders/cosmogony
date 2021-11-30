@@ -1,6 +1,6 @@
 use crate::file_format::OutputFormat;
 use crate::{Cosmogony, Zone};
-use failure::Error;
+use anyhow::{anyhow, Error};
 use std::path::Path;
 
 // Stream Cosmogony's Zone from a Reader
@@ -9,10 +9,8 @@ fn read_zones(
 ) -> impl std::iter::Iterator<Item = Result<Zone, Error>> {
     reader
         .lines()
-        .map(|l| l.map_err(|e| failure::err_msg(e.to_string())))
-        .map(|l| {
-            l.and_then(|l| serde_json::from_str(&l).map_err(|e| failure::err_msg(e.to_string())))
-        })
+        .map(|l| l.map_err(|err| anyhow!("{}", err)))
+        .map(|l| l.and_then(|l| serde_json::from_str(&l).map_err(|err| anyhow!("{}", err))))
 }
 
 fn from_json_stream(reader: impl std::io::BufRead) -> Result<Cosmogony, Error> {
@@ -60,11 +58,9 @@ fn load_cosmogony(reader: impl std::io::BufRead, format: OutputFormat) -> Result
     match format {
         OutputFormat::JsonGz => {
             let r = flate2::read::GzDecoder::new(reader);
-            serde_json::from_reader(r).map_err(|e| failure::err_msg(e.to_string()))
+            serde_json::from_reader(r).map_err(|err| anyhow!("{}", err))
         }
-        OutputFormat::Json => {
-            serde_json::from_reader(reader).map_err(|e| failure::err_msg(e.to_string()))
-        }
+        OutputFormat::Json => serde_json::from_reader(reader).map_err(|err| anyhow!("{}", err)),
         OutputFormat::JsonStream => from_json_stream(reader),
         OutputFormat::JsonStreamGz => {
             let r = flate2::bufread::GzDecoder::new(reader);

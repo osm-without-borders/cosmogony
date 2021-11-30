@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::{anyhow, Error};
 use std::path::Path;
 
 #[derive(PartialEq, Clone)]
@@ -34,12 +34,12 @@ impl OutputFormat {
                     .map(|(e, _)| *e)
                     .collect::<Vec<_>>()
                     .join(", ");
-                failure::err_msg(format!(
+                anyhow!(
                     "Unable to detect the file format from filename '{}'. \
                      Accepted extensions are: {}",
                     filename.as_ref().display(),
                     extensions_str
-                ))
+                )
             })
     }
 }
