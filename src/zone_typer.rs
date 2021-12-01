@@ -1,7 +1,5 @@
-use cosmogony::{Zone, ZoneIndex, ZoneType};
-/* use failure::Fail; */
-/* use failure::{err_msg, Error}; */
 use anyhow::{anyhow, Error};
+use cosmogony::{Zone, ZoneIndex, ZoneType};
 use log::warn;
 use serde_derive::*;
 use std::collections::BTreeMap;
