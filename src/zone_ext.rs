@@ -12,7 +12,6 @@ use osm_boundaries_utils::build_boundary;
 use osmpbfreader::objects::{Node, OsmId, OsmObj, Relation, Tags};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
-use std::convert::TryInto;
 
 pub trait ZoneExt {
     /// create a zone from an osm node
@@ -78,7 +77,7 @@ impl ZoneExt for Zone {
             .collect();
         let wikidata = tags.get("wikidata").map(|s| s.to_string());
 
-        let international_names = get_international_names(&tags, name);
+        let international_names = get_international_names(tags, name);
         Some(Self {
             id: index,
             osm_id: osm_id_str,
@@ -319,16 +318,12 @@ impl ZoneExt for Zone {
             || (self.zone_type == Some(ZoneType::City)
                 && (center_wikidata.is_none() || self.wikidata.is_none()))
         {
-            let center_names: Vec<_> = self
-                .center_tags
+            self.center_tags
                 .iter()
                 .filter(|(k, _)| k.starts_with("name:"))
-                .map(|(k, v)| (k.to_string(), v.to_string()))
-                .collect();
-
-            center_names.into_iter().for_each(|(k, v)| {
-                self.tags.entry(k.into()).or_insert(v.into());
-            })
+                .for_each(|(k, v)| {
+                    self.tags.entry(k.clone()).or_insert_with(|| v.clone());
+                })
         }
         self.international_names = get_international_names(&self.tags, &self.name);
     }
