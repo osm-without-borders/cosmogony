@@ -50,7 +50,7 @@ impl CountryFinder {
         inclusion
             .iter()
             .chain(std::iter::once(&z.id)) // we also add the zone to check if it's itself a country
-            .filter_map(|parent_index| self.countries.get(&parent_index))
+            .filter_map(|parent_index| self.countries.get(parent_index))
             .max_by_key(|c| c.admin_level.unwrap_or(0u32))
             .map(|c| c.iso.clone())
     }

@@ -1,3 +1,4 @@
+use anyhow::Result;
 use cosmogony::{file_format::OutputFormat, Cosmogony};
 use cosmogony_builder::{build_cosmogony, merger};
 use flate2::write::GzEncoder;
@@ -86,10 +87,7 @@ struct MergeArgs {
     output: PathBuf,
 }
 
-fn to_json_stream(
-    mut writer: impl std::io::Write,
-    cosmogony: &Cosmogony,
-) -> Result<(), failure::Error> {
+fn to_json_stream(mut writer: impl std::io::Write, cosmogony: &Cosmogony) -> Result<()> {
     for z in &cosmogony.zones {
         serde_json::to_writer(&mut writer, z)?;
         writer.write_all(b"\n")?;
@@ -104,7 +102,7 @@ fn serialize_cosmogony(
     cosmogony: &Cosmogony,
     output_file: String,
     format: OutputFormat,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     log::info!("writing the output file {}", output_file);
     let file = File::create(output_file)?;
     let stream = BufWriter::new(file);
@@ -127,7 +125,7 @@ fn serialize_cosmogony(
     Ok(())
 }
 
-fn cosmogony(args: GenerateArgs) -> Result<(), failure::Error> {
+fn cosmogony(args: GenerateArgs) -> Result<()> {
     let format = OutputFormat::from_filename(&args.output)?;
 
     let cosmogony = build_cosmogony(
@@ -149,7 +147,7 @@ fn cosmogony(args: GenerateArgs) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn run(args: Args) -> Result<(), failure::Error> {
+fn run(args: Args) -> Result<()> {
     match args {
         Args::Merge(merge_args) => merger::merge_cosmogony(&merge_args.files, &merge_args.output),
         Args::Generate(gen_args) => cosmogony(gen_args),
@@ -182,11 +180,8 @@ fn main() {
         });
     if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);
-        e.iter_chain().for_each(|c| {
+        e.chain().for_each(|c| {
             log::error!("{}", c);
-            if let Some(b) = c.backtrace() {
-                log::error!("  - {}", b);
-            }
         });
         std::process::exit(1);
     }

@@ -11,10 +11,9 @@ pub mod zone_typer;
 use crate::country_finder::CountryFinder;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use additional_zones::compute_additional_cities;
+use anyhow::{anyhow, Context, Error};
 use cosmogony::mutable_slice::MutableSlice;
 use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
-use failure::Error;
-use failure::ResultExt;
 use log::{debug, info};
 use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
@@ -82,7 +81,7 @@ fn get_country_code<'a>(
     if let Some(ref c) = *country_code {
         Some(c.to_uppercase())
     } else {
-        country_finder.find_zone_country(&zone, &inclusions)
+        country_finder.find_zone_country(zone, inclusions)
     }
 }
 
@@ -97,10 +96,11 @@ fn type_zones(
     let zone_typer = zone_typer::ZoneTyper::new()?;
 
     info!("creating a countries rtree");
-    let country_finder: CountryFinder = CountryFinder::init(&zones, &zone_typer);
+    let country_finder: CountryFinder = CountryFinder::init(zones, &zone_typer);
     if country_code.is_none() && country_finder.is_empty() {
-        return Err(failure::err_msg(
-            "no country_code has been provided and no country have been found, we won't be able to make a cosmogony",
+        return Err(anyhow!(
+            "no country_code has been provided and no country have been found, \
+             we won't be able to make a cosmogony",
         ));
     }
 
@@ -113,9 +113,9 @@ fn type_zones(
     let zones_type: Vec<_> = zones
         .par_iter()
         .map(|z| {
-            get_country_code(&country_finder, &z, &country_code, &inclusions[z.id.index]).map(|c| {
+            get_country_code(&country_finder, z, &country_code, &inclusions[z.id.index]).map(|c| {
                 zone_typer
-                    .get_zone_type(&z, &c, &inclusions[z.id.index], zones)
+                    .get_zone_type(z, &c, &inclusions[z.id.index], zones)
                     .map(|zone_type| (c, zone_type))
             })
         })

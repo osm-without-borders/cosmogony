@@ -187,7 +187,6 @@ where
     D: serde::Deserializer<'de>,
 {
     use serde::Deserialize;
-    use std::convert::TryInto;
 
     Option::<geojson::GeoJson>::deserialize(d).map(|option| {
         option.and_then(|geojson| match geojson {

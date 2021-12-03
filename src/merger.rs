@@ -1,3 +1,4 @@
+use anyhow::Result;
 use cosmogony::{file_format::OutputFormat, read_zones_from_file, Zone, ZoneIndex};
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -11,7 +12,7 @@ struct CosmogonyMerger {
 fn to_json_stream(
     mut writer: impl std::io::Write,
     zones: impl std::iter::Iterator<Item = Zone>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     for z in zones {
         serde_json::to_writer(&mut writer, &z)?;
         writer.write_all(b"\n")?;
@@ -24,18 +25,14 @@ impl CosmogonyMerger {
         &mut self,
         files: &[PathBuf],
         mut writer: impl std::io::Write,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<()> {
         for f in files {
-            self.read_cosmogony(&f, &mut writer)?;
+            self.read_cosmogony(f, &mut writer)?;
         }
         Ok(())
     }
 
-    fn read_cosmogony(
-        &mut self,
-        file: &PathBuf,
-        writer: impl std::io::Write,
-    ) -> Result<(), failure::Error> {
+    fn read_cosmogony(&mut self, file: &Path, writer: impl std::io::Write) -> Result<()> {
         let mut max_id = 0;
         let zones = read_zones_from_file(file)?
             .into_iter()
@@ -59,7 +56,7 @@ impl CosmogonyMerger {
     }
 }
 
-pub fn merge_cosmogony(files: &[PathBuf], output: &Path) -> Result<(), failure::Error> {
+pub fn merge_cosmogony(files: &[PathBuf], output: &Path) -> Result<()> {
     let mut merger = CosmogonyMerger::default();
 
     let format = OutputFormat::from_filename(output)?;

@@ -1,6 +1,5 @@
+use anyhow::{anyhow, Error};
 use cosmogony::{Zone, ZoneIndex, ZoneType};
-use failure::Fail;
-use failure::{err_msg, Error};
 use log::warn;
 use serde_derive::*;
 use std::collections::BTreeMap;
@@ -58,11 +57,8 @@ struct CountryAdminTypeRules {
     // we don't implement libpostal's 'use_admin_center' as we don't need it
 }
 
-#[derive(Debug, Fail)]
 pub enum ZoneTyperError {
-    #[fail(display = "impossible to find country {}", _0)]
     InvalidCountry(String),
-    #[fail(display = "no lvl {:?} in libpostal rule for {}", _0, _1)]
     UnkownLevel(Option<u32>, String),
 }
 
@@ -72,10 +68,10 @@ impl ZoneTyper {
             countries_rules: read_libpostal_yaml_folder()?,
         };
         if z.countries_rules.is_empty() {
-            Err(err_msg(format!(
+            Err(anyhow!(
                 "no country rules have been loaded, the libpostal directory \
                  must contains valid libpostal rules"
-            )))
+            ))
         } else {
             Ok(z)
         }
@@ -92,11 +88,9 @@ impl ZoneTyper {
             .countries_rules
             .get(country_code)
             .ok_or_else(|| ZoneTyperError::InvalidCountry(country_code.to_string()))?;
-        Ok(country_rules
+        country_rules
             .get_zone_type(zone, zone_inclusions, all_zones)
-            .ok_or_else(|| {
-                ZoneTyperError::UnkownLevel(zone.admin_level, country_code.to_string())
-            })?)
+            .ok_or_else(|| ZoneTyperError::UnkownLevel(zone.admin_level, country_code.to_string()))
     }
 
     pub fn contains_rule(&self, country_code: &str) -> bool {
@@ -149,14 +143,13 @@ impl RulesOverrides {
                 if self.contained_by.is_empty() {
                     return None;
                 }
-                let parents_osm_id = zone_inclusions
+                let mut parents_osm_id = zone_inclusions
                     .iter()
                     .map(|idx| &all_zones[idx.index].osm_id);
 
                 parents_osm_id
-                    .filter_map(|parent_osm_id| self.contained_by.get(parent_osm_id))
-                    .next()
-                    .and_then(|ref country_rules| {
+                    .find_map(|parent_osm_id| self.contained_by.get(parent_osm_id))
+                    .and_then(|country_rules| {
                         country_rules
                             .get_zone_type(zone, zone_inclusions, all_zones)
                             .map(Some)
@@ -167,9 +160,9 @@ impl RulesOverrides {
 }
 
 fn read_libpostal_yaml_folder() -> Result<BTreeMap<String, CountryAdminTypeRules>, Error> {
-    Ok(LIBPOSTAL_RULES_DIR.files().iter().filter_map(|d| {
+    Ok(LIBPOSTAL_RULES_DIR.files().filter_map(|d| {
         let contents = d.contents_utf8()?;
-        let deserialized_level = read_libpostal_yaml(&contents)
+        let deserialized_level = read_libpostal_yaml(contents)
             .map_err(|e| {
                 warn!(
                     "Levels corresponding to file: {:?} have been skipped due to {}",
@@ -196,7 +189,7 @@ fn read_libpostal_yaml_folder() -> Result<BTreeMap<String, CountryAdminTypeRules
 }
 
 fn read_libpostal_yaml(contents: &str) -> Result<CountryAdminTypeRules, Error> {
-    Ok(serde_yaml::from_str(&contents)?)
+    Ok(serde_yaml::from_str(contents)?)
 }
 
 // stuff used for serde
@@ -261,7 +254,7 @@ mod test {
         "5": "city_district"
         "8": "city""#;
 
-        let deserialized_levels = read_libpostal_yaml(&yaml_basic).expect("invalid yaml");
+        let deserialized_levels = read_libpostal_yaml(yaml_basic).expect("invalid yaml");
 
         assert_eq!(
             deserialized_levels
@@ -297,9 +290,9 @@ mod test {
                         admin_level:
                             "10": "suburb""#;
 
-        let deserialized_levels = read_libpostal_yaml(&yaml_ko);
+        let deserialized_levels = read_libpostal_yaml(yaml_ko);
 
-        assert_eq!(deserialized_levels.is_err(), true);
+        assert!(deserialized_levels.is_err());
     }
 
     #[test]
@@ -320,7 +313,7 @@ mod test {
                 "407489":
                     admin_level:
                         "9": "city_district""#;
-        let deserialized_levels = read_libpostal_yaml(&yaml).expect("invalid yaml");
+        let deserialized_levels = read_libpostal_yaml(yaml).expect("invalid yaml");
 
         assert_eq!(
             deserialized_levels
@@ -360,7 +353,7 @@ mod test {
                 "1803923": "city_district"
                 "42": null # it is a way in libpostal to remove a zone from being typed
                 "#;
-        let deserialized_levels = read_libpostal_yaml(&yaml).expect("invalid yaml");
+        let deserialized_levels = read_libpostal_yaml(yaml).expect("invalid yaml");
 
         assert_eq!(
             deserialized_levels
@@ -424,7 +417,7 @@ mod test {
                     admin_level:
                         "9": "suburb"
                 "#;
-        read_libpostal_yaml(&yaml).expect("invalid yaml")
+        read_libpostal_yaml(yaml).expect("invalid yaml")
     }
 
     #[test]
@@ -433,11 +426,13 @@ mod test {
 
         let mut idx = 0usize;
         let mut make_zone = |id: &str, lvl| {
-            let mut z = Zone::default();
-            z.id = ZoneIndex { index: idx };
+            let z = Zone {
+                id: ZoneIndex { index: idx },
+                osm_id: format!("relation:{}", id.to_string()),
+                admin_level: lvl,
+                ..Default::default()
+            };
             idx += 1;
-            z.osm_id = format!("relation:{}", id.to_string());
-            z.admin_level = lvl;
             z
         };
         let zones = vec![
@@ -460,7 +455,6 @@ mod test {
                         .find(|z| z.osm_id == format!("relation:{}", osm_id))
                         .unwrap()
                         .id
-                        .clone()
                 };
                 inclusions[find_zone_id(z_osm_id).index] =
                     parents_id.into_iter().map(&find_zone_id).collect();
@@ -480,7 +474,7 @@ mod test {
                 .iter()
                 .find(|z| z.osm_id == format!("relation:{}", osm_id))
                 .unwrap();
-            rules.get_zone_type(&z, &inclusions[z.id.index], &zones)
+            rules.get_zone_type(z, &inclusions[z.id.index], &zones)
         };
 
         // even if z1 has no admin_level it has explicitly been set by libpostal to city_district

@@ -19,7 +19,7 @@ impl ZoneIndexAndBbox {
     fn new(id: ZoneIndex, bbox: &Rect<f64>) -> Self {
         ZoneIndexAndBbox {
             index: id,
-            bbox: envelope(&bbox),
+            bbox: envelope(bbox),
         }
     }
 }
@@ -104,27 +104,30 @@ pub fn find_inclusions(zones: &[Zone]) -> (Vec<Vec<ZoneIndex>>, ZonesTree) {
 /// * a zone must be attached to zone with a 'greater' zone_type
 ///     a City cannot be attached to a CityDistrict or a Suburb, it should be attached to a
 ///     StateDistrict, a State, a CountryRegion or a Country
-pub fn build_hierarchy(zones: &mut [Zone], inclusions: Vec<Vec<ZoneIndex>>) {
+pub fn build_hierarchy(zones: &mut [Zone], zones_inclusions: Vec<Vec<ZoneIndex>>) {
     info!("building the zones's hierarchy");
-    let nb_zones = zones.len();
+    assert_eq!(zones.len(), zones_inclusions.len());
 
-    for i in 0..nb_zones {
-        let (mslice, z) = MutableSlice::init(zones, i);
+    zones_inclusions
+        .iter()
+        .enumerate()
+        .for_each(|(i, inclusions)| {
+            let (mslice, z) = MutableSlice::init(zones, i);
 
-        let parent = inclusions[i]
-            .iter()
-            .filter_map(|c_idx| {
-                let c = mslice.get(&c_idx);
-                if z.can_be_child_of(c) {
-                    Some(c)
-                } else {
-                    None
-                }
-            })
-            .min_by_key(|z| z.zone_type);
+            let parent = inclusions
+                .iter()
+                .filter_map(|c_idx| {
+                    let c = mslice.get(c_idx);
+                    if z.can_be_child_of(c) {
+                        Some(c)
+                    } else {
+                        None
+                    }
+                })
+                .min_by_key(|z| z.zone_type);
 
-        z.set_parent(parent.map(|z| z.id));
-    }
+            z.set_parent(parent.map(|z| z.id));
+        })
 }
 
 #[cfg(test)]
@@ -136,7 +139,7 @@ mod test {
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);
-        let mp = MultiPolygon(vec![p.clone()]);
+        let mp = MultiPolygon(vec![p]);
 
         let mut z = Zone::default();
         z.id.index = idx;
@@ -192,7 +195,7 @@ mod test {
     }
 
     fn assert_parent(zones: &[Zone], idx: usize, expected_parent: Option<usize>) {
-        match (expected_parent, zones[idx].parent.clone()) {
+        match (expected_parent, zones[idx].parent) {
             (None, None) => (),
             (Some(_), None) => panic!("Zone {} should have a parent", idx),
             (None, Some(_)) => panic!("Zone {} should not have a parent", idx),

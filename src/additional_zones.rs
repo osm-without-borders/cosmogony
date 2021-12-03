@@ -8,9 +8,6 @@ use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::BTreeMap;
 
-use std::convert::TryFrom;
-use std::convert::TryInto;
-
 use crate::zone_ext::ZoneExt;
 
 fn difference<'a>(g: &geos::Geometry<'a>, other: &Zone) -> Option<geos::Geometry<'a>> {
@@ -48,7 +45,7 @@ pub fn compute_additional_cities(
         .par_iter()
         .filter_map(|place| {
             place.zone_type?;
-            get_parent(&place, &zones, &zones_rtree).map(|parent| (parent, place))
+            get_parent(place, zones, &zones_rtree).map(|parent| (parent, place))
         })
         .filter(|(parent, place)| {
             parent
@@ -85,7 +82,7 @@ pub fn compute_additional_cities(
         candidate_parent_zones
             .into_par_iter()
             .filter(|(_, places)| !places.is_empty())
-            .map(|(parent, places)| compute_voronoi(parent, &places, &zones, &zones_rtree))
+            .map(|(parent, places)| compute_voronoi(parent, &places, zones, &zones_rtree))
             .collect()
     };
     for cities in new_cities.into_iter() {
@@ -96,7 +93,7 @@ pub fn compute_additional_cities(
 fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> Option<&'a Zone> {
     use itertools::Itertools;
     zones_rtree
-        .fetch_zone_bbox(&place)
+        .fetch_zone_bbox(place)
         .into_iter()
         .map(|z_idx| &zones[z_idx.index])
         .filter(|z| {
@@ -119,12 +116,12 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
         .values()
         .enumerate()
         .filter_map(|(index, obj)| {
-            if !is_place(&obj) {
+            if !is_place(obj) {
                 return None;
             }
             if let OsmObj::Node(ref node) = obj {
                 let next_index = ZoneIndex { index };
-                if let Some(mut zone) = Zone::from_osm_node(&node, next_index) {
+                if let Some(mut zone) = Zone::from_osm_node(node, next_index) {
                     if zone.name.is_empty() {
                         return None;
                     }
@@ -218,7 +215,7 @@ fn get_zones_to_subtract<'a>(
     zones_rtree: &ZonesTree,
 ) -> Vec<&'a Zone> {
     zones_rtree
-        .fetch_zone_bbox(&zone)
+        .fetch_zone_bbox(zone)
         .into_par_iter()
         .map(|z_idx| &zones[z_idx.index])
         .filter(|z| {
@@ -252,7 +249,7 @@ fn compute_voronoi(
         place.boundary = parent.boundary.clone();
         place.bbox = parent.bbox;
         place.parent = Some(parent.id);
-        let zones_to_subtract = get_zones_to_subtract(&parent, &parent.id, zones, zones_rtree);
+        let zones_to_subtract = get_zones_to_subtract(parent, &parent.id, zones, zones_rtree);
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
         if subtract_existing_zones(&mut place, &zones_to_subtract).is_ok() {
             return vec![place];
