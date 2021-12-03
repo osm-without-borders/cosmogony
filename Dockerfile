@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y libgeos-c1v5 libgeos-dev && apt-get cle
 
 COPY . ./
 
-RUN cargo build --release
+RUN cargo build --profile production
 
 FROM debian:buster-slim
 

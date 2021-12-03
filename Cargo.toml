@@ -32,3 +32,8 @@ structopt = "0.3"
 
 [dev-dependencies]
 approx = "0.5"
+
+[profile.production]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
