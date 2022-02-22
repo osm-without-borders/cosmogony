@@ -209,18 +209,16 @@ impl From<SerdeRulesOverrides> for RulesOverrides {
             .contained_by
             .into_iter()
             .flat_map(|(osm_type, map)| {
-                map.into_iter().map(move |(osm_id, rules)| {
-                    (format!("{}:{}", osm_type.to_string(), osm_id), rules)
-                })
+                map.into_iter()
+                    .map(move |(osm_id, rules)| (format!("{}:{}", osm_type, osm_id), rules))
             })
             .collect();
         let i = serde
             .id_rules
             .into_iter()
             .flat_map(|(osm_type, map)| {
-                map.into_iter().map(move |(osm_id, rules)| {
-                    (format!("{}:{}", osm_type.to_string(), osm_id), rules)
-                })
+                map.into_iter()
+                    .map(move |(osm_id, rules)| (format!("{}:{}", osm_type, osm_id), rules))
             })
             .collect();
         RulesOverrides {
@@ -428,7 +426,7 @@ mod test {
         let mut make_zone = |id: &str, lvl| {
             let z = Zone {
                 id: ZoneIndex { index: idx },
-                osm_id: format!("relation:{}", id.to_string()),
+                osm_id: format!("relation:{}", id),
                 admin_level: lvl,
                 ..Default::default()
             };

@@ -1,4 +1,6 @@
 use anyhow::Result;
+use clap::ErrorKind;
+use clap::Parser;
 use cosmogony::{file_format::OutputFormat, Cosmogony};
 use cosmogony_builder::{build_cosmogony, merger};
 use flate2::write::GzEncoder;
@@ -6,8 +8,6 @@ use flate2::Compression;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
-use structopt::clap::ErrorKind;
-use structopt::StructOpt;
 
 /// Cosmogony arguments
 ///
@@ -21,30 +21,31 @@ use structopt::StructOpt;
 ///
 /// So `cosmogony -i <osm-file> -o output file` if the same as
 /// `cosmogony generate -i <osm-file> -o output file`
-#[derive(StructOpt, Debug)]
+#[derive(Debug, clap::Parser)]
+#[clap(version)]
 enum Args {
     /// Generate cosmogony subcommand
     ///
     /// Note: for retrocompatibility this is also the default subcommand if none is provided
-    #[structopt(name = "generate")]
+    #[clap(name = "generate")]
     Generate(GenerateArgs),
     /// Merge cosmogony subcommand
     ///
     /// Use it to merge several streamed cosmogony files into one.
     /// Can be useful to split the processing of a large osm file (like the planet)
     /// into several non overlapping small ones
-    #[structopt(name = "merge")]
+    #[clap(name = "merge")]
     Merge(MergeArgs),
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, clap::Parser)]
 struct GenerateArgs {
     /// OSM PBF file.
-    #[structopt(short = "i", long = "input")]
+    #[clap(short = 'i', long = "input")]
     input: String,
     /// output file name
-    #[structopt(
-        short = "o",
+    #[clap(
+        short = 'o',
         long = "output",
         default_value = "cosmogony.json",
         help = r#"Output file name. Format will be deduced from the file extension. 
@@ -53,19 +54,19 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
 "#
     )]
     output: String,
-    #[structopt(help = "Do not display the stats", long = "no-stats")]
+    #[clap(help = "Do not display the stats", long = "no-stats")]
     no_stats: bool,
-    #[structopt(
+    #[clap(
         help = "country code if the pbf file does not contains any country",
         long = "country-code"
     )]
     country_code: Option<String>,
-    #[structopt(
+    #[clap(
         help = "Prevent voronoi geometries computation and generation",
         long = "disable-voronoi"
     )]
     disable_voronoi: bool,
-    #[structopt(
+    #[clap(
         help = "Only generates labels for given langs. Either repeat parameter or use comma-separated value",
         long = "filter-langs"
     )]
@@ -81,14 +82,14 @@ impl GenerateArgs {
     }
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, clap::Parser)]
 struct MergeArgs {
     /// Cosmogony files to process
-    #[structopt(name = "FILE", parse(from_os_str))]
+    #[clap(name = "FILE", parse(from_os_str))]
     files: Vec<PathBuf>,
     /// output file name
-    #[structopt(
-        short = "o",
+    #[clap(
+        short = 'o',
         long = "output",
         default_value = "cosmogony.jsonl",
         help = r#"Output file name. Format will be deduced from the file extension.
@@ -180,16 +181,16 @@ fn main() {
     init_logger();
     // Note: for retrocompatibility, we also try to read the args without subcommand
     // to generate a cosmogony
-    let args = GenerateArgs::from_args_safe()
+    let args = GenerateArgs::try_parse()
         .map(Args::Generate)
         .unwrap_or_else(|err| {
-            if let ErrorKind::VersionDisplayed = err.kind {
+            if let ErrorKind::DisplayVersion = err.kind() {
                 // The version number has been displayed.
                 // Args should not be parsed a second time.
                 println!();
                 std::process::exit(0)
             }
-            Args::from_args()
+            Args::parse()
         });
     if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);
