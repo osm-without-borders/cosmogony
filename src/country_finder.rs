@@ -14,14 +14,6 @@ pub struct CountryFinder {
     countries: BTreeMap<ZoneIndex, Country>,
 }
 
-impl Default for CountryFinder {
-    fn default() -> Self {
-        CountryFinder {
-            countries: BTreeMap::new(),
-        }
-    }
-}
-
 impl CountryFinder {
     pub fn init(zones: &[Zone], typer: &ZoneTyper) -> Self {
         CountryFinder {

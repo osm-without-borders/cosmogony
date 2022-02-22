@@ -49,9 +49,9 @@ impl ZoneExt for Zone {
     fn from_osm_node(node: &Node, index: ZoneIndex) -> Option<Self> {
         let osm_id = OsmId::Node(node.id);
         let osm_id_str = match osm_id {
-            OsmId::Node(n) => format!("node:{}", n.0.to_string()),
-            OsmId::Relation(r) => format!("relation:{}", r.0.to_string()),
-            OsmId::Way(r) => format!("way:{}", r.0.to_string()),
+            OsmId::Node(n) => format!("node:{}", n.0),
+            OsmId::Relation(r) => format!("relation:{}", r.0),
+            OsmId::Way(r) => format!("way:{}", r.0),
         };
         let tags = &node.tags;
         let name = match tags.get("name") {
@@ -136,7 +136,7 @@ impl ZoneExt for Zone {
             .collect();
         let wikidata = relation.tags.get("wikidata").map(|s| s.to_string());
 
-        let osm_id = format!("relation:{}", relation.id.0.to_string());
+        let osm_id = format!("relation:{}", relation.id.0);
 
         let label_node = relation
             .refs
