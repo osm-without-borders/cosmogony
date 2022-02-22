@@ -66,8 +66,20 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
         long = "disable-voronoi"
     )]
     disable_voronoi: bool,
-    #[clap(help = "Only generates labels for given langs", long = "filter-langs")]
-    filter_langs: Vec<String>,
+    #[clap(
+        help = "Only generates labels for given langs. Either repeat parameter or use comma-separated value",
+        long = "filter-langs"
+    )]
+    filter_langs_raw: Vec<String>,
+}
+
+impl GenerateArgs {
+    fn filter_langs(&self) -> Vec<String> {
+        self.filter_langs_raw
+            .iter()
+            .flat_map(|val| val.split(',').map(String::from))
+            .collect()
+    }
 }
 
 #[derive(Debug, clap::Parser)]
@@ -128,12 +140,13 @@ fn serialize_cosmogony(
 
 fn cosmogony(args: GenerateArgs) -> Result<()> {
     let format = OutputFormat::from_filename(&args.output)?;
+    let filter_langs = args.filter_langs();
 
     let cosmogony = build_cosmogony(
         args.input,
         args.country_code,
         args.disable_voronoi,
-        &args.filter_langs,
+        &filter_langs,
     )?;
 
     serialize_cosmogony(&cosmogony, args.output, format)?;
