@@ -10,16 +10,9 @@ pub struct Country {
     admin_level: Option<u32>,
 }
 
+#[derive(Default)]
 pub struct CountryFinder {
     countries: BTreeMap<ZoneIndex, Country>,
-}
-
-impl Default for CountryFinder {
-    fn default() -> Self {
-        CountryFinder {
-            countries: BTreeMap::new(),
-        }
-    }
 }
 
 impl CountryFinder {
