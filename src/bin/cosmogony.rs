@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::ErrorKind;
 use clap::Parser;
 use cosmogony::{file_format::OutputFormat, Cosmogony};
@@ -41,24 +41,25 @@ enum Args {
 #[derive(Debug, clap::Parser)]
 struct GenerateArgs {
     /// OSM PBF file.
-    #[clap(short = 'i', long = "input")]
+    #[clap(short, long)]
     input: String,
     /// output file name
     #[clap(
-        short = 'o',
-        long = "output",
+        short,
+        long,
         default_value = "cosmogony.json",
-        help = r#"Output file name. Format will be deduced from the file extension. 
-Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
-'jsonl' is json stream, each line is a zone as json
-"#
+        help = concat!(
+            "Output file name. Format will be deduced from the file extension. ",
+            "Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'. ",
+            "'jsonl' is json stream where each line is a zone as json.",
+        )
     )]
     output: String,
-    #[clap(help = "Do not display the stats", long = "no-stats")]
+    #[clap(help = "Do not display the stats", long)]
     no_stats: bool,
     #[clap(
-        help = "country code if the pbf file does not contains any country",
-        long = "country-code"
+        help = "Country code if the pbf file does not contains any country",
+        long
     )]
     country_code: Option<String>,
     #[clap(
@@ -67,10 +68,21 @@ Accepted extensions are '.json', '.json.gz', '.jsonl', '.jsonl.gz'
     )]
     disable_voronoi: bool,
     #[clap(
-        help = "Only generates labels for given langs. Either repeat parameter or use comma-separated value",
+        help = concat!(
+            "Only generates labels for given langs. ",
+            "Either repeat parameter or use comma-separated value.",
+        ),
         long = "filter-langs"
     )]
     filter_langs_raw: Vec<String>,
+    #[clap(
+        help = concat!(
+            "Configure the max number of threads using during computations. ",
+            "This won't affect the number of threads used to parse the OSM file.",
+        ),
+        long
+    )]
+    num_threads: Option<usize>,
 }
 
 impl GenerateArgs {
@@ -141,6 +153,13 @@ fn serialize_cosmogony(
 fn cosmogony(args: GenerateArgs) -> Result<()> {
     let format = OutputFormat::from_filename(&args.output)?;
     let filter_langs = args.filter_langs();
+
+    if let Some(num_threads) = args.num_threads {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build_global()
+            .map_err(|err| anyhow!("could not init rayon's global thread pool: {err}"))?;
+    }
 
     let cosmogony = build_cosmogony(
         args.input,
