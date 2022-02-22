@@ -10,7 +10,6 @@ pub struct Country {
     admin_level: Option<u32>,
 }
 
-#[derive(Default)]
 pub struct CountryFinder {
     countries: BTreeMap<ZoneIndex, Country>,
 }
