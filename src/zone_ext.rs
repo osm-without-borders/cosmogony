@@ -76,6 +76,8 @@ impl ZoneExt for Zone {
             .sorted()
             .collect();
         let wikidata = tags.get("wikidata").map(|s| s.to_string());
+        let loc_name = tags.get("loc_name").map(|s| s.to_string());
+        let alt_name = tags.get("alt_name").map(|s| s.to_string());
 
         let international_names = get_international_names(tags, name);
         Some(Self {
@@ -84,8 +86,8 @@ impl ZoneExt for Zone {
             admin_level: level,
             zone_type: None,
             name: name.to_string(),
-            loc_name: None,
-            alt_name: None,
+            loc_name,
+            alt_name,
             boundary: None,
             bbox: None,
             parent: None,
