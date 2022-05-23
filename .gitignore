@@ -8,3 +8,9 @@ target/
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/vcs.xml
+/cosmogony/.idea/.gitignore
+/cosmogony/.idea/cosmogony.iml
+/cosmogony/.idea/vcs.xml
+/cosmogony/.idea/modules.xml
+/cosmogony/.idea/workspace.xml
+/cosmogony/Cargo.lock
