@@ -49,8 +49,8 @@ pub struct Zone {
     pub admin_level: Option<u32>,
     pub zone_type: Option<ZoneType>,
     pub name: String,
-    pub loc_name: Option<String>, // add them in full labels ??
-    pub alt_name: Option<String>,
+    pub loc_name: String,
+    pub alt_name: String,
     #[serde(default)]
     pub label: String,
     #[serde(default)]
@@ -100,8 +100,8 @@ impl Default for Zone {
             admin_level: None,
             zone_type: None,
             name: "".into(),
-            loc_name: None,
-            alt_name: None,
+            loc_name: "".into(),
+            alt_name: "".into(),
             label: "".into(),
             international_labels: BTreeMap::default(),
             international_names: BTreeMap::default(),
