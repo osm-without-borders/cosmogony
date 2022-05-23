@@ -126,7 +126,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony"
-version = "0.12.1"
+version = "0.12.2"
 dependencies = [
  "anyhow",
  "flate2",
@@ -141,7 +141,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony_builder"
-version = "0.12.1"
+version = "0.12.2"
 dependencies = [
  "anyhow",
  "approx 0.5.0",
