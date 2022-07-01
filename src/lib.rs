@@ -193,14 +193,14 @@ pub fn create_ontology(
     type_zones(zones, stats, country_code, &inclusions)?;
 
     build_hierarchy(zones, inclusions);
-    println!("{:?}", zones);
-    println!("aaaaaaaa");
+
+    println!("{:?}", zones.len());
+
     if !disable_voronoi {
         compute_additional_cities(zones, parsed_pbf, ztree);
     }
-    println!("bbbbbbb");
+
     zones.iter_mut().for_each(|z| z.compute_names());
-    println!("{:?}", zones);
 
     compute_labels(zones, filter_langs);
 
