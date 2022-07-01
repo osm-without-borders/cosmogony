@@ -86,7 +86,7 @@ impl ZoneExt for Zone {
             .unwrap_or_else(|| "".to_string());
 
         let international_names = get_international_names(tags, name);
-        println!("{:?}", international_names);
+
         Some(Self {
             id: index,
             osm_id: osm_id_str,
@@ -315,7 +315,7 @@ impl ZoneExt for Zone {
         } else {
             it.collect()
         };
-
+        println!("{:?}", all_lang);
         let international_labels = all_lang
             .iter()
             .map(|lang| {
@@ -326,6 +326,7 @@ impl ZoneExt for Zone {
             })
             .collect();
 
+        println!("{:?}", international_labels);
         self.international_labels = international_labels;
         self.label = label;
     }
