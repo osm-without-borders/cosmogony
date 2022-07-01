@@ -86,6 +86,7 @@ impl ZoneExt for Zone {
             .unwrap_or_else(|| "".to_string());
 
         let international_names = get_international_names(tags, name);
+        println!("{:?}", international_names);
         Some(Self {
             id: index,
             osm_id: osm_id_str,
