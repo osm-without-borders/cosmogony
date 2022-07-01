@@ -153,6 +153,7 @@ fn serialize_cosmogony(
 fn cosmogony(args: GenerateArgs) -> Result<()> {
     let format = OutputFormat::from_filename(&args.output)?;
     let filter_langs = args.filter_langs();
+    println!("{:?}", filter_langs);
 
     if let Some(num_threads) = args.num_threads {
         rayon::ThreadPoolBuilder::new()
@@ -211,6 +212,8 @@ fn main() {
             }
             Args::parse()
         });
+
+    println!("{:?}", args);
     if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);
         e.chain().for_each(|c| {
