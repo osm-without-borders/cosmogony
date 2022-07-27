@@ -18,11 +18,14 @@ use log::{debug, info};
 use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 
 use cosmogony::{Zone, ZoneIndex};
 
 use crate::zone_ext::ZoneExt;
+
+const FILE_BUF_SIZE: usize = 1024 * 1024; // 1MB
 
 #[rustfmt::skip]
 pub fn is_admin(obj: &OsmObj) -> bool {
@@ -223,6 +226,7 @@ pub fn build_cosmogony(
     let path = Path::new(&pbf_path);
     info!("Reading pbf with geometries...");
     let file = File::open(&path).context("no pbf file")?;
+    let file = BufReader::with_capacity(FILE_BUF_SIZE, file);
 
     let parsed_pbf = OsmPbfReader::new(file)
         .get_objs_and_deps(|o| is_admin(o) || is_place(o))
