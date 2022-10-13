@@ -315,7 +315,6 @@ impl ZoneExt for Zone {
             it.collect()
         };
 
-        println!("{:?}", all_lang);
         let international_labels = all_lang
             .iter()
             .map(|lang| {
