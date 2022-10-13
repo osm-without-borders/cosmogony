@@ -153,7 +153,6 @@ fn serialize_cosmogony(
 fn cosmogony(args: GenerateArgs) -> Result<()> {
     let format = OutputFormat::from_filename(&args.output)?;
     let filter_langs = args.filter_langs();
-    println!("{:?}", filter_langs);
 
     if let Some(num_threads) = args.num_threads {
         rayon::ThreadPoolBuilder::new()
@@ -207,13 +206,11 @@ fn main() {
             if let ErrorKind::DisplayVersion = err.kind() {
                 // The version number has been displayed.
                 // Args should not be parsed a second time.
-                println!();
                 std::process::exit(0)
             }
             Args::parse()
         });
 
-    println!("{:?}", args);
     if let Err(e) = run(args) {
         log::error!("cosmogony in error! {:?}", e);
         e.chain().for_each(|c| {
