@@ -10,7 +10,7 @@ pub mod zone_typer;
 
 use crate::country_finder::CountryFinder;
 use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
-use additional_zones::compute_additional_cities;
+use additional_zones::compute_additional_places;
 use anyhow::{anyhow, Context, Error};
 use cosmogony::mutable_slice::MutableSlice;
 use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
@@ -43,10 +43,10 @@ pub fn is_admin(obj: &OsmObj) -> bool {
 
 pub fn is_place(obj: &OsmObj) -> bool {
     match *obj {
-        OsmObj::Node(ref node) => node
-            .tags
-            .get("place")
-            .map_or(false, |v| v == "city" || v == "town" || v == "village"),
+        OsmObj::Node(ref node) => matches!(
+            node.tags.get("place").map(|s| s.as_str()),
+            Some("city" | "town" | "village" | "suburb")
+        ),
         _ => false,
     }
 }
@@ -197,7 +197,7 @@ pub fn create_ontology(
     build_hierarchy(zones, inclusions);
 
     if !disable_voronoi {
-        compute_additional_cities(zones, parsed_pbf, ztree);
+        compute_additional_places(zones, parsed_pbf, ztree);
     }
 
     zones.iter_mut().for_each(|z| z.compute_names());

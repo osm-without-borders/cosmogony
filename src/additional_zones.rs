@@ -30,12 +30,13 @@ fn difference<'a>(g: &geos::Geometry<'a>, other: &Zone) -> Option<geos::Geometry
     }
 }
 
-pub fn compute_additional_cities(
+pub fn compute_additional_places(
     zones: &mut Vec<Zone>,
     parsed_pbf: &BTreeMap<OsmId, OsmObj>,
     zones_rtree: ZonesTree,
 ) {
     let place_zones = read_places(parsed_pbf);
+
     info!(
         "there are {} places, we'll try to make boundaries for them",
         place_zones.len()
