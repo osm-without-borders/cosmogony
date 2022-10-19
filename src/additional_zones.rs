@@ -49,17 +49,16 @@ pub fn compute_additional_places(
             get_parent(place, zones, &zones_rtree).map(|parent| (parent, place))
         })
         .filter(|(parent, place)| {
-            parent
-                .zone_type
-                .as_ref()
-                .map(|x| {
-                    if *x == ZoneType::Country {
+            (parent.zone_type)
+                .map(|parent_zone| {
+                    if parent_zone == ZoneType::Country {
                         info!(
                             "Ignoring place with id {} and country {} as parent",
                             place.osm_id, parent.osm_id
                         );
                     }
-                    *x > ZoneType::City && *x < ZoneType::Country
+
+                    parent_zone < ZoneType::Country
                 })
                 .unwrap_or(false)
         })
@@ -86,8 +85,9 @@ pub fn compute_additional_places(
             .map(|(parent, places)| compute_voronoi(parent, &places, zones, &zones_rtree))
             .collect()
     };
-    for cities in new_cities.into_iter() {
-        publish_new_cities(zones, cities);
+
+    for places in new_cities {
+        publish_new_places(zones, places);
     }
 }
 
@@ -120,31 +120,32 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
             if !is_place(obj) {
                 return None;
             }
-            if let OsmObj::Node(ref node) = obj {
-                let next_index = ZoneIndex { index };
-                if let Some(mut zone) = Zone::from_osm_node(node, next_index) {
-                    if zone.name.is_empty() {
-                        return None;
-                    }
-                    zone.zone_type = Some(ZoneType::City);
-                    zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
-                    zone.bbox = zone.center.as_ref().map(|p| {
-                        Rect::new(
-                            Coordinate {
-                                x: p.0.x - std::f64::EPSILON,
-                                y: p.0.y - std::f64::EPSILON,
-                            }, // min
-                            Coordinate {
-                                x: p.0.x + std::f64::EPSILON,
-                                y: p.0.y + std::f64::EPSILON,
-                            }, // max
-                        )
-                    });
-                    zone.is_generated = true;
-                    return Some(zone);
-                }
+
+            let node = obj.node()?;
+            let next_index = ZoneIndex { index };
+            let mut zone = Zone::from_osm_node(node, next_index)?;
+
+            if zone.name.is_empty() {
+                return None;
             }
-            None
+
+            zone.zone_type = Some(zone.zone_type.unwrap_or(ZoneType::City));
+            zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
+            zone.bbox = zone.center.as_ref().map(|p| {
+                Rect::new(
+                    Coordinate {
+                        x: p.0.x - std::f64::EPSILON,
+                        y: p.0.y - std::f64::EPSILON,
+                    }, // min
+                    Coordinate {
+                        x: p.0.x + std::f64::EPSILON,
+                        y: p.0.y + std::f64::EPSILON,
+                    }, // max
+                )
+            });
+
+            zone.is_generated = true;
+            Some(zone)
         })
         .collect()
 }
@@ -388,7 +389,7 @@ fn compute_voronoi(
         .collect()
 }
 
-fn publish_new_cities(zones: &mut Vec<Zone>, new_cities: Vec<Zone>) {
+fn publish_new_places(zones: &mut Vec<Zone>, new_cities: Vec<Zone>) {
     for mut city in new_cities {
         city.id = ZoneIndex { index: zones.len() };
         zones.push(city);
