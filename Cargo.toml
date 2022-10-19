@@ -8,12 +8,12 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "3", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
 cosmogony = { path = "cosmogony" }
 env_logger = "0.9"
 flate2 = "1.0"
-geo = "0.18"
-geojson = { version = "0.22", features = ["geo-types"] }
+geo = "0.23"
+geojson = { version = "0.24", features = ["geo-types"] }
 geos = { version = "8.0", features= ["geo"] }
 geo-types = { version = "0.7", features = ["rstar"] }
 include_dir = "0.7"
@@ -24,11 +24,11 @@ osm_boundaries_utils = "0.10"
 osmpbfreader = "0.15"
 rayon = "1.5"
 regex = "1"
-rstar = "0.8"
+rstar = "0.9"
 serde_derive = "1"
 serde_json = "1"
 serde = { version = "1", features = ["rc"] }
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 
 [dev-dependencies]
 approx = "0.5"

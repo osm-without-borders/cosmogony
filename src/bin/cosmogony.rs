@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use clap::ErrorKind;
+use clap::error::ErrorKind;
 use clap::Parser;
 use cosmogony::{file_format::OutputFormat, Cosmogony};
 use cosmogony_builder::{build_cosmogony, merger};
@@ -9,8 +9,6 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
-/// Cosmogony arguments
-///
 /// You can:
 ///
 /// * generate a cosmogony file from an osm file (generate)
@@ -97,7 +95,7 @@ impl GenerateArgs {
 #[derive(Debug, clap::Parser)]
 struct MergeArgs {
     /// Cosmogony files to process
-    #[clap(name = "FILE", parse(from_os_str))]
+    #[clap(name = "FILE")]
     files: Vec<PathBuf>,
     /// output file name
     #[clap(
