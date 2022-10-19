@@ -40,7 +40,7 @@ impl ZoneType {
         Some(match s {
             "suburb" => Self::Suburb,
             "city_district" => Self::CityDistrict,
-            "city" => Self::City,
+            "city" | "town" | "village" => Self::City,
             "state_district" => Self::StateDistrict,
             "state" => Self::State,
             "country_region" => Self::CountryRegion,

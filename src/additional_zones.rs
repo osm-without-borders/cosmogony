@@ -129,7 +129,6 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
                 return None;
             }
 
-            zone.zone_type = Some(zone.zone_type.unwrap_or(ZoneType::City));
             zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
             zone.bbox = zone.center.as_ref().map(|p| {
                 Rect::new(
@@ -169,7 +168,7 @@ fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
     }
 }
 
-fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(), String> {
+fn subtract_existing_town(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(), String> {
     if to_subtract.is_empty() {
         return Ok(());
     }
@@ -210,7 +209,7 @@ fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(),
     Ok(())
 }
 
-fn get_zones_to_subtract<'a>(
+fn get_towns_to_subtract<'a>(
     zone: &Zone,
     parent_id: &ZoneIndex,
     zones: &'a [Zone],
@@ -251,9 +250,9 @@ fn compute_voronoi(
         place.boundary = parent.boundary.clone();
         place.bbox = parent.bbox;
         place.parent = Some(parent.id);
-        let zones_to_subtract = get_zones_to_subtract(parent, &parent.id, zones, zones_rtree);
+        let zones_to_subtract = get_towns_to_subtract(parent, &parent.id, zones, zones_rtree);
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
-        if subtract_existing_zones(&mut place, &zones_to_subtract).is_ok() {
+        if subtract_existing_town(&mut place, &zones_to_subtract).is_ok() {
             return vec![place];
         }
         return Vec::new();
@@ -369,8 +368,8 @@ fn compute_voronoi(
                         place.bbox = boundary.bounding_rect();
                     }
                     let zones_to_subtract =
-                        get_zones_to_subtract(&place, &parent.id, zones, zones_rtree);
-                    subtract_existing_zones(&mut place, &zones_to_subtract).ok()?;
+                        get_towns_to_subtract(&place, &parent.id, zones, zones_rtree);
+                    subtract_existing_town(&mut place, &zones_to_subtract).ok()?;
                     Some(place)
                 }
                 Err(e) => {

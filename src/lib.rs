@@ -13,7 +13,7 @@ use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
 use additional_zones::compute_additional_places;
 use anyhow::{anyhow, Context, Error};
 use cosmogony::mutable_slice::MutableSlice;
-use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats};
+use cosmogony::{Cosmogony, CosmogonyMetadata, CosmogonyStats, ZoneType};
 use log::{debug, info};
 use osmpbfreader::{OsmId, OsmObj, OsmPbfReader};
 use std::collections::BTreeMap;
@@ -44,8 +44,8 @@ pub fn is_admin(obj: &OsmObj) -> bool {
 pub fn is_place(obj: &OsmObj) -> bool {
     match *obj {
         OsmObj::Node(ref node) => matches!(
-            node.tags.get("place").map(|s| s.as_str()),
-            Some("city" | "town" | "village" | "suburb")
+            node.tags.get("place").and_then(|s| ZoneType::parse(s)),
+            Some(ZoneType::City | ZoneType::Suburb)
         ),
         _ => false,
     }
