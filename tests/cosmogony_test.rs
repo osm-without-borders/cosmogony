@@ -58,8 +58,8 @@ fn test_cmd_with_json_stream_output() {
     assert!(output.status.success());
 
     // we try also the streaming zone's reader
-    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
-    assert_eq!(zones.len(), 195);
+    let zones = cosmogony::read_zones_from_file(out_file).unwrap();
+    assert_eq!(zones.count(), 195);
 }
 
 #[test]
@@ -74,8 +74,8 @@ fn test_cmd_with_json_stream_gz_output() {
     assert!(output.status.success());
 
     // we try also the streaming zone's reader
-    let zones: Vec<_> = cosmogony::read_zones_from_file(out_file).unwrap().collect();
-    assert_eq!(zones.len(), 195);
+    let zones = cosmogony::read_zones_from_file(out_file).unwrap();
+    assert_eq!(zones.count(), 195);
 }
 
 #[test]
@@ -109,10 +109,9 @@ fn create_cosmogony_for_lux() -> Cosmogony {
         env!("OUT_DIR"),
         "/../../../../../tests/data/luxembourg_filtered.osm.pbf"
     );
-    let cosmogony =
-        cosmogony_builder::build_cosmogony(test_file.into(), Some("lu".into()), true, &[])
-            .expect("invalid cosmogony");
-    return cosmogony;
+
+    cosmogony_builder::build_cosmogony(test_file.into(), Some("lu".into()), true, &[])
+        .expect("invalid cosmogony")
 }
 
 fn test_wrapper_for_lux_admin_levels(a_cosmogony: &Cosmogony) {
@@ -208,12 +207,12 @@ fn test_lux_zone_types() {
             key
         )
     }
-    assert_count(&zone_type_counts, "Suburb", 55);
-    assert_count(&zone_type_counts, "City", 105);
-    assert_count(&zone_type_counts, "StateDistrict", 13);
-    assert_count(&zone_type_counts, "State", 0);
-    assert_count(&zone_type_counts, "Country", 1);
-    assert_count(&zone_type_counts, "None", 0); // all the zones without zone_type should be filtered
+    assert_count(zone_type_counts, "Suburb", 55);
+    assert_count(zone_type_counts, "City", 105);
+    assert_count(zone_type_counts, "StateDistrict", 13);
+    assert_count(zone_type_counts, "State", 0);
+    assert_count(zone_type_counts, "Country", 1);
+    assert_count(zone_type_counts, "None", 0); // all the zones without zone_type should be filtered
 
     // check Luxembourg city
     let lux = cosmogony
@@ -228,9 +227,7 @@ fn test_lux_zone_types() {
     assert!(lux.zip_codes.is_empty());
     assert!(lux.center.is_some());
     assert_eq!(
-        get_zone(&cosmogony, &lux.parent.clone().unwrap())
-            .unwrap()
-            .name,
+        get_zone(&cosmogony, &lux.parent.unwrap()).unwrap().name,
         "Canton Luxembourg"
     );
     assert_eq!(lux.wikidata, Some("Q1842".into()));
