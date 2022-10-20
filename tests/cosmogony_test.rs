@@ -43,7 +43,7 @@ fn test_cmd_with_json_output() {
     assert!(output.status.success());
 
     let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
-    assert_eq!(cosmo.zones.len(), 299);
+    assert_eq!(cosmo.zones.len(), 675);
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn test_cmd_with_json_stream_output() {
 
     // we try also the streaming zone's reader
     let zones = cosmogony::read_zones_from_file(out_file).unwrap();
-    assert_eq!(zones.count(), 299);
+    assert_eq!(zones.count(), 675);
 }
 
 #[test]
@@ -75,7 +75,7 @@ fn test_cmd_with_json_stream_gz_output() {
 
     // we try also the streaming zone's reader
     let zones = cosmogony::read_zones_from_file(out_file).unwrap();
-    assert_eq!(zones.count(), 299);
+    assert_eq!(zones.count(), 675);
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn test_cmd_with_json_gz_output() {
     ]);
     assert!(output.status.success());
     let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
-    assert_eq!(cosmo.zones.len(), 299);
+    assert_eq!(cosmo.zones.len(), 675);
 }
 
 #[test]
@@ -329,5 +329,5 @@ fn test_voronoi() {
     assert_eq!(zones.len(), 118);
     create_ontology(&mut zones, &mut stats, None, false, &parsed_pbf, &[])
         .expect("create_ontology failed");
-    assert_eq!(zones.len(), 4453);
+    assert_eq!(zones.len(), 4500);
 }
