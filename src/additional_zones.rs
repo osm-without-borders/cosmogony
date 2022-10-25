@@ -50,10 +50,6 @@ pub fn compute_additional_places(
             get_parent(place, zones, &zones_rtree).map(|parent| (parent, place))
         })
         .filter(|(parent, place)| {
-            if place.name == "Cité Internationale" {
-                dbg!(&parent, &place);
-            }
-
             (parent.zone_type)
                 .map(|parent_zone| {
                     if parent_zone == ZoneType::Country {
@@ -63,7 +59,11 @@ pub fn compute_additional_places(
                         );
                     }
 
-                    parent_zone < ZoneType::Country
+                    // Ensuring zones are stricly increasing also ensures there will be no
+                    // duplicates, for example by adding an admin label which is inside its
+                    // boundary.
+                    parent_zone > place.zone_type.unwrap_or(parent_zone)
+                        && parent_zone < ZoneType::Country
                 })
                 .unwrap_or(false)
         })
