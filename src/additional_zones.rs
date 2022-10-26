@@ -152,9 +152,11 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
         .collect()
 }
 
-fn convert_to_geo(geom: Geometry<'_>) -> Result<MultiPolygon<f64>> {
-    match geom.try_into().context("failed to convert to geo")? {
-        geo::Geometry::Polygon(x) => Ok(MultiPolygon(vec![x])),
+fn convert_to_geo(geom: Geometry<'_>) -> Result<Option<MultiPolygon<f64>>> {
+    let is_empty_poly = |poly: &geo::Polygon| poly.exterior().lines().next().is_none();
+
+    let polys = match geom.try_into().context("failed to convert to geo")? {
+        geo::Geometry::Polygon(x) => vec![x],
         geo::Geometry::GeometryCollection(geoms) => {
             // Convert each geometry into a multi-polygon
             let multi_polys: Vec<_> = geoms
@@ -163,15 +165,30 @@ fn convert_to_geo(geom: Geometry<'_>) -> Result<MultiPolygon<f64>> {
                 .try_collect()?;
 
             // Flatten all multi polygons into a single one
-            let polys = multi_polys
+            multi_polys
                 .into_iter()
                 .flat_map(|m| m.into_iter())
-                .collect();
-
-            Ok(MultiPolygon(polys))
+                .collect()
         }
-        y => Ok(y.try_into().context("failed to convert to multi-polygon")?),
-    }
+        y => {
+            return Ok(Some(
+                y.try_into().context("failed to convert to multi-polygon")?,
+            ))
+        }
+    };
+
+    let polys: Vec<_> = polys
+        .into_iter()
+        .filter(|poly| !is_empty_poly(poly))
+        .collect();
+
+    Ok({
+        if polys.is_empty() {
+            None
+        } else {
+            Some(MultiPolygon(polys))
+        }
+    })
 }
 
 fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<()> {
@@ -198,16 +215,16 @@ fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<()>
         }
 
         if updates > 0 {
-            let g = convert_to_geo(g_boundary).map_err(|err| {
+            if let Some(g) = convert_to_geo(g_boundary).map_err(|err| {
                 warn!(
                     "subtract_existing_town: failed to convert back to geo for {}...",
                     zone.osm_id
                 );
                 err
-            })?;
-
-            zone.bbox = g.bounding_rect();
-            zone.boundary = Some(g);
+            })? {
+                zone.bbox = g.bounding_rect();
+                zone.boundary = Some(g);
+            }
         }
     }
     Ok(())
@@ -367,7 +384,8 @@ fn compute_voronoi(
 
                     place.boundary = convert_to_geo(s)
                         .map_err(|err| warn!("failed to convert to geos: {err:?}"))
-                        .ok();
+                        .ok()
+                        .flatten();
 
                     if let Some(ref boundary) = place.boundary {
                         place.bbox = boundary.bounding_rect();
