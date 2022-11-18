@@ -242,7 +242,7 @@ fn get_places_to_subtract<'a>(
         .map(|z_idx| &zones[z_idx.index])
         .filter(|z| {
             z.admin_type()
-                .map(|zt| zt <= ZoneType::City || z.parent == Some(*parent_id))
+                .map(|zt| Some(zt) == zone.zone_type || z.parent == Some(*parent_id))
                 .unwrap_or(false)
         })
         .filter(|z| zone.intersects(z))
