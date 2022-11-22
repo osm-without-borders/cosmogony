@@ -9,7 +9,7 @@ fn read_zones(
 ) -> impl std::iter::Iterator<Item = Result<Zone, Error>> {
     reader
         .lines()
-        .map(|l| l.map_err(|err| anyhow!("{}", err)))
+        .map(|l| l.map_err(|err| err.into()))
         .map(|l| l.and_then(|l| serde_json::from_str(&l).map_err(|err| anyhow!("{}", err))))
 }
 

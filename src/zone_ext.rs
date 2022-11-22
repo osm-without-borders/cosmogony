@@ -85,12 +85,17 @@ impl ZoneExt for Zone {
             .map(|s| s.to_string())
             .unwrap_or_else(|| "".to_string());
 
+        let zone_type = tags
+            .get("place")
+            .map(|s| s.as_str())
+            .and_then(ZoneType::parse);
+
         let international_names = get_international_names(tags, name);
         Some(Self {
             id: index,
             osm_id: osm_id_str,
             admin_level: level,
-            zone_type: None,
+            zone_type,
             name: name.to_string(),
             loc_name,
             alt_name,

@@ -1,14 +1,15 @@
 use crate::hierarchy_builder::ZonesTree;
 use crate::is_place;
+use crate::zone_ext::ZoneExt;
+use anyhow::{Context, Result};
 use cosmogony::{Zone, ZoneIndex, ZoneType};
 use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, MultiPolygon, Point, Rect};
 use geos::{Geom, Geometry};
+use itertools::Itertools;
 use osmpbfreader::{OsmId, OsmObj};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::BTreeMap;
-
-use crate::zone_ext::ZoneExt;
 
 fn difference<'a>(g: &geos::Geometry<'a>, other: &Zone) -> Option<geos::Geometry<'a>> {
     let zone_as_geos: Option<Geometry> = other.boundary.as_ref().and_then(|b| {
@@ -30,12 +31,13 @@ fn difference<'a>(g: &geos::Geometry<'a>, other: &Zone) -> Option<geos::Geometry
     }
 }
 
-pub fn compute_additional_cities(
+pub fn compute_additional_places(
     zones: &mut Vec<Zone>,
     parsed_pbf: &BTreeMap<OsmId, OsmObj>,
     zones_rtree: ZonesTree,
 ) {
     let place_zones = read_places(parsed_pbf);
+
     info!(
         "there are {} places, we'll try to make boundaries for them",
         place_zones.len()
@@ -48,17 +50,20 @@ pub fn compute_additional_cities(
             get_parent(place, zones, &zones_rtree).map(|parent| (parent, place))
         })
         .filter(|(parent, place)| {
-            parent
-                .zone_type
-                .as_ref()
-                .map(|x| {
-                    if *x == ZoneType::Country {
+            (parent.zone_type)
+                .map(|parent_zone| {
+                    if parent_zone == ZoneType::Country {
                         info!(
                             "Ignoring place with id {} and country {} as parent",
                             place.osm_id, parent.osm_id
                         );
                     }
-                    *x > ZoneType::City && *x < ZoneType::Country
+
+                    // Ensuring zones are stricly increasing also ensures there will be no
+                    // duplicates, for example by adding an admin label which is inside its
+                    // boundary.
+                    parent_zone > place.zone_type.unwrap_or(parent_zone)
+                        && parent_zone < ZoneType::Country
                 })
                 .unwrap_or(false)
         })
@@ -78,20 +83,19 @@ pub fn compute_additional_cities(
         candidate_parent_zones.len()
     );
 
-    let new_cities: Vec<Vec<Zone>> = {
+    let new_cities: Vec<Zone> = {
         candidate_parent_zones
             .into_par_iter()
             .filter(|(_, places)| !places.is_empty())
             .map(|(parent, places)| compute_voronoi(parent, &places, zones, &zones_rtree))
+            .flatten()
             .collect()
     };
-    for cities in new_cities.into_iter() {
-        publish_new_cities(zones, cities);
-    }
+
+    publish_new_places(zones, new_cities);
 }
 
 fn get_parent<'a>(place: &Zone, zones: &'a [Zone], zones_rtree: &ZonesTree) -> Option<&'a Zone> {
-    use itertools::Itertools;
     zones_rtree
         .fetch_zone_bbox(place)
         .into_iter()
@@ -119,96 +123,114 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
             if !is_place(obj) {
                 return None;
             }
-            if let OsmObj::Node(ref node) = obj {
-                let next_index = ZoneIndex { index };
-                if let Some(mut zone) = Zone::from_osm_node(node, next_index) {
-                    if zone.name.is_empty() {
-                        return None;
-                    }
-                    zone.zone_type = Some(ZoneType::City);
-                    zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
-                    zone.bbox = zone.center.as_ref().map(|p| {
-                        Rect::new(
-                            Coordinate {
-                                x: p.0.x - std::f64::EPSILON,
-                                y: p.0.y - std::f64::EPSILON,
-                            }, // min
-                            Coordinate {
-                                x: p.0.x + std::f64::EPSILON,
-                                y: p.0.y + std::f64::EPSILON,
-                            }, // max
-                        )
-                    });
-                    zone.is_generated = true;
-                    return Some(zone);
-                }
+
+            let node = obj.node()?;
+            let next_index = ZoneIndex { index };
+            let mut zone = Zone::from_osm_node(node, next_index)?;
+
+            if zone.name.is_empty() {
+                return None;
             }
-            None
+
+            zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
+            zone.bbox = zone.center.as_ref().map(|p| {
+                Rect::new(
+                    Coordinate {
+                        x: p.0.x - std::f64::EPSILON,
+                        y: p.0.y - std::f64::EPSILON,
+                    }, // min
+                    Coordinate {
+                        x: p.0.x + std::f64::EPSILON,
+                        y: p.0.y + std::f64::EPSILON,
+                    }, // max
+                )
+            });
+
+            zone.is_generated = true;
+            Some(zone)
         })
         .collect()
 }
 
-fn convert_to_geo(geom: Geometry<'_>) -> Option<MultiPolygon<f64>> {
-    match match geom.try_into() {
-        Ok(c) => c,
-        Err(e) => {
-            warn!("convert_to_geo: conversion to geo failed: {}", e);
-            return None;
+fn convert_to_geo(geom: Geometry<'_>) -> Result<Option<MultiPolygon<f64>>> {
+    let is_empty_poly = |poly: &geo::Polygon| poly.exterior().lines().next().is_none();
+
+    let polys = match geom.try_into().context("failed to convert to geo")? {
+        geo::Geometry::Polygon(x) => vec![x],
+        geo::Geometry::GeometryCollection(geoms) => {
+            // Convert each geometry into a multi-polygon
+            let multi_polys: Vec<_> = geoms
+                .into_iter()
+                .map(MultiPolygon::try_from)
+                .try_collect()?;
+
+            // Flatten all multi polygons into a single one
+            multi_polys
+                .into_iter()
+                .flat_map(|m| m.into_iter())
+                .collect()
         }
-    } {
-        geo::Geometry::Polygon(x) => Some(MultiPolygon(vec![x])),
         y => {
-            if let Ok(x) = y.try_into() {
-                Some(x)
-            } else {
-                None
-            }
+            return Ok(Some(
+                y.try_into().context("failed to convert to multi-polygon")?,
+            ))
         }
-    }
+    };
+
+    let polys: Vec<_> = polys
+        .into_iter()
+        .filter(|poly| !is_empty_poly(poly))
+        .collect();
+
+    Ok({
+        if polys.is_empty() {
+            None
+        } else {
+            Some(MultiPolygon(polys))
+        }
+    })
 }
 
-fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<(), String> {
+fn subtract_existing_zones(zone: &mut Zone, to_subtract: &[&Zone]) -> Result<()> {
     if to_subtract.is_empty() {
         return Ok(());
     }
+
     if let Some(ref boundary) = zone.boundary {
         let mut updates = 0;
-        let mut g_boundary = match geos::Geometry::try_from(boundary) {
-            Ok(b) => b,
-            Err(e) => {
-                warn!(
-                    "subtract_existing_town: failed to convert to geos for zone {}: {}",
-                    zone.osm_id, e
-                );
-                return Err(e.to_string());
-            }
-        };
+
+        let mut g_boundary = geos::Geometry::try_from(boundary).map_err(|err| {
+            warn!(
+                "subtract_existing_town: failed to convert to geos for zone {}: {}",
+                zone.osm_id, err
+            );
+            err
+        })?;
+
         for z in to_subtract {
             if let Some(b) = difference(&g_boundary, z) {
                 updates += 1;
                 g_boundary = b;
             }
         }
+
         if updates > 0 {
-            match convert_to_geo(g_boundary) {
-                Some(g) => {
-                    zone.bbox = g.bounding_rect();
-                    zone.boundary = Some(g);
-                }
-                None => {
-                    warn!(
-                        "subtract_existing_town: failed to convert back to geo for {}...",
-                        zone.osm_id
-                    );
-                    return Err("Failed to convert to Geo".to_owned());
-                }
+            if let Some(g) = convert_to_geo(g_boundary).map_err(|err| {
+                warn!(
+                    "subtract_existing_town: failed to convert back to geo for {}...",
+                    zone.osm_id
+                );
+                err
+            })? {
+                zone.bbox = g.bounding_rect();
+                zone.boundary = Some(g);
             }
         }
     }
     Ok(())
 }
 
-fn get_zones_to_subtract<'a>(
+fn get_places_to_subtract<'a>(
     zone: &Zone,
     parent_id: &ZoneIndex,
     zones: &'a [Zone],
@@ -220,9 +242,7 @@ fn get_zones_to_subtract<'a>(
         .map(|z_idx| &zones[z_idx.index])
         .filter(|z| {
             z.admin_type()
-                .map(|zt| {
-                    zt == ZoneType::City || (zt > ZoneType::City && z.parent == Some(*parent_id))
-                })
+                .map(|zt| Some(zt) == zone.zone_type || z.parent == Some(*parent_id))
                 .unwrap_or(false)
         })
         .filter(|z| zone.intersects(z))
@@ -249,7 +269,7 @@ fn compute_voronoi(
         place.boundary = parent.boundary.clone();
         place.bbox = parent.bbox;
         place.parent = Some(parent.id);
-        let zones_to_subtract = get_zones_to_subtract(parent, &parent.id, zones, zones_rtree);
+        let zones_to_subtract = get_places_to_subtract(parent, &parent.id, zones, zones_rtree);
         // If an error occurs, we can't just use the parent area so instead, we return nothing.
         if subtract_existing_zones(&mut place, &zones_to_subtract).is_ok() {
             return vec![place];
@@ -361,13 +381,17 @@ fn compute_voronoi(
             match geos_parent.intersection(&voronoi) {
                 Ok(s) => {
                     place.parent = Some(parent.id);
-                    place.boundary = convert_to_geo(s);
+
+                    place.boundary = convert_to_geo(s)
+                        .map_err(|err| warn!("failed to convert to geos: {err:?}"))
+                        .ok()
+                        .flatten();
 
                     if let Some(ref boundary) = place.boundary {
                         place.bbox = boundary.bounding_rect();
                     }
                     let zones_to_subtract =
-                        get_zones_to_subtract(&place, &parent.id, zones, zones_rtree);
+                        get_places_to_subtract(&place, &parent.id, zones, zones_rtree);
                     subtract_existing_zones(&mut place, &zones_to_subtract).ok()?;
                     Some(place)
                 }
@@ -387,7 +411,7 @@ fn compute_voronoi(
         .collect()
 }
 
-fn publish_new_cities(zones: &mut Vec<Zone>, new_cities: Vec<Zone>) {
+fn publish_new_places(zones: &mut Vec<Zone>, new_cities: Vec<Zone>) {
     for mut city in new_cities {
         city.id = ZoneIndex { index: zones.len() };
         zones.push(city);

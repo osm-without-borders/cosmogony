@@ -3,13 +3,13 @@ extern crate approx;
 
 use cosmogony::{Cosmogony, Zone, ZoneIndex, ZoneType};
 use cosmogony_builder::{create_ontology, get_zones_and_stats, is_admin, is_place};
+use geo_types::Point;
 use osmpbfreader::OsmPbfReader;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::Path;
 use std::process::{Command, Output};
 
-use geo_types::Point;
 type Coord = Point<f64>;
 
 fn launch_command_line(args: Vec<&str>) -> Output {
@@ -42,8 +42,8 @@ fn test_cmd_with_json_output() {
     ]);
     assert!(output.status.success());
 
-    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
-    assert_eq!(cosmo.zones.len(), 195);
+    let cosmo = cosmogony::load_cosmogony_from_file(out_file).unwrap();
+    assert_eq!(cosmo.zones.len(), 208);
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn test_cmd_with_json_stream_output() {
 
     // we try also the streaming zone's reader
     let zones = cosmogony::read_zones_from_file(out_file).unwrap();
-    assert_eq!(zones.count(), 195);
+    assert_eq!(zones.count(), 208);
 }
 
 #[test]
@@ -75,7 +75,7 @@ fn test_cmd_with_json_stream_gz_output() {
 
     // we try also the streaming zone's reader
     let zones = cosmogony::read_zones_from_file(out_file).unwrap();
-    assert_eq!(zones.count(), 195);
+    assert_eq!(zones.count(), 208);
 }
 
 #[test]
@@ -88,8 +88,8 @@ fn test_cmd_with_json_gz_output() {
         out_file,
     ]);
     assert!(output.status.success());
-    let cosmo = cosmogony::load_cosmogony_from_file(&out_file).unwrap();
-    assert_eq!(cosmo.zones.len(), 195);
+    let cosmo = cosmogony::load_cosmogony_from_file(out_file).unwrap();
+    assert_eq!(cosmo.zones.len(), 208);
 }
 
 #[test]
@@ -317,7 +317,7 @@ fn test_voronoi() {
         "/../../../../../tests/data/ivory-coast.pbf"
     );
     let path = Path::new(&ivory_test_file);
-    let file = File::open(&path).expect("no pbf file");
+    let file = File::open(path).expect("no pbf file");
 
     let parsed_pbf = OsmPbfReader::new(file)
         .get_objs_and_deps(|o| is_admin(o) || is_place(o))
@@ -329,5 +329,5 @@ fn test_voronoi() {
     assert_eq!(zones.len(), 118);
     create_ontology(&mut zones, &mut stats, None, false, &parsed_pbf, &[])
         .expect("create_ontology failed");
-    assert_eq!(zones.len(), 4449);
+    assert_eq!(zones.len(), 4471);
 }

@@ -35,6 +35,20 @@ impl ZoneType {
             ZoneType::NonAdministrative => "non_administrative",
         }
     }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "suburb" | "quarter" | "neighbourhood" => Self::Suburb,
+            "city_district" => Self::CityDistrict,
+            "city" | "town" | "village" => Self::City,
+            "state_district" => Self::StateDistrict,
+            "state" => Self::State,
+            "country_region" => Self::CountryRegion,
+            "country" => Self::Country,
+            "non_administrative" => Self::NonAdministrative,
+            _ => return None,
+        })
+    }
 }
 
 #[derive(Copy, Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
