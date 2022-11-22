@@ -3,12 +3,13 @@ name: Build and publish Docker image
 on:
   push:
     branches:
-      - 'master'
+      - "master"
     tags:
-      - 'v*'
+      - "v*"
 
 env:
   DOCKER_IMAGE_BASENAME: ghcr.io/osm-without-borders/cosmogony
+  DOCKER_BUILDKIT: 1
 
 jobs:
   build_docker:
@@ -34,6 +35,6 @@ jobs:
             IMAGE_TAG=$VERSION
           fi
           echo "DOCKER_IMAGE=$DOCKER_IMAGE_BASENAME:$IMAGE_TAG" >> $GITHUB_ENV
-      - run: docker build --label "org.label-schema.vcs-ref=$GITHUB_SHA" -t $DOCKER_IMAGE .
 
+      - run: docker build --label "org.label-schema.vcs-ref=$GITHUB_SHA" -t $DOCKER_IMAGE .
       - run: docker push $DOCKER_IMAGE
