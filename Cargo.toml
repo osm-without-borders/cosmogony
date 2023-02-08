@@ -21,7 +21,7 @@ itertools = "0.10"
 lazy_static = "1"
 log = "0.4"
 osm_boundaries_utils = "0.10"
-osmpbfreader = "0.15"
+osmpbfreader = "0.16"
 rayon = "1.5"
 regex = "1"
 rstar = "0.9"
@@ -37,3 +37,6 @@ approx = "0.5"
 inherits = "release"
 lto = "fat"
 codegen-units = 1
+
+[patch.crates-io]
+osm_boundaries_utils = { git = "https://github.com/woshilapin/osm_boundaries_utils_rs", branch = "osmpbfreader-0.16" }
