@@ -149,8 +149,8 @@ mod test {
         z
     }
 
-    fn coords(tuples: Vec<(f64, f64)>) -> Vec<Coordinate<f64>> {
-        tuples.into_iter().map(Coordinate::from).collect()
+    fn coords(tuples: Vec<(f64, f64)>) -> Vec<Coord<f64>> {
+        tuples.into_iter().map(Coord::from).collect()
     }
 
     #[rustfmt::skip]
