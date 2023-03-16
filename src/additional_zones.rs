@@ -4,7 +4,7 @@ use crate::zone_ext::ZoneExt;
 use anyhow::{Context, Result};
 use cosmogony::{Zone, ZoneIndex, ZoneType};
 use geo::prelude::BoundingRect;
-use geo_types::{Coordinate, MultiPolygon, Point, Rect};
+use geo_types::{Coord, MultiPolygon, Point, Rect};
 use geos::{Geom, Geometry};
 use itertools::Itertools;
 use osmpbfreader::{OsmId, OsmObj};
@@ -135,11 +135,11 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
             zone.center = Some(Point::<f64>::new(node.lon(), node.lat()));
             zone.bbox = zone.center.as_ref().map(|p| {
                 Rect::new(
-                    Coordinate {
+                    Coord {
                         x: p.0.x - std::f64::EPSILON,
                         y: p.0.y - std::f64::EPSILON,
                     }, // min
-                    Coordinate {
+                    Coord {
                         x: p.0.x + std::f64::EPSILON,
                         y: p.0.y + std::f64::EPSILON,
                     }, // max

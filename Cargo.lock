@@ -172,7 +172,7 @@ dependencies = [
 
 [[package]]
 name = "cosmogony"
-version = "0.12.7"
+version = "0.12.8"
 dependencies = [
  "anyhow",
  "flate2",
@@ -411,9 +411,9 @@ dependencies = [
 
 [[package]]
 name = "geo-types"
-version = "0.7.7"
+version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8d77ceb80f375dc4cda113a3ae1b06a36ef623f8f035c03752ca6698f4ddfee"
+checksum = "a5f0b3068e1537a4b861ec3734f4aa9c317d537cf0845bf6fb6221973499d26c"
 dependencies = [
  "approx",
  "num-traits",
@@ -772,9 +772,9 @@ checksum = "9ff7415e9ae3fff1225851df9e0d9e4e5479f947619774677a63572e55e80eff"
 
 [[package]]
 name = "osm_boundaries_utils"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd6c56628b8a1a8fc78615358e83c5f87d04e46229e9587232ad793117ed79ff"
+checksum = "14081789b9d45108f642a329f2f47675b73ac66af2383ed154790c99d5ca636c"
 dependencies = [
  "geo 0.18.0",
  "geo-types",
@@ -784,9 +784,9 @@ dependencies = [
 
 [[package]]
 name = "osmpbfreader"
-version = "0.15.2"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b322df744f061ec02182f59e3e4c8b429c54ad39acbdca8da271aba951ef8539"
+checksum = "6107e8414aa4d74a38a97785baccafb57981e2c6ce3db467bf0d90a2192cd07d"
 dependencies = [
  "byteorder",
  "flat_map",
@@ -1097,12 +1097,14 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "smartstring"
-version = "0.2.10"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e714dff2b33f2321fdcd475b71cec79781a692d846f37f415fb395a1d2bcd48e"
+checksum = "3fb72c633efbaa2dd666986505016c32c3044395ceaf881518399d2f4127ee29"
 dependencies = [
+ "autocfg",
  "serde",
  "static_assertions",
+ "version_check",
 ]
 
 [[package]]

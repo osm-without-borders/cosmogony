@@ -15,13 +15,13 @@ flate2 = "1.0"
 geo = "0.23"
 geojson = { version = "0.24", features = ["geo-types"] }
 geos = { version = "8.0", features= ["geo"] }
-geo-types = { version = "0.7", features = ["rstar"] }
+geo-types = { version = "0.7.9", features = ["rstar"] }
 include_dir = "0.7"
 itertools = "0.10"
 lazy_static = "1"
 log = "0.4"
-osm_boundaries_utils = "0.10"
-osmpbfreader = "0.15"
+osm_boundaries_utils = "0.11.0"
+osmpbfreader = "0.16"
 rayon = "1.5"
 regex = "1"
 rstar = "0.9"

@@ -135,7 +135,7 @@ mod test {
     use crate::hierarchy_builder::{build_hierarchy, find_inclusions};
     use cosmogony::{Zone, ZoneType};
     use geo::bounding_rect::BoundingRect;
-    use geo_types::{Coordinate, LineString, MultiPolygon, Polygon};
+    use geo_types::{Coord, LineString, MultiPolygon, Polygon};
 
     fn zone_factory(idx: usize, ls: LineString<f64>, zone_type: Option<ZoneType>) -> Zone {
         let p = Polygon::new(ls, vec![]);
