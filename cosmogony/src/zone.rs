@@ -1,5 +1,5 @@
 use crate::mutable_slice::MutableSlice;
-use geo_types::{Coordinate, Geometry, MultiPolygon, Point, Rect};
+use geo_types::{Geometry, MultiPolygon, Point, Rect};
 use log::warn;
 use osmpbfreader::objects::Tags;
 use serde::Serialize;
@@ -273,8 +273,8 @@ where
     use serde::Deserialize;
     Option::<Vec<f64>>::deserialize(d).map(|option| match option {
         Some(b) => Some(Rect::new(
-            Coordinate { x: b[0], y: b[1] }, // min
-            Coordinate { x: b[2], y: b[3] }, // max
+            geo_types::Coord { x: b[0], y: b[1] }, // min
+            geo_types::Coord { x: b[2], y: b[3] }, // max
         )),
         None => None,
     })

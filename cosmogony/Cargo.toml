@@ -1,6 +1,6 @@
 [package]
 name = "cosmogony"
-version = "0.12.7"
+version = "0.12.8"
 authors = ["Adrien Matissart <a.matissart@qwantresearch.com>", "Antoine Desbordes <antoine.desbordes@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/osm-without-borders/cosmogony"
@@ -15,9 +15,9 @@ edition = "2021"
 anyhow = "1.0"
 flate2 = "1.0"
 geojson = { version = "0.22", features = ["geo-types"] }
-geo-types = { version = "0.7", features = ["use-rstar"] }
+geo-types = { version = "0.7.9", features = ["use-rstar"] }
 log = "0.4"
-osmpbfreader = "0.15"
+osmpbfreader = "0.16"
 serde_derive = "1"
 serde_json = "1"
 serde = {version = "1", features = ["rc"]}
