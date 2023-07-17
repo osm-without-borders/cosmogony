@@ -1,6 +1,6 @@
 name: Test and Publish crate
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   tests:
@@ -23,7 +23,6 @@ jobs:
           components: rustfmt
 
       - run: cargo fmt --all -- --check
-      - run: cargo test --all
       - run: cd cosmogony && cargo test --all
 
       - name: Publish crate
