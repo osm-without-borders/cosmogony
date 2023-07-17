@@ -24,12 +24,10 @@ impl<'a> MutableSlice<'a> {
 
     pub fn get(&self, zindex: &ZoneIndex) -> &Zone {
         let idx = zindex.index;
-        if idx < self.idx {
-            &self.left[idx]
-        } else if idx == self.idx {
-            panic!("Cannot retrieve middle index");
-        } else {
-            &self.right[idx - self.idx - 1]
+        match idx {
+            i if i < self.idx => &self.left[i],
+            i if i == self.idx => panic!("Cannot retrieve middle index"),
+            i => &self.right[i - self.idx - 1],
         }
     }
 }

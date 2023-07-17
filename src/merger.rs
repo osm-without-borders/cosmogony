@@ -35,7 +35,6 @@ impl CosmogonyMerger {
     fn read_cosmogony(&mut self, file: &Path, writer: impl std::io::Write) -> Result<()> {
         let mut max_id = 0;
         let zones = read_zones_from_file(file)?
-            .into_iter()
             .filter_map(|z| z.ok())
             .map(|mut z| {
                 z.id = self.get_updated_id(z.id);

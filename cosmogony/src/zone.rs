@@ -152,7 +152,7 @@ impl Zone {
     /// iter_hierarchy gives an iterator over the whole hierachy including self
     pub fn iter_hierarchy<'a>(&'a self, all_zones: &'a MutableSlice<'_>) -> HierarchyIterator<'a> {
         HierarchyIterator {
-            zone: Some(&self),
+            zone: Some(self),
             all_zones,
         }
     }
@@ -170,7 +170,7 @@ impl<'a> Iterator for HierarchyIterator<'a> {
         match z {
             Some(z) => {
                 self.zone = match &z.parent {
-                    Some(ref p_idx) => Some(self.all_zones.get(&p_idx)),
+                    Some(ref p_idx) => Some(self.all_zones.get(p_idx)),
                     _ => None,
                 };
                 Some(z)
@@ -271,12 +271,13 @@ where
     D: serde::Deserializer<'de>,
 {
     use serde::Deserialize;
-    Option::<Vec<f64>>::deserialize(d).map(|option| match option {
-        Some(b) => Some(Rect::new(
-            geo_types::Coord { x: b[0], y: b[1] }, // min
-            geo_types::Coord { x: b[2], y: b[3] }, // max
-        )),
-        None => None,
+    Option::<Vec<f64>>::deserialize(d).map(|option| {
+        option.map(|b| {
+            Rect::new(
+                geo_types::Coord { x: b[0], y: b[1] }, // min
+                geo_types::Coord { x: b[2], y: b[3] }, // max
+            )
+        })
     })
 }
 
