@@ -235,12 +235,12 @@ impl ZoneExt for Zone {
 
     fn contains(&self, other: &Zone) -> bool {
         match (&self.boundary, &other.boundary) {
-            (&Some(ref mpoly1), &Some(ref mpoly2)) => {
+            (Some(mpoly1), Some(mpoly2)) => {
                 let m_self: Result<Geometry, _> = mpoly1.try_into();
                 let m_other: Result<Geometry, _> = mpoly2.try_into();
 
                 match (&m_self, &m_other) {
-                    (&Ok(ref m_self), &Ok(ref m_other)) => {
+                    (Ok(m_self), Ok(m_other)) => {
                         // In GEOS, "covers" is less strict than "contains".
                         // eg: a polygon does NOT "contain" its boundary, but "covers" it.
                         m_self.covers(m_other)
@@ -248,7 +248,7 @@ impl ZoneExt for Zone {
                         &self.osm_id, &other.osm_id, e))
                         .unwrap_or(false)
                     }
-                    (&Err(ref e), _) => {
+                    (Err(e), _) => {
                         info!(
                             "impossible to convert to geos for zone {:?}, error {}",
                             &self.osm_id, e
@@ -259,7 +259,7 @@ impl ZoneExt for Zone {
                         );
                         false
                     }
-                    (_, &Err(ref e)) => {
+                    (_, Err(e)) => {
                         info!(
                             "impossible to convert to geos for zone {:?}, error {}",
                             &other.osm_id, e
@@ -278,7 +278,7 @@ impl ZoneExt for Zone {
 
     fn contains_center(&self, other: &Zone) -> bool {
         match (&self.boundary, &other.center) {
-            (&Some(ref mpoly1), &Some(ref point)) => mpoly1.contains(point),
+            (Some(mpoly1), Some(point)) => mpoly1.contains(point),
             _ => false,
         }
     }

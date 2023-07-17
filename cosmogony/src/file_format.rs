@@ -20,14 +20,14 @@ impl OutputFormat {
     pub fn from_filename(filename: impl AsRef<Path>) -> Result<OutputFormat, Error> {
         ALL_EXTENSIONS
             .iter()
-            .find(|&&(ref e, _)| {
+            .find(|&(e, _)| {
                 filename
                     .as_ref()
                     .file_name()
                     .and_then(|f| f.to_str())
                     .map_or(false, |f| f.ends_with(e))
             })
-            .map(|&(_, ref f)| f.clone())
+            .map(|(_, f)| f.clone())
             .ok_or_else(|| {
                 let extensions_str = ALL_EXTENSIONS
                     .iter()

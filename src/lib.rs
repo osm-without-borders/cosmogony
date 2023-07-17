@@ -229,7 +229,7 @@ pub fn build_cosmogony(
 ) -> Result<Cosmogony, Error> {
     let path = Path::new(&pbf_path);
     info!("Reading pbf with geometries...");
-    let file = File::open(&path).context("no pbf file")?;
+    let file = File::open(path).context("no pbf file")?;
     let file = BufReader::with_capacity(FILE_BUF_SIZE, file);
 
     let parsed_pbf = OsmPbfReader::new(file)
