@@ -45,7 +45,9 @@ pub fn compute_additional_places(
 
     let candidate_parent_zones = place_zones
         .par_iter()
-        .filter(|place| place.admin_level.is_none() && place.zone_type == Option::from(ZoneType::Suburb))
+        .filter(|place| {
+            place.admin_level.is_none() && place.zone_type == Option::from(ZoneType::Suburb)
+        })
         .filter_map(|place| {
             place.zone_type?;
             get_parent(place, zones, &zones_rtree).map(|parent| (parent, place))
@@ -87,7 +89,7 @@ pub fn compute_additional_places(
     let new_cities: Vec<Zone> = {
         candidate_parent_zones
             .into_par_iter()
-            .filter(|(_, places)| !places.is_empty() )
+            .filter(|(_, places)| !places.is_empty())
             .map(|(parent, places)| compute_voronoi(parent, &places, zones, &zones_rtree))
             .flatten()
             .collect()
