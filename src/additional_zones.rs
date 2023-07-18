@@ -45,6 +45,9 @@ pub fn compute_additional_places(
 
     let candidate_parent_zones = place_zones
         .par_iter()
+        .filter(|place| {
+            place.admin_level.is_none() && place.zone_type == Option::from(ZoneType::Suburb)
+        })
         .filter_map(|place| {
             place.zone_type?;
             get_parent(place, zones, &zones_rtree).map(|parent| (parent, place))
@@ -59,7 +62,7 @@ pub fn compute_additional_places(
                         );
                     }
 
-                    // Ensuring zones are stricly increasing also ensures there will be no
+                    // Ensuring zones are strictly increasing also ensures there will be no
                     // duplicates, for example by adding an admin label which is inside its
                     // boundary.
                     parent_zone > place.zone_type.unwrap_or(parent_zone)
@@ -360,7 +363,7 @@ fn compute_voronoi(
     voronoi_polygons
         .into_par_iter()
         .filter_map(|voronoi| {
-            // WARNING: This clone should not be necessary, but segfaults occured. Thread-safety issue in geos ?
+            // WARNING: This clone should not be necessary, but segfaults occurred. Thread-safety issue in geos ?
             let geos_points = geos_points.clone();
 
             // Since GEOS doesn't return voronoi geometries in the same order as the given points...
