@@ -15,7 +15,7 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get -y --no-install-suggests --no-install-recommends install libgeos-c1v5 libgeos-dev
       
-      - name: Rust stable with rustfmt
+      - name: Rust stable with latest rustfmt
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
