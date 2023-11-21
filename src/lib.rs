@@ -58,7 +58,7 @@ pub fn get_zones_and_stats(
     let mut zones = Vec::with_capacity(1000);
 
     for obj in pbf.values() {
-        if !is_admin(obj) && !obj.tags().get("place").map_or(false, |v| v == "suburb") {
+        if !is_admin(obj) {
             continue;
         }
         if let OsmObj::Relation(ref relation) = *obj {
@@ -68,13 +68,6 @@ pub fn get_zones_and_stats(
                 if zone.boundary.is_some() {
                     zones.push(zone);
                 }
-            };
-        }
-        if let OsmObj::Node(ref node) = *obj {
-            let next_index = ZoneIndex { index: zones.len() };
-            if let Some(zone) = Zone::from_osm_node(node, next_index) {
-                // Ignore zone without boundary polygon for the moment
-                zones.push(zone);
             };
         }
     }
@@ -238,6 +231,8 @@ pub fn build_cosmogony(
     info!("reading pbf done.");
 
     let (mut zones, mut stats) = get_zones_and_stats(&parsed_pbf)?;
+
+    let test: Vec<_>= zones.iter().find(|zone| zone.osm_id =="France").iter().collect();
 
     create_ontology(
         &mut zones,
