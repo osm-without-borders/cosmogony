@@ -14,3 +14,11 @@ target/
 /cosmogony/.idea/modules.xml
 /cosmogony/.idea/workspace.xml
 /cosmogony/Cargo.lock
+cosmogony_france.jsonl.gz
+.idea/.gitignore
+.idea/GitLink.xml
+.idea/kubernetes-settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+cosmogony_liechtenstein.json
+france.pbf
+liechtenstein.pbf
