@@ -37,6 +37,9 @@ pub fn is_admin(obj: &OsmObj) -> bool {
             &&
             rel.tags.get("admin_level").is_some()
         }
+        OsmObj::Node(ref node) => {
+                node.tags.get("capital").map_or(false, |v| v == "yes")
+        }
         _ => false,
     }
 }
