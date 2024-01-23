@@ -30,7 +30,7 @@ The best way to explore the data (i.e. the coverage, the zones metadata, the hie
 You can build cosmogony to extract the regions on your own.
 
 - #### Build
-Here are the necessary manual steps to build cosmogony:
+Here are the necessary manual steps to build cosmogony :
 ```bash
 curl https://sh.rustup.rs -sSf | sh    # intall rust
 apt-get install libgeos-dev            # install GEOS
