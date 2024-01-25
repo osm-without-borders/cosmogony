@@ -1,5 +1,5 @@
 use crate::hierarchy_builder::ZonesTree;
-use crate::is_place;
+use crate::is_additional_place;
 use crate::zone_ext::ZoneExt;
 use anyhow::{Context, Result};
 use cosmogony::{Zone, ZoneIndex, ZoneType};
@@ -46,7 +46,8 @@ pub fn compute_additional_places(
     let candidate_parent_zones = place_zones
         .par_iter()
         .filter(|place| {
-            place.admin_level.is_none() && place.zone_type == Option::from(ZoneType::Suburb)
+            (place.admin_level.is_none() && place.zone_type == Option::from(ZoneType::Suburb))
+                | place.tags.get("capital").map_or(false, |v| v == "yes")
         })
         .filter_map(|place| {
             place.zone_type?;
@@ -56,7 +57,7 @@ pub fn compute_additional_places(
             (parent.zone_type)
                 .map(|parent_zone| {
                     if parent_zone == ZoneType::Country {
-                        info!(
+                        println!(
                             "Ignoring place with id {} and country {} as parent",
                             place.osm_id, parent.osm_id
                         );
@@ -65,7 +66,7 @@ pub fn compute_additional_places(
                     // Ensuring zones are strictly increasing also ensures there will be no
                     // duplicates, for example by adding an admin label which is inside its
                     // boundary.
-                    parent_zone > place.zone_type.unwrap_or(parent_zone)
+                    parent_zone >= place.zone_type.unwrap_or(parent_zone)
                         && parent_zone < ZoneType::Country
                 })
                 .unwrap_or(false)
@@ -81,7 +82,7 @@ pub fn compute_additional_places(
             map1
         });
 
-    info!(
+    println!(
         "We'll compute voronois partitions for {} parent zones",
         candidate_parent_zones.len()
     );
@@ -123,7 +124,7 @@ fn read_places(parsed_pbf: &BTreeMap<OsmId, OsmObj>) -> Vec<Zone> {
         .values()
         .enumerate()
         .filter_map(|(index, obj)| {
-            if !is_place(obj) {
+            if !is_additional_place(obj) {
                 return None;
             }
 

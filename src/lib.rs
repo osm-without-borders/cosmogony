@@ -51,6 +51,18 @@ pub fn is_place(obj: &OsmObj) -> bool {
     }
 }
 
+pub fn is_additional_place(obj: &OsmObj) -> bool {
+    match *obj {
+        OsmObj::Node(ref node) => {
+            matches!(
+                node.tags.get("place").and_then(|s| ZoneType::parse(s)),
+                Some(ZoneType::City | ZoneType::Suburb)
+            ) | node.tags.get("capital").map_or(false, |v| v == "yes")
+        }
+        _ => false,
+    }
+}
+
 pub fn get_zones_and_stats(
     pbf: &BTreeMap<OsmId, OsmObj>,
 ) -> Result<(Vec<Zone>, CosmogonyStats), Error> {
