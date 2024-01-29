@@ -67,7 +67,7 @@ pub fn compute_additional_places(
                     // duplicates, for example by adding an admin label which is inside its
                     // boundary.
                     parent_zone >= place.zone_type.unwrap_or(parent_zone)
-                        && parent_zone < ZoneType::Country
+                        && (parent_zone < ZoneType::Country || parent.name == place.name)
                 })
                 .unwrap_or(false)
         })
