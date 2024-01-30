@@ -46,8 +46,7 @@ pub fn compute_additional_places(
     let candidate_parent_zones = place_zones
         .par_iter()
         .filter(|place| {
-            (place.admin_level.is_none() && place.zone_type == Option::from(ZoneType::Suburb))
-                | place.tags.get("capital").map_or(false, |v| v == "yes")
+            place.admin_level.is_none() | place.tags.get("capital").map_or(false, |v| v == "yes")
         })
         .filter_map(|place| {
             place.zone_type?;
