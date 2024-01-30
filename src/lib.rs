@@ -45,7 +45,7 @@ pub fn is_place(obj: &OsmObj) -> bool {
     match *obj {
         OsmObj::Node(ref node) => matches!(
             node.tags.get("place").and_then(|s| ZoneType::parse(s)),
-            Some(ZoneType::City | ZoneType::Suburb)
+            Some(ZoneType::City)
         ),
         _ => false,
     }
@@ -56,7 +56,7 @@ pub fn is_additional_place(obj: &OsmObj) -> bool {
         OsmObj::Node(ref node) => {
             matches!(
                 node.tags.get("place").and_then(|s| ZoneType::parse(s)),
-                Some(ZoneType::City | ZoneType::Suburb)
+                Some(ZoneType::City)
             ) | node.tags.get("capital").map_or(false, |v| v == "yes")
         }
         _ => false,
